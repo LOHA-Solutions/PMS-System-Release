@@ -1,0 +1,88 @@
+name: Release checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.14.6'
+      - name: Check release structure, examples and migration graph
+        run: |
+          test -s .agents/skills/loha-release/SKILL.md
+          test -s .agents/skills/loha-release/scripts/release_check.py
+          python .agents/skills/loha-release/scripts/release_check.py
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.14.6'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: Install verified installer and application dependencies
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r requirements-installer.txt
+          python -m pip install --require-hashes --only-binary=:all: -r requirements-dev.txt
+      - run: python -m pip check
+      - run: python -m ruff check .
+      - run: python -m ruff format --check .
+      - name: Install isolated audit tool with verified hashes
+        run: |
+          python -m venv "$RUNNER_TEMP/pms-audit"
+          python -m pip --python "$RUNNER_TEMP/pms-audit/bin/python" install --require-hashes --only-binary=:all: -r requirements-audit.txt
+      - name: Audit application and audit-tool dependencies
+        run: |
+          "$RUNNER_TEMP/pms-audit/bin/python" -m pip_audit --disable-pip --require-hashes --strict --progress-spinner off -r requirements-dev.txt
+          "$RUNNER_TEMP/pms-audit/bin/python" -m pip_audit --disable-pip --require-hashes --strict --progress-spinner off -r requirements-audit.txt
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [frontend, landingpage]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24.18.0'
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - name: Verify pinned npm version
+        run: |
+          expected="$(node -p "require('./package.json').packageManager.slice(4)")"
+          test "$(npm --version)" = "$expected"
+      - run: npm ci --ignore-scripts
+      - run: npm audit --package-lock-only --audit-level=high
+      - run: npm audit signatures
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run build
