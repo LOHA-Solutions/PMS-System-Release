@@ -70,8 +70,9 @@ SQLAlchemy==2.0.54 \
     --hash=sha256:ffba7eb2d67c7505e82a0902aa854d8824b74c28a183820d6a8bd3cfd0f812c2
 alembic==1.20.0 \
     --hash=sha256:77eb101048d95f982c0353e9233404889dcd7a6fc244c107836c0e2fc9cf7d9d
-psycopg[binary]==3.3.6 \
-    --hash=sha256:a1db9f7148b06a28606767efaca51fa6f9398c5c0a3810519be69d7000bdb631
+psycopg[binary]==3.3.8 \
+    --hash=sha256:86c135a9a6f5e98404975c5787e620bf436a7807e088baebd1b20fa48d3b4b4f \
+    --hash=sha256:ca50af6072ba9ea6866f33021975230c2555d7bfdb9d8f94ca3af5c3d1bf2167
 psycopg-binary==3.3.6 \
     --hash=sha256:05a83ac9fd52b9bca7cb5ab04b3691163170bd16f53defa27216ea3aa07ee781 \
     --hash=sha256:0a52991594ac4db888c7d39bccef331797e30cb31a95cae02cf2607f83a42dc2 \
