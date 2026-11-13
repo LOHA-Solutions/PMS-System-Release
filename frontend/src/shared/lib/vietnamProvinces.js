@@ -38,7 +38,9 @@ export const VIETNAM_PROVINCES = [
   { code: '96', name: 'Cà Mau' },
 ];
 
-const provinceNames = new Set(VIETNAM_PROVINCES.map(province => province.name));
+const provinceNames = new Set(
+  VIETNAM_PROVINCES.map((province) => province.name),
+);
 
 export function isVietnamProvince(value) {
   return provinceNames.has(value);

@@ -12,8 +12,14 @@ export function emailInput(value) {
 }
 
 export function taxIdInput(value) {
-  if (typeof value !== 'string' || value.trim().length > 40 || (value.trim() && !taxIdExpression.test(value.trim()))) {
-    throw new Error('Mã số thuế gồm chữ số, có thể thêm dấu gạch ngang và 3 số chi nhánh; tối đa 40 ký tự.');
+  if (
+    typeof value !== 'string' ||
+    value.trim().length > 40 ||
+    (value.trim() && !taxIdExpression.test(value.trim()))
+  ) {
+    throw new Error(
+      'Mã số thuế gồm chữ số, có thể thêm dấu gạch ngang và 3 số chi nhánh; tối đa 40 ký tự.',
+    );
   }
   return value.trim();
 }

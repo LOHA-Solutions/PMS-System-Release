@@ -12,7 +12,9 @@ export function nonnegativeMoneyInput(value) {
 export function positiveMoneyInput(value) {
   const amount = nonnegativeMoneyInput(value);
   if (/^0+(?:\.0+)?$/.test(amount)) {
-    throw new Error('Số tiền phải lớn hơn 0, tối đa 15 chữ số nguyên và 4 chữ số thập phân. Dùng dấu chấm cho phần thập phân.');
+    throw new Error(
+      'Số tiền phải lớn hơn 0, tối đa 15 chữ số nguyên và 4 chữ số thập phân. Dùng dấu chấm cho phần thập phân.',
+    );
   }
   return amount;
 }
@@ -23,11 +25,19 @@ export function dateFilterRange(start, through) {
       throw new Error('Vui lòng chọn ngày hợp lệ.');
     }
   }
-  if (start && through && start > through) throw new Error('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.');
-  return { ...(start ? { start } : {}), ...(through ? { end: addDays(through, 1) } : {}) };
+  if (start && through && start > through)
+    throw new Error('Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.');
+  return {
+    ...(start ? { start } : {}),
+    ...(through ? { end: addDays(through, 1) } : {}),
+  };
 }
 
 export function currentMonthRange(date = new Date()) {
-  const year = date.getUTCFullYear(), month = date.getUTCMonth();
-  return { start: new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10), through: new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10) };
+  const year = date.getUTCFullYear(),
+    month = date.getUTCMonth();
+  return {
+    start: new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10),
+    through: new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10),
+  };
 }

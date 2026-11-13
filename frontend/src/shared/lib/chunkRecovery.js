@@ -10,15 +10,23 @@ export function registerChunkReloadGuard(hasBlockers) {
 
 function hasReloadBlockers() {
   for (const hasBlockers of reloadGuards) {
-    try { if (hasBlockers()) return true; }
-    catch { return true; }
+    try {
+      if (hasBlockers()) return true;
+    } catch {
+      return true;
+    }
   }
   return false;
 }
 
 export function isChunkLoadError(error) {
   const message = typeof error?.message === 'string' ? error.message : '';
-  return error?.name === 'ChunkLoadError' || /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Loading (?:CSS )?chunk .+ failed|Unable to preload CSS for/i.test(message);
+  return (
+    error?.name === 'ChunkLoadError' ||
+    /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Loading (?:CSS )?chunk .+ failed|Unable to preload CSS for/i.test(
+      message,
+    )
+  );
 }
 
 export class RouteChunkLoadError extends Error {
@@ -35,8 +43,9 @@ export function isRouteChunkLoadError(error) {
 
 export function wrapRouteImport(importer) {
   return async () => {
-    try { return await importer(); }
-    catch (error) {
+    try {
+      return await importer();
+    } catch (error) {
       // Syntax errors and exceptions thrown by module code keep their normal
       // error boundary behavior; only transport/preload failures need refresh.
       if (isChunkLoadError(error)) throw new RouteChunkLoadError(error);
@@ -55,7 +64,12 @@ function markReload(storage, location) {
 }
 
 export function attemptChunkReload(error, options = {}) {
-  if (!isRouteChunkLoadError(error) || error.reloadBlocked || hasReloadBlockers()) return false;
+  if (
+    !isRouteChunkLoadError(error) ||
+    error.reloadBlocked ||
+    hasReloadBlockers()
+  )
+    return false;
   const online = options.online ?? globalThis.navigator?.onLine;
   if (online === false) return false;
   try {
@@ -67,7 +81,9 @@ export function attemptChunkReload(error, options = {}) {
     if (!location || !storage || !markReload(storage, location)) return false;
     location.reload();
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 export function reloadCurrentRoute() {

@@ -24,7 +24,9 @@ export const HOTEL_CURRENCIES = [
   { code: 'TWD', label: 'TWD — Tân Đài tệ', locale: 'zh-TW' },
 ];
 
-export const HOTEL_CURRENCY_CODES = HOTEL_CURRENCIES.map(currency => currency.code);
+export const HOTEL_CURRENCY_CODES = HOTEL_CURRENCIES.map(
+  (currency) => currency.code,
+);
 const supportedCodes = new Set(HOTEL_CURRENCY_CODES);
 
 export function isHotelCurrency(value) {

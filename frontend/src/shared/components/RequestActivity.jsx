@@ -6,8 +6,19 @@ export default function RequestActivity() {
   useI18n();
   const { pendingRequests } = usePms();
   if (!pendingRequests?.reads && !pendingRequests?.writes) return null;
-  return <div className="loha-request-activity" role="status" aria-live="polite" aria-atomic="true">
-    <span className="loha-request-spinner" aria-hidden="true" />
-    <span>{pendingRequests.writes ? tUi("system.processing") : tUi("system.loadingData")}</span>
-  </div>;
+  return (
+    <div
+      className="loha-request-activity"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span className="loha-request-spinner" aria-hidden="true" />
+      <span>
+        {pendingRequests.writes
+          ? tUi('system.processing')
+          : tUi('system.loadingData')}
+      </span>
+    </div>
+  );
 }

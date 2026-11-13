@@ -9,14 +9,22 @@ export default function LegacyI18nBridge() {
     const root = document.getElementById('root');
     if (!root) return undefined;
     localizeTree(root, locale);
-    const observer = new MutationObserver(records => {
+    const observer = new MutationObserver((records) => {
       for (const record of records) {
-        if (record.type === 'characterData') localizeText(record.target, locale);
-        else if (record.type === 'attributes') localizeTree(record.target, locale);
+        if (record.type === 'characterData')
+          localizeText(record.target, locale);
+        else if (record.type === 'attributes')
+          localizeTree(record.target, locale);
         else for (const node of record.addedNodes) localizeTree(node, locale);
       }
     });
-    observer.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: observedAttributes });
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: observedAttributes,
+    });
     return () => observer.disconnect();
   }, [locale]);
 

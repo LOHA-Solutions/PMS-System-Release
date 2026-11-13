@@ -1,4 +1,7 @@
-const locationCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+const locationCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
 
 export function roomLocationValue(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -18,14 +21,19 @@ function compareLocationValues(left, right) {
 }
 
 export function roomLocationOptions(rooms, field) {
-  return [...new Set(rooms.map(room => roomLocationValue(room[field])))]
+  return [...new Set(rooms.map((room) => roomLocationValue(room[field])))]
     .sort(compareLocationValues)
-    .map(value => ({ value, filterValue: roomLocationFilterValue(value) }));
+    .map((value) => ({ value, filterValue: roomLocationFilterValue(value) }));
 }
 
-export function matchesRoomLocationFilters(room, { area = '', floor = '' } = {}) {
-  return (!area || roomLocationFilterValue(room.area) === area)
-    && (!floor || roomLocationFilterValue(room.floor) === floor);
+export function matchesRoomLocationFilters(
+  room,
+  { area = '', floor = '' } = {},
+) {
+  return (
+    (!area || roomLocationFilterValue(room.area) === area) &&
+    (!floor || roomLocationFilterValue(room.floor) === floor)
+  );
 }
 
 export function groupRoomsByLocation(rooms) {
@@ -38,9 +46,18 @@ export function groupRoomsByLocation(rooms) {
     groups.get(key).rooms.push(room);
   }
   return [...groups.values()]
-    .sort((left, right) => compareLocationValues(left.area, right.area) || compareLocationValues(left.floor, right.floor))
-    .map(group => ({
+    .sort(
+      (left, right) =>
+        compareLocationValues(left.area, right.area) ||
+        compareLocationValues(left.floor, right.floor),
+    )
+    .map((group) => ({
       ...group,
-      rooms: group.rooms.toSorted((left, right) => compareLocationValues(String(left.number ?? left.id), String(right.number ?? right.id))),
+      rooms: group.rooms.toSorted((left, right) =>
+        compareLocationValues(
+          String(left.number ?? left.id),
+          String(right.number ?? right.id),
+        ),
+      ),
     }));
 }

@@ -1,6 +1,6 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import { bundleModuleMap } from './scripts/bundle-manifest.mjs'
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { bundleModuleMap } from './scripts/bundle-manifest.mjs';
 
 export default defineConfig({
   plugins: [react(), bundleModuleMap()],
@@ -12,4 +12,4 @@ export default defineConfig({
     // Let the route import graph split shared libraries as needed. Combining
     // icons, charts and animation into one eager chunk loads unopened features.
   },
-})
+});

@@ -19,7 +19,11 @@ export function subscriptionState(subscription, now = Date.now()) {
   return 'active';
 }
 
-export function matchesSubscriptionState(subscription, filter, now = Date.now()) {
+export function matchesSubscriptionState(
+  subscription,
+  filter,
+  now = Date.now(),
+) {
   if (filter === 'all' || filter === 'ALL') return true;
   const state = subscriptionState(subscription, now);
   return state === filter || (filter === 'active' && state === 'expiring');
