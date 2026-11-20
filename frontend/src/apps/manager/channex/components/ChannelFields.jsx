@@ -1,29 +1,16 @@
-import { tr as labelUi } from '../../../../shared/i18n/useI18n.js';
-import { Plus, Trash2 } from 'lucide-react';
-import {
-  channelSettingsDraft,
-  otaMappingOptions,
-  visibleChannelFields,
-} from '../channelForms';
+import { tr as labelUi } from '../../../../shared/i18n/useI18n.js'
+import { Plus, Trash2 } from 'lucide-react'
+import { channelSettingsDraft, otaMappingOptions, visibleChannelFields } from '../channelForms'
 
-export function ChannelFields({
-  fields,
-  values,
-  secrets = [],
-  onChange,
-  mapping,
-}) {
+export function ChannelFields({ fields, values, secrets = [], onChange, mapping }) {
   return (
     <div className="channex-editor-grid">
       {visibleChannelFields(fields, values).map((field) => {
-        const options = otaMappingOptions(field, values, mapping);
+        const options = otaMappingOptions(field, values, mapping)
         const dropdown =
           field.type === 'select' ||
-          Boolean(
-            mapping?.rooms &&
-            ['room_type_code', 'rate_plan_code'].includes(field.key),
-          ) ||
-          options.length > 0;
+          Boolean(mapping?.rooms && ['room_type_code', 'rate_plan_code'].includes(field.key)) ||
+          options.length > 0
         return (
           <label
             key={field.key}
@@ -34,9 +21,7 @@ export function ChannelFields({
                 <input
                   type="checkbox"
                   checked={values[field.key] === true}
-                  onChange={(event) =>
-                    onChange(field.key, event.target.checked)
-                  }
+                  onChange={(event) => onChange(field.key, event.target.checked)}
                 />
                 <span>{field.label}</span>
               </>
@@ -46,13 +31,9 @@ export function ChannelFields({
                 {dropdown ? (
                   <select
                     value={values[field.key] ?? ''}
-                    onChange={(event) =>
-                      onChange(field.key, event.target.value)
-                    }
+                    onChange={(event) => onChange(field.key, event.target.value)}
                   >
-                    <option value="">
-                      Chọn {field.label.toLocaleLowerCase()}
-                    </option>
+                    <option value="">Chọn {field.label.toLocaleLowerCase()}</option>
                     {options.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
@@ -60,23 +41,12 @@ export function ChannelFields({
                     ))}
                     {values[field.key] &&
                       !options.some(
-                        (option) =>
-                          String(option.value) === String(values[field.key]),
-                      ) && (
-                        <option value={values[field.key]}>
-                          Đã lưu: {values[field.key]}
-                        </option>
-                      )}
+                        (option) => String(option.value) === String(values[field.key]),
+                      ) && <option value={values[field.key]}>Đã lưu: {values[field.key]}</option>}
                   </select>
                 ) : (
                   <input
-                    type={
-                      field.secret
-                        ? 'password'
-                        : field.type === 'integer'
-                          ? 'number'
-                          : 'text'
-                    }
+                    type={field.secret ? 'password' : field.type === 'integer' ? 'number' : 'text'}
                     autoComplete={field.secret ? 'new-password' : 'off'}
                     step={field.type === 'integer' ? 1 : undefined}
                     maxLength={1000}
@@ -86,53 +56,43 @@ export function ChannelFields({
                         ? labelUi('Đã lưu · để trống để giữ nguyên')
                         : field.label
                     }
-                    onChange={(event) =>
-                      onChange(field.key, event.target.value)
-                    }
+                    onChange={(event) => onChange(field.key, event.target.value)}
                   />
                 )}
                 {secrets.includes(field.key) && (
-                  <small>
-                    {labelUi('Thông tin bảo mật đã lưu, không hiển thị lại.')}
-                  </small>
+                  <small>{labelUi('Thông tin bảo mật đã lưu, không hiển thị lại.')}</small>
                 )}
               </>
             )}
           </label>
-        );
+        )
       })}
     </div>
-  );
+  )
 }
 
-export function ChannelMappings({
-  rows,
-  fields,
-  rateOptions,
-  remote,
-  onChange,
-}) {
+export function ChannelMappings({ rows, fields, rateOptions, remote, onChange }) {
   function update(index, field, value) {
     const next = rows.map((row, position) => {
-      if (position !== index) return row;
-      const settings = { ...row.settings, [field]: value };
+      if (position !== index) return row
+      const settings = { ...row.settings, [field]: value }
       if (field === 'room_type_code') {
-        settings.rate_plan_code = '';
-        settings.occupancy = '';
+        settings.rate_plan_code = ''
+        settings.occupancy = ''
       }
       if (field === 'rate_plan_code') {
         const rate = remote?.rooms
           ?.find((room) => room.id === settings.room_type_code)
-          ?.rates?.find((plan) => plan.id === value);
+          ?.rates?.find((plan) => plan.id === value)
         if (rate) {
-          if (rate.pricingType) settings.pricing_type = rate.pricingType;
-          settings.readonly = rate.readonly === true;
-          settings.occupancy = rate.occupancies?.[0] ?? '';
+          if (rate.pricingType) settings.pricing_type = rate.pricingType
+          settings.readonly = rate.readonly === true
+          settings.occupancy = rate.occupancies?.[0] ?? ''
         }
       }
-      return { ...row, settings };
-    });
-    onChange(next);
+      return { ...row, settings }
+    })
+    onChange(next)
   }
   return (
     <div className="channex-editor-section">
@@ -143,10 +103,7 @@ export function ChannelMappings({
           className="manager-button"
           disabled={!rateOptions.length}
           onClick={() =>
-            onChange([
-              ...rows,
-              { ratePlanId: '', settings: channelSettingsDraft(fields) },
-            ])
+            onChange([...rows, { ratePlanId: '', settings: channelSettingsDraft(fields) }])
           }
         >
           <Plus size={14} aria-hidden="true" />
@@ -169,33 +126,23 @@ export function ChannelMappings({
               type="button"
               className="manager-icon-button"
               aria-label={
-                row.removed
-                  ? `Khôi phục ghép nối ${index + 1}`
-                  : `Bỏ ghép nối ${index + 1}`
+                row.removed ? `Khôi phục ghép nối ${index + 1}` : `Bỏ ghép nối ${index + 1}`
               }
               onClick={() =>
                 onChange(
                   row.id
                     ? rows.map((entry, position) =>
-                        position === index
-                          ? { ...entry, removed: !entry.removed }
-                          : entry,
+                        position === index ? { ...entry, removed: !entry.removed } : entry,
                       )
                     : rows.filter((_, position) => position !== index),
                 )
               }
             >
-              {row.removed ? (
-                labelUi('Khôi phục')
-              ) : (
-                <Trash2 size={15} aria-hidden="true" />
-              )}
+              {row.removed ? labelUi('Khôi phục') : <Trash2 size={15} aria-hidden="true" />}
             </button>
           </div>
           {row.removed ? (
-            <p className="channex-channel-note">
-              {labelUi('Ghép nối này sẽ được xóa khi lưu.')}
-            </p>
+            <p className="channex-channel-note">{labelUi('Ghép nối này sẽ được xóa khi lưu.')}</p>
           ) : (
             <>
               <label>
@@ -207,9 +154,7 @@ export function ChannelMappings({
                   onChange={(event) =>
                     onChange(
                       rows.map((entry, position) =>
-                        position === index
-                          ? { ...entry, ratePlanId: event.target.value }
-                          : entry,
+                        position === index ? { ...entry, ratePlanId: event.target.value } : entry,
                       ),
                     )
                   }
@@ -220,17 +165,13 @@ export function ChannelMappings({
                   {rateOptions.map((rate) => (
                     <option key={rate.id} value={rate.id}>
                       {rate.name}
-                      {rate.occupancy != null
-                        ? ` · ${rate.occupancy} khách`
-                        : ''}
+                      {rate.occupancy != null ? ` · ${rate.occupancy} khách` : ''}
                     </option>
                   ))}
                 </select>
                 {row.id && (
                   <small>
-                    {labelUi(
-                      'Muốn đổi gói giá: bỏ ghép nối này và thêm ghép nối mới.',
-                    )}
+                    {labelUi('Muốn đổi gói giá: bỏ ghép nối này và thêm ghép nối mới.')}
                   </small>
                 )}
               </label>
@@ -246,5 +187,5 @@ export function ChannelMappings({
         </div>
       ))}
     </div>
-  );
+  )
 }

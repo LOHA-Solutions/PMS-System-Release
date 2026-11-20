@@ -1,48 +1,34 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDateTime } from '../../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useCallback, useState } from 'react';
-import { BedDouble, Check, Link2, Pencil, Plus, RefreshCw } from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import { addDays } from '../../../pms/data/model';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDateTime } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useCallback, useState } from 'react'
+import { BedDouble, Check, Link2, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import { addDays } from '../../../pms/data/model'
 import {
   channexMoney,
   channexToday,
   dateLabel,
   inventoryDateError,
   inventoryValue,
-} from '../presentation';
-import {
-  DataState,
-  EmptyState,
-  Pagination,
-  RemoteId,
-  TableWrap,
-} from './RemoteData';
-import { useChannexQuery } from '../useChannexQuery';
-import CatalogEditor from './CatalogEditor';
-import '../ChannexSurface.css';
-export { default as ChannelsView } from './ChannelsView';
+} from '../presentation'
+import { DataState, EmptyState, Pagination, RemoteId, TableWrap } from './RemoteData'
+import { useChannexQuery } from '../useChannexQuery'
+import CatalogEditor from './CatalogEditor'
+import '../ChannexSurface.css'
+export { default as ChannelsView } from './ChannelsView'
 
-const sellModes = { per_room: 'Theo phòng', per_person: 'Theo người' };
+const sellModes = { per_room: 'Theo phòng', per_person: 'Theo người' }
 const rateModes = {
   manual: 'Giá thủ công',
   derived: 'Giá kế thừa',
   auto: 'Giá tự động',
   cascade: 'Giá liên kết',
-};
-const bookingStatuses = {
-  new: 'Mới',
-  modified: 'Đã thay đổi',
-  cancelled: 'Đã hủy',
-};
+}
+const bookingStatuses = { new: 'Mới', modified: 'Đã thay đổi', cancelled: 'Đã hủy' }
 
 function ViewHeading({ title, query, children }) {
-  useI18n();
+  useI18n()
   return (
     <div className="channex-section-heading">
       <div>
@@ -59,26 +45,26 @@ function ViewHeading({ title, query, children }) {
         {tUi('common.reload')}
       </button>
     </div>
-  );
+  )
 }
 
 export function CatalogView({ account, property, canWrite = false }) {
-  useI18n();
-  const { getChannexCatalog } = usePms();
+  useI18n()
+  const { getChannexCatalog } = usePms()
   const request = useCallback(
     () => getChannexCatalog(account.id, property.id),
     [getChannexCatalog, account.id, property.id],
-  );
-  const query = useChannexQuery(request, 'roomTypes,ratePlans');
+  )
+  const query = useChannexQuery(request, 'roomTypes,ratePlans')
   const rooms = query.data?.roomTypes || [],
-    plans = query.data?.ratePlans || [];
+    plans = query.data?.ratePlans || []
   const [editor, setEditor] = useState(null),
-    [message, setMessage] = useState('');
+    [message, setMessage] = useState('')
   const openEditor = (kind, item = {}) => {
-    if (!canWrite) return;
-    setMessage('');
-    setEditor({ kind, item });
-  };
+    if (!canWrite) return
+    setMessage('')
+    setEditor({ kind, item })
+  }
   return (
     <section
       className="channex-data-view"
@@ -98,8 +84,7 @@ export function CatalogView({ account, property, canWrite = false }) {
         <div className="channex-section-block">
           <div className="channex-table-heading">
             <h4>
-              {tUi('common.roomType')}{' '}
-              <span className="channex-count">{rooms.length}</span>
+              {tUi('common.roomType')} <span className="channex-count">{rooms.length}</span>
             </h4>
             {canWrite && (
               <button
@@ -148,28 +133,16 @@ export function CatalogView({ account, property, canWrite = false }) {
                           </div>
                         </div>
                       </td>
-                      <td className="channex-number">
-                        {inventoryValue(room.countOfRooms)}
-                      </td>
-                      <td className="channex-number">
-                        {inventoryValue(room.adults)}
-                      </td>
-                      <td className="channex-number">
-                        {inventoryValue(room.children)}
-                      </td>
-                      <td className="channex-number">
-                        {inventoryValue(room.infants)}
-                      </td>
+                      <td className="channex-number">{inventoryValue(room.countOfRooms)}</td>
+                      <td className="channex-number">{inventoryValue(room.adults)}</td>
+                      <td className="channex-number">{inventoryValue(room.children)}</td>
+                      <td className="channex-number">{inventoryValue(room.infants)}</td>
                       <td>
                         <span
                           className={`channex-status channex-status--${room.mapped ? 'active' : 'neutral'}`}
                         >
-                          {room.mapped && (
-                            <Link2 size={12} aria-hidden="true" />
-                          )}
-                          {room.mapped
-                            ? labelUi('Đã ghép PMS')
-                            : labelUi('Chưa ghép')}
+                          {room.mapped && <Link2 size={12} aria-hidden="true" />}
+                          {room.mapped ? labelUi('Đã ghép PMS') : labelUi('Chưa ghép')}
                         </span>
                       </td>
                       <td>
@@ -195,8 +168,7 @@ export function CatalogView({ account, property, canWrite = false }) {
         <div className="channex-section-block channex-plan-section">
           <div className="channex-table-heading">
             <h4>
-              {labelUi('Gói giá')}{' '}
-              <span className="channex-count">{plans.length}</span>
+              {labelUi('Gói giá')} <span className="channex-count">{plans.length}</span>
             </h4>
             {canWrite && (
               <button
@@ -217,17 +189,13 @@ export function CatalogView({ account, property, canWrite = false }) {
               <table className="manager-table channex-table channex-rates">
                 <thead>
                   <tr>
-                    {[
-                      'Gói giá',
-                      'Loại phòng',
-                      'Giá mặc định',
-                      'Đồng bộ LOHA',
-                      'Thao tác',
-                    ].map((label) => (
-                      <th key={label} scope="col">
-                        {labelUi(label)}
-                      </th>
-                    ))}
+                    {['Gói giá', 'Loại phòng', 'Giá mặc định', 'Đồng bộ LOHA', 'Thao tác'].map(
+                      (label) => (
+                        <th key={label} scope="col">
+                          {labelUi(label)}
+                        </th>
+                      ),
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -242,24 +210,19 @@ export function CatalogView({ account, property, canWrite = false }) {
                         <RemoteId id={plan.id} />
                       </td>
                       <td>
-                        {rooms.find((room) => room.id === plan.roomTypeId)
-                          ?.name ||
+                        {rooms.find((room) => room.id === plan.roomTypeId)?.name ||
                           plan.roomTypeId ||
                           '—'}
                       </td>
                       <td className="channex-money">
-                        <strong>
-                          {channexMoney(plan.rate, plan.currency)}
-                        </strong>
+                        <strong>{channexMoney(plan.rate, plan.currency)}</strong>
                         <small>{plan.currency || '—'}</small>
                       </td>
                       <td>
                         <span
                           className={`channex-status channex-status--${plan.supported ? 'active' : 'warning'}`}
                         >
-                          {plan.supported
-                            ? labelUi('Tương thích')
-                            : labelUi('Chưa hỗ trợ')}
+                          {plan.supported ? labelUi('Tương thích') : labelUi('Chưa hỗ trợ')}
                         </span>
                       </td>
                       <td>
@@ -275,9 +238,7 @@ export function CatalogView({ account, property, canWrite = false }) {
                             {tUi('common.edit')}
                           </button>
                         )}
-                        {!plan.editable && (
-                          <small>{labelUi('Gói giá phức tạp: chỉ xem')}</small>
-                        )}
+                        {!plan.editable && <small>{labelUi('Gói giá phức tạp: chỉ xem')}</small>}
                       </td>
                     </tr>
                   ))}
@@ -286,9 +247,7 @@ export function CatalogView({ account, property, canWrite = false }) {
             </TableWrap>
           )}
           <p className="channex-table-caption">
-            {labelUi(
-              'Giá mặc định của gói. Giá bán từng ngày được hiển thị tại Tồn phòng & giá.',
-            )}
+            {labelUi('Giá mặc định của gói. Giá bán từng ngày được hiển thị tại Tồn phòng & giá.')}
           </p>
         </div>
       </DataState>
@@ -301,30 +260,30 @@ export function CatalogView({ account, property, canWrite = false }) {
           rooms={rooms}
           onClose={() => setEditor(null)}
           onSaved={(text) => {
-            setEditor(null);
-            setMessage(text);
-            query.refresh();
+            setEditor(null)
+            setMessage(text)
+            query.refresh()
           }}
           onReload={() => {
-            setEditor(null);
-            query.refresh();
+            setEditor(null)
+            query.refresh()
           }}
         />
       )}
     </section>
-  );
+  )
 }
 
 export function BookingsView({ account, property }) {
-  useI18n();
-  const { getChannexBookings } = usePms();
-  const [page, setPage] = useState(1);
+  useI18n()
+  const { getChannexBookings } = usePms()
+  const [page, setPage] = useState(1)
   const request = useCallback(
     () => getChannexBookings(account.id, property.id, page),
     [getChannexBookings, account.id, property.id, page],
-  );
-  const query = useChannexQuery(request, 'bookings');
-  const rows = query.data?.bookings || [];
+  )
+  const query = useChannexQuery(request, 'bookings')
+  const rows = query.data?.bookings || []
   return (
     <section
       className="channex-data-view"
@@ -384,9 +343,7 @@ export function BookingsView({ account, property }) {
                     </td>
                     <td>
                       {row.createdAt ? (
-                        <time dateTime={row.createdAt}>
-                          {formatDateTime(row.createdAt)}
-                        </time>
+                        <time dateTime={row.createdAt}>{formatDateTime(row.createdAt)}</time>
                       ) : (
                         '—'
                       )}
@@ -406,34 +363,33 @@ export function BookingsView({ account, property }) {
         loading={query.loading}
       />
     </section>
-  );
+  )
 }
 
 export function InventoryView({ account, property }) {
-  useI18n();
-  const { getChannexInventory } = usePms();
+  useI18n()
+  const { getChannexInventory } = usePms()
   const [range, setRange] = useState(() => {
-    const start = channexToday(property.timezone);
-    return { start, end: addDays(start, 6) };
-  });
+    const start = channexToday(property.timezone)
+    return { start, end: addDays(start, 6) }
+  })
   const [draft, setDraft] = useState(range),
-    [dateError, setDateError] = useState('');
+    [dateError, setDateError] = useState('')
   const request = useCallback(
     () => getChannexInventory(account.id, property.id, range.start, range.end),
     [getChannexInventory, account.id, property.id, range],
-  );
-  const query = useChannexQuery(request, 'dates,availability,rates');
+  )
+  const query = useChannexQuery(request, 'dates,availability,rates')
   const dates = query.data?.dates || [],
     availability = query.data?.availability || [],
-    rates = query.data?.rates || [];
+    rates = query.data?.rates || []
   function applyRange(event) {
-    event.preventDefault();
-    const error = inventoryDateError(draft.start, draft.end);
-    setDateError(error);
+    event.preventDefault()
+    const error = inventoryDateError(draft.start, draft.end)
+    setDateError(error)
     if (!error) {
-      if (range.start === draft.start && range.end === draft.end)
-        query.refresh();
-      else setRange(draft);
+      if (range.start === draft.start && range.end === draft.end) query.refresh()
+      else setRange(draft)
     }
   }
   return (
@@ -445,10 +401,7 @@ export function InventoryView({ account, property }) {
       <ViewHeading title={labelUi('Tồn phòng & giá')} query={query}>
         {labelUi('Xem tối đa 31 ngày. Dấu — là dữ liệu chưa có.')}
       </ViewHeading>
-      <form
-        className="channex-filters channex-date-filter"
-        onSubmit={applyRange}
-      >
+      <form className="channex-filters channex-date-filter" onSubmit={applyRange}>
         <label>
           {tUi('common.fromDate')}
           <DateInput
@@ -466,11 +419,7 @@ export function InventoryView({ account, property }) {
             onChange={(end) => setDraft({ ...draft, end })}
           />
         </label>
-        <button
-          type="submit"
-          className="manager-button"
-          disabled={query.loading}
-        >
+        <button type="submit" className="manager-button" disabled={query.loading}>
           {labelUi('Xem dữ liệu')}
         </button>
         {dateError && (
@@ -481,8 +430,7 @@ export function InventoryView({ account, property }) {
       </form>
       <DataState query={query} label="tồn phòng và giá">
         <p className="channex-range-label">
-          {dateLabel(range.start)} – {dateLabel(range.end)}, bao gồm ngày kết
-          thúc
+          {dateLabel(range.start)} – {dateLabel(range.end)}, bao gồm ngày kết thúc
         </p>
         <h4 className="channex-table-title">
           <BedDouble size={16} aria-hidden="true" />
@@ -516,9 +464,7 @@ export function InventoryView({ account, property }) {
             </table>
           </TableWrap>
         )}
-        <h4 className="channex-table-title">
-          {labelUi('Giá & trạng thái bán')}
-        </h4>
+        <h4 className="channex-table-title">{labelUi('Giá & trạng thái bán')}</h4>
         {!rates.length ? (
           <EmptyState title={labelUi('Chưa có dữ liệu giá')} />
         ) : (
@@ -542,12 +488,10 @@ export function InventoryView({ account, property }) {
                       <small>{plan.currency || '—'}</small>
                     </th>
                     {dates.map((date) => {
-                      const value = plan.values?.[date];
+                      const value = plan.values?.[date]
                       return (
                         <td key={date}>
-                          <strong>
-                            {channexMoney(value?.rate, plan.currency)}
-                          </strong>
+                          <strong>{channexMoney(value?.rate, plan.currency)}</strong>
                           <small>
                             {value?.stopSell == null ? (
                               '—'
@@ -555,14 +499,12 @@ export function InventoryView({ account, property }) {
                               <span
                                 className={`channex-status channex-status--${value.stopSell ? 'warning' : 'active'}`}
                               >
-                                {value.stopSell
-                                  ? labelUi('Đóng bán')
-                                  : labelUi('Đang bán')}
+                                {value.stopSell ? labelUi('Đóng bán') : labelUi('Đang bán')}
                               </span>
                             )}
                           </small>
                         </td>
-                      );
+                      )
                     })}
                   </tr>
                 ))}
@@ -572,5 +514,5 @@ export function InventoryView({ account, property }) {
         )}
       </DataState>
     </section>
-  );
+  )
 }

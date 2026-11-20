@@ -1,5 +1,5 @@
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { shortDate } from '../planCalendar';
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { shortDate } from '../planCalendar'
 
 export default function AutomaticDayPlan({
   date,
@@ -12,13 +12,10 @@ export default function AutomaticDayPlan({
   onApplyRooms,
   open,
 }) {
-  useI18n();
-  const selectedRooms = Array.isArray(configuration.roomIds);
+  useI18n()
+  const selectedRooms = Array.isArray(configuration.roomIds)
   function chooseShift(staffId, value) {
-    onChange({
-      ...configuration,
-      shifts: { ...configuration.shifts, [staffId]: value },
-    });
+    onChange({ ...configuration, shifts: { ...configuration.shifts, [staffId]: value } })
   }
   return (
     <details className="hk-auto-day" open={open || undefined}>
@@ -36,10 +33,7 @@ export default function AutomaticDayPlan({
           <select
             value={selectedRooms ? 'selected' : 'automatic'}
             onChange={(event) =>
-              onChange({
-                ...configuration,
-                roomIds: event.target.value === 'selected' ? [] : null,
-              })
+              onChange({ ...configuration, roomIds: event.target.value === 'selected' ? [] : null })
             }
           >
             <option value="automatic">{tUi('hk.autoRoomsAutomatic')}</option>
@@ -54,18 +48,12 @@ export default function AutomaticDayPlan({
                 <button
                   type="button"
                   onClick={() =>
-                    onChange({
-                      ...configuration,
-                      roomIds: rooms.map((room) => room.uuid),
-                    })
+                    onChange({ ...configuration, roomIds: rooms.map((room) => room.uuid) })
                   }
                 >
                   {tUi('hk.autoSelectAll')}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...configuration, roomIds: [] })}
-                >
+                <button type="button" onClick={() => onChange({ ...configuration, roomIds: [] })}>
                   {tUi('hk.autoClear')}
                 </button>
               </div>
@@ -81,9 +69,7 @@ export default function AutomaticDayPlan({
                         ...configuration,
                         roomIds: event.target.checked
                           ? [...configuration.roomIds, room.uuid]
-                          : configuration.roomIds.filter(
-                              (id) => id !== room.uuid,
-                            ),
+                          : configuration.roomIds.filter((id) => id !== room.uuid),
                       })
                     }
                   />
@@ -93,12 +79,8 @@ export default function AutomaticDayPlan({
                 </label>
               ))}
             </div>
-            {!rooms.length && (
-              <p className="hk-plan-hint">{tUi('hk.autoNoAvailableRooms')}</p>
-            )}
-            {configuration.roomIds.some(
-              (id) => !rooms.some((room) => room.uuid === id),
-            ) && (
+            {!rooms.length && <p className="hk-plan-hint">{tUi('hk.autoNoAvailableRooms')}</p>}
+            {configuration.roomIds.some((id) => !rooms.some((room) => room.uuid === id)) && (
               <p className="hk-plan-hint" role="status">
                 {tUi('hk.autoRoomsChanged')}
               </p>
@@ -115,24 +97,18 @@ export default function AutomaticDayPlan({
         <div className="hk-plan-fields">
           {staff.map((person) => {
             const options = shifts.filter(
-              (shift) =>
-                shift.active &&
-                shift.staffId === person.id &&
-                shift.date === date,
-            );
-            const value = configuration.shifts?.[person.id] || 'auto';
+              (shift) => shift.active && shift.staffId === person.id && shift.date === date,
+            )
+            const value = configuration.shifts?.[person.id] || 'auto'
             const missing =
-              !['auto', 'none'].includes(value) &&
-              !options.some((shift) => shift.id === value);
+              !['auto', 'none'].includes(value) && !options.some((shift) => shift.id === value)
             return (
               <label key={person.id}>
                 {person.name}
                 <select
                   disabled={loading}
                   value={value}
-                  onChange={(event) =>
-                    chooseShift(person.id, event.target.value)
-                  }
+                  onChange={(event) => chooseShift(person.id, event.target.value)}
                 >
                   <option value="auto">{tUi('hk.autoShiftAutomatic')}</option>
                   <option value="none">{tUi('hk.noShift')}</option>
@@ -143,17 +119,15 @@ export default function AutomaticDayPlan({
                   ))}
                   {missing && (
                     <option value={value}>
-                      {loading
-                        ? tUi('hk.loadingShifts')
-                        : tUi('hk.autoInvalidShift')}
+                      {loading ? tUi('hk.loadingShifts') : tUi('hk.autoInvalidShift')}
                     </option>
                   )}
                 </select>
               </label>
-            );
+            )
           })}
         </div>
       </div>
     </details>
-  );
+  )
 }

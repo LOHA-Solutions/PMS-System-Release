@@ -35,22 +35,35 @@ def hotel_summary(tenant_id):
     summary = connection_json(connection) if connection else None
     counts = {}
     for key, model in (("roomCount", PhysicalRoom), ("roomTypeCount", RoomType)):
-        counts[key] = db.session.scalar(select(func.count()).select_from(model).where(
-            model.tenant_id == tenant_id, model.active.is_(True)
-        ))
-    active, closing = db.session.execute(select(
-        func.count().filter(
-            ChannelMapping.active.is_(True),
-            ChannelMapping.pause_requested.is_(False),
-            RoomType.active.is_(True),
-        ),
-        func.count().filter(ChannelMapping.pause_requested.is_(True)),
-    ).join(RoomType, and_(
-        RoomType.tenant_id == ChannelMapping.tenant_id,
-        RoomType.id == ChannelMapping.room_type_id,
-    )).where(ChannelMapping.tenant_id == tenant_id)).one()
-    latest = db.session.scalar(select(ChannelJob).where(ChannelJob.tenant_id == tenant_id)
-        .order_by(ChannelJob.created_at.desc(), ChannelJob.id.desc()).limit(1))
+        counts[key] = db.session.scalar(
+            select(func.count())
+            .select_from(model)
+            .where(model.tenant_id == tenant_id, model.active.is_(True))
+        )
+    active, closing = db.session.execute(
+        select(
+            func.count().filter(
+                ChannelMapping.active.is_(True),
+                ChannelMapping.pause_requested.is_(False),
+                RoomType.active.is_(True),
+            ),
+            func.count().filter(ChannelMapping.pause_requested.is_(True)),
+        )
+        .join(
+            RoomType,
+            and_(
+                RoomType.tenant_id == ChannelMapping.tenant_id,
+                RoomType.id == ChannelMapping.room_type_id,
+            ),
+        )
+        .where(ChannelMapping.tenant_id == tenant_id)
+    ).one()
+    latest = db.session.scalar(
+        select(ChannelJob)
+        .where(ChannelJob.tenant_id == tenant_id)
+        .order_by(ChannelJob.created_at.desc(), ChannelJob.id.desc())
+        .limit(1)
+    )
     return {
         "tenantId": tenant.id,
         "name": tenant.name,
@@ -60,17 +73,28 @@ def hotel_summary(tenant_id):
         "mappingCount": active,
         "closingCount": closing,
         "connection": {
-            key: summary[key] for key in (
-                "environment", "propertyId", "active", "credentialsConfigured",
-                "credentialError", "credentialSource", "verifiedAt", "webhookRegistered",
+            key: summary[key]
+            for key in (
+                "environment",
+                "propertyId",
+                "active",
+                "credentialsConfigured",
+                "credentialError",
+                "credentialSource",
+                "verifiedAt",
+                "webhookRegistered",
             )
-        } if summary else None,
+        }
+        if summary
+        else None,
         "latestJob": {
             "kind": latest.kind,
             "status": latest.status,
             "errorCode": latest.error_code,
             "createdAt": latest.created_at.isoformat(),
-        } if latest else None,
+        }
+        if latest
+        else None,
     }
 
 
@@ -78,10 +102,13 @@ class ChannexView(CommonMethodView):
     @staticmethod
     @require_system()
     def dispatch_request():
-        return {"hotels": [
-            summary for row in support_hotels()
-            if (summary := hotel_summary(row.tenant_id)) is not None
-        ]}
+        return {
+            "hotels": [
+                summary
+                for row in support_hotels()
+                if (summary := hotel_summary(row.tenant_id)) is not None
+            ]
+        }
 
 
 class ChannelSupportWorkspaceView(CommonMethodView):

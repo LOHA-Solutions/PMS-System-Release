@@ -11,9 +11,16 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("channel_mappings", sa.Column("inbound_rate_plan_ids", JSONB, nullable=False, server_default="[]"))
-    op.add_column("channel_revisions", sa.Column("money_snapshot", JSONB, nullable=False, server_default="{}"))
-    op.alter_column("commission_settlements", "percent", existing_type=sa.Numeric(7, 4), nullable=True)
+    op.add_column(
+        "channel_mappings",
+        sa.Column("inbound_rate_plan_ids", JSONB, nullable=False, server_default="[]"),
+    )
+    op.add_column(
+        "channel_revisions", sa.Column("money_snapshot", JSONB, nullable=False, server_default="{}")
+    )
+    op.alter_column(
+        "commission_settlements", "percent", existing_type=sa.Numeric(7, 4), nullable=True
+    )
 
 
 def downgrade():
@@ -31,6 +38,8 @@ def downgrade():
         PERFORM set_config('app.is_system',previous_system,true);
         PERFORM set_config('app.is_service',previous_service,true);
     END $$""")
-    op.alter_column("commission_settlements", "percent", existing_type=sa.Numeric(7, 4), nullable=False)
+    op.alter_column(
+        "commission_settlements", "percent", existing_type=sa.Numeric(7, 4), nullable=False
+    )
     op.drop_column("channel_revisions", "money_snapshot")
     op.drop_column("channel_mappings", "inbound_rate_plan_ids")

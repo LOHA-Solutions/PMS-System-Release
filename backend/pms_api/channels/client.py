@@ -139,9 +139,7 @@ class ChannexClient:
                 failure_type = "connection"
             else:
                 failure_type = "transport"
-            raise ProviderError(
-                "provider_unavailable", True, failure_type=failure_type
-            ) from None
+            raise ProviderError("provider_unavailable", True, failure_type=failure_type) from None
         except (ValueError, UnicodeDecodeError, RecursionError):
             raise ProviderError("provider_invalid_response") from None
 
@@ -367,7 +365,8 @@ class ChannexClient:
 
     def restrictions(self, property_id, start, end):
         result = self._request(
-            "GET", "/restrictions",
+            "GET",
+            "/restrictions",
             query={
                 "filter[property_id]": remote_id(property_id),
                 "filter[date][gte]": start,
@@ -380,10 +379,15 @@ class ChannexClient:
         return result["data"]
 
     def availability(self, property_id, start, end):
-        result = self._request("GET", "/availability", query={
-            "filter[property_id]": remote_id(property_id),
-            "filter[date][gte]": start, "filter[date][lte]": end,
-        })
+        result = self._request(
+            "GET",
+            "/availability",
+            query={
+                "filter[property_id]": remote_id(property_id),
+                "filter[date][gte]": start,
+                "filter[date][lte]": end,
+            },
+        )
         if not isinstance(result.get("data"), dict):
             raise ProviderError("provider_invalid_response")
         return result["data"]

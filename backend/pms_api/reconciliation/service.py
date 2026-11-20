@@ -13,7 +13,7 @@ def day_window(value, timezone, now):
         if not isinstance(value, str) or len(value) != 10:
             raise ValueError
         day = date.fromisoformat(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         raise ApiError(422, "invalid_dates", "Chọn ngày đối soát hợp lệ.") from None
     zone = ZoneInfo(timezone)
     if day > now.astimezone(zone).date():

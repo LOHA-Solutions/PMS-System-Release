@@ -204,6 +204,44 @@
 .hk-plan-page fieldset:disabled :is(input, select, textarea) {
   opacity: 0.7;
 }
+.hk-plan-queues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 12px;
+}
+.hk-plan-page .hk-plan-queues button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.hk-plan-page .hk-plan-queues button[aria-pressed='true'] {
+  color: var(--accent-primary);
+  background: #eaf4fc;
+  border-color: var(--accent-primary);
+  font-weight: 600;
+}
+.hk-plan-queues .hk-queue-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bg-main);
+  font-size: 11px;
+  text-align: center;
+}
+.hk-plan-page .hk-queue-hint {
+  margin: 0;
+  padding: 0 16px 10px;
+}
+.hk-calendar-task > .hk-task-priority {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #fff1e6;
+  color: #9a3412;
+  font-weight: 600;
+}
 .hk-plan-legend {
   display: flex;
   align-items: center;
@@ -687,6 +725,10 @@
   .hk-plan-filters > label {
     max-width: none;
   }
+  .hk-plan-queues,
+  .hk-plan-page .hk-queue-hint {
+    padding-inline: 12px;
+  }
   .hk-plan-page .hk-calendar tr > th:first-child {
     width: 150px;
   }
@@ -722,6 +764,9 @@
   }
   .hk-plan-page button.hk-calendar-add {
     min-height: 36px;
+  }
+  .hk-plan-page .hk-plan-queues button {
+    min-height: 42px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

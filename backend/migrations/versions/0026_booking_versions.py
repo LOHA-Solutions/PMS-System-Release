@@ -10,7 +10,9 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("reservations", sa.Column("version", sa.Integer(), nullable=False, server_default="1"))
+    op.add_column(
+        "reservations", sa.Column("version", sa.Integer(), nullable=False, server_default="1")
+    )
     op.create_check_constraint("ck_reservations_positive_version", "reservations", "version > 0")
     op.execute("""CREATE FUNCTION pms_booking_version() RETURNS trigger
         LANGUAGE plpgsql AS $$ BEGIN

@@ -1,6 +1,8 @@
-import { formatDate, formatDateTime } from '../../../shared/lib/date.js';
-import DateInput from '../../../shared/components/DateInput.jsx';
-import { useEffect, useRef, useState } from 'react';
+import { formatDate, formatDateTime, parseIsoDate } from '../../../shared/lib/date.js'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { workflowLink } from './workflowNavigation.js'
+import DateInput from '../../../shared/components/DateInput.jsx'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -18,192 +20,219 @@ import {
   RefreshCw,
   UserRound,
   Wallet,
-} from 'lucide-react';
-import { usePms } from '../data/usePms';
-import { createIntentJournal } from '../data/api';
-import { today, money } from '../data/model';
-import { useI18n } from '../../../shared/i18n/useI18n';
-import FormDialog from '../components/FormDialog';
-import './DayReconciliation.css';
-import NightAuditPanel from './NightAuditPanel';
+} from 'lucide-react'
+import { usePms } from '../data/usePms'
+import { createIntentJournal } from '../data/api'
+import { addDays, today, money } from '../data/model'
+import { useI18n } from '../../../shared/i18n/useI18n'
+import FormDialog from '../components/FormDialog'
+import './DayReconciliation.css'
+import NightAuditPanel from './NightAuditPanel'
 
 const intentStorage = () => {
   try {
-    return sessionStorage;
+    return sessionStorage
   } catch {
-    return undefined;
+    return undefined
   }
-};
+}
 
 export default function DayReconciliation() {
-  const { t } = useI18n();
-  const {
-    settings,
-    tenantId,
-    user,
-    authGeneration,
-    requestTenant,
-    access,
-    workspaceRevision,
-  } = usePms();
-  const [day, setDay] = useState(() => today(settings.timezone));
-  const [dayValid, setDayValid] = useState(true);
+  const { t } = useI18n()
+  const { settings, tenantId, user, authGeneration, requestTenant, access, workspaceRevision } =
+    usePms()
+  const [params, setParams] = useSearchParams()
+  const day = params.get('date') ?? today(settings.timezone)
+  const [dayValid, setDayValid] = useState(true)
   const [previewResult, setPreviewResult] = useState(null),
-    [historyResult, setHistoryResult] = useState(null);
+    [historyResult, setHistoryResult] = useState(null)
   const [actionError, setActionError] = useState(''),
     [stalePreview, setStalePreview] = useState(false),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false)
   const [revision, setRevision] = useState(0),
-    [page, setPage] = useState(1);
+    [page, setPage] = useState(1)
   const [dialog, setDialog] = useState(false),
     [note, setNote] = useState(''),
-    [acknowledged, setAcknowledged] = useState(false);
+    [acknowledged, setAcknowledged] = useState(false)
   const [dialogError, setDialogError] = useState(''),
     [notice, setNotice] = useState(''),
-    [selectedRecord, setSelectedRecord] = useState(null);
-  const [historyRevision, setHistoryRevision] = useState(0);
-  const [journal] = useState(() => createIntentJournal(intentStorage()));
+    [selectedRecord, setSelectedRecord] = useState(null)
+  const [historyRevision, setHistoryRevision] = useState(0),
+    [auditSummary, setAuditSummary] = useState(null)
+  const [journal] = useState(() => createIntentJournal(intentStorage()))
   const inFlight = useRef(false),
-    current = useRef(null);
-  const scope = `${tenantId}:${user?.id}:${authGeneration}`;
-  const maxDay = today(settings.timezone);
-  const valid = dayValid && /^\d{4}-\d{2}-\d{2}$/.test(day) && day <= maxDay;
-  const canConfirm = access('reconciliation.confirm').allowed;
-  const previewKey = JSON.stringify([scope, day, revision, workspaceRevision]);
-  const historyKey = JSON.stringify([previewKey, page, historyRevision]);
-  const preview =
-    !stalePreview && previewResult?.key === previewKey
-      ? previewResult.data
-      : null;
-  const history = historyResult?.key === historyKey ? historyResult.data : null;
-  const error =
-    actionError ||
-    (previewResult?.key === previewKey ? previewResult.error : '');
-  const historyError =
-    historyResult?.key === historyKey ? historyResult.error : '';
-  const loading = valid && previewResult?.key !== previewKey;
+    current = useRef(null)
+  const scope = `${tenantId}:${user?.id}:${authGeneration}`
+  const maxDay = today(settings.timezone)
+  const valid =
+    dayValid && Number.isFinite(parseIsoDate(day)) && day >= '0001-01-01' && day <= maxDay
+  const canConfirm = access('reconciliation.confirm').allowed
+  const previewKey = JSON.stringify([scope, day, revision, workspaceRevision])
+  const historyKey = JSON.stringify([previewKey, page, historyRevision])
+  const preview = !stalePreview && previewResult?.key === previewKey ? previewResult.data : null
+  const history = historyResult?.key === historyKey ? historyResult.data : null
+  const error = actionError || (previewResult?.key === previewKey ? previewResult.error : '')
+  const historyError = historyResult?.key === historyKey ? historyResult.error : ''
+  const loading = valid && previewResult?.key !== previewKey
   const savedView =
-    selectedRecord?.scope === scope && selectedRecord?.day === day
-      ? selectedRecord.record
-      : null;
+    selectedRecord?.scope === scope && selectedRecord?.day === day ? selectedRecord.record : null
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
     if (valid)
       requestTenant(`/reconciliation?date=${encodeURIComponent(day)}`)
         .then((data) => {
-          if (mounted) setPreviewResult({ key: previewKey, data, error: '' });
+          if (mounted) setPreviewResult({ key: previewKey, data, error: '' })
         })
         .catch((err) => {
-          if (mounted)
-            setPreviewResult({
-              key: previewKey,
-              data: null,
-              error: err.message,
-            });
-        });
+          if (mounted) setPreviewResult({ key: previewKey, data: null, error: err.message })
+        })
     return () => {
-      mounted = false;
-    };
-  }, [requestTenant, previewKey, day, valid]);
+      mounted = false
+    }
+  }, [requestTenant, previewKey, day, valid])
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
     if (valid)
       requestTenant(
         `/reconciliation/history?${new URLSearchParams({ date: day, page, pageSize: 10 })}`,
       )
         .then((data) => {
-          if (mounted) setHistoryResult({ key: historyKey, data, error: '' });
+          if (mounted) setHistoryResult({ key: historyKey, data, error: '' })
         })
         .catch((err) => {
-          if (mounted)
-            setHistoryResult({
-              key: historyKey,
-              data: null,
-              error: err.message,
-            });
-        });
+          if (mounted) setHistoryResult({ key: historyKey, data: null, error: err.message })
+        })
     return () => {
-      mounted = false;
-    };
-  }, [requestTenant, historyKey, day, valid, page]);
+      mounted = false
+    }
+  }, [requestTenant, historyKey, day, valid, page])
 
   useEffect(() => {
-    current.current = { scope, requestTenant };
+    current.current = { scope, requestTenant }
     return () => {
-      current.current = { scope: null };
-    };
-  }, [scope, requestTenant]);
+      current.current = { scope: null }
+    }
+  }, [scope, requestTenant])
 
   function changeDay(value) {
-    setDay(value);
-    setPage(1);
-    setNotice('');
-    setNote('');
-    setSelectedRecord(null);
-    setActionError('');
-    setStalePreview(false);
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        next.set('date', value)
+        return next
+      },
+      { replace: true },
+    )
+    setPage(1)
+    setNotice('')
+    setNote('')
+    setSelectedRecord(null)
+    setActionError('')
+    setStalePreview(false)
   }
   function reload() {
-    setNotice('');
-    setActionError('');
-    setStalePreview(false);
-    setSelectedRecord(null);
-    setRevision((value) => value + 1);
+    setNotice('')
+    setActionError('')
+    setStalePreview(false)
+    setSelectedRecord(null)
+    setRevision((value) => value + 1)
   }
   function openConfirmation() {
-    setAcknowledged(false);
-    setDialogError('');
-    setDialog(true);
+    setAcknowledged(false)
+    setDialogError('')
+    setDialog(true)
   }
   async function confirm(event) {
-    event.preventDefault();
-    if (inFlight.current || !valid || !preview || !acknowledged || !canConfirm)
-      return;
-    inFlight.current = true;
-    setBusy(true);
-    setDialogError('');
-    const operationScope = scope;
-    const body = { date: day, previewToken: preview.previewToken, note };
-    const path = `/api/tenants/${encodeURIComponent(tenantId)}/reconciliation/confirm`;
+    event.preventDefault()
+    if (inFlight.current || !valid || !preview || !acknowledged || !canConfirm) return
+    inFlight.current = true
+    setBusy(true)
+    setDialogError('')
+    const operationScope = scope
+    const body = { date: day, previewToken: preview.previewToken, note }
+    const path = `/api/tenants/${encodeURIComponent(tenantId)}/reconciliation/confirm`
     try {
-      const intent = await journal.acquire(path, body, undefined, user?.id);
-      if (current.current.scope !== operationScope) return;
-      const result = await current.current.requestTenant(
-        '/reconciliation/confirm',
-        { method: 'POST', body, intent: intent.key },
-      );
-      journal.confirm(intent);
-      if (current.current.scope !== operationScope) return;
-      setDialog(false);
-      setNote('');
-      setNotice(t('reconciliation.saved'));
-      setSelectedRecord({ scope, day, record: result });
+      const intent = await journal.acquire(path, body, undefined, user?.id)
+      if (current.current.scope !== operationScope) return
+      const result = await current.current.requestTenant('/reconciliation/confirm', {
+        method: 'POST',
+        body,
+        intent: intent.key,
+      })
+      journal.confirm(intent)
+      if (current.current.scope !== operationScope) return
+      setDialog(false)
+      setNote('')
+      setNotice(t('reconciliation.saved'))
+      setSelectedRecord({ scope, day, record: result })
       // History changes after a confirmation; the displayed saved snapshot stays fixed.
-      setPage(1);
-      setHistoryRevision((value) => value + 1);
+      setPage(1)
+      setHistoryRevision((value) => value + 1)
     } catch (err) {
       if (current.current.scope === operationScope) {
         if (err.code === 'preview_changed') {
-          setDialog(false);
-          setStalePreview(true);
-          setActionError(err.message);
-        } else setDialogError(err.message);
+          setDialog(false)
+          setStalePreview(true)
+          setActionError(err.message)
+        } else setDialogError(err.message)
       }
     } finally {
-      inFlight.current = false;
-      if (current.current.scope === operationScope) setBusy(false);
+      inFlight.current = false
+      if (current.current.scope === operationScope) setBusy(false)
     }
   }
 
-  const data = valid ? savedView?.snapshot || preview : null;
-  const timestamp = (value, timezone = settings.timezone) =>
-    formatDateTime(value, timezone);
-  const totalPages = Math.max(
-    1,
-    Math.ceil((history?.pagination.totalItems || 0) / 10),
-  );
+  const data = valid ? savedView?.snapshot || preview : null
+  const timestamp = (value, timezone = settings.timezone) => formatDateTime(value, timezone)
+  const totalPages = Math.max(1, Math.ceil((history?.pagination.totalItems || 0) / 10))
+  // Night Audit summary comes from the panel's own preview read; ignore it unless it matches this scope and audit day.
+  const auditDay = params.get('auditDate') ?? addDays(today(settings.timezone), -1)
+  const audit = auditSummary?.scope === scope && auditSummary.day === auditDay ? auditSummary : null
+  const navBlocked = busy || dialog || Boolean(audit?.busy)
+  const stayText = loading ? 'Đang tải…' : 'Chưa có dữ liệu'
+  const auditText =
+    !audit || audit.status === 'loading'
+      ? 'Đang tải…'
+      : audit.status === 'invalid'
+        ? 'Ngày không hợp lệ'
+        : audit.status === 'error'
+          ? 'Chưa tải được'
+          : audit.locked
+            ? 'Đã chốt'
+            : `${audit.blockers} vướng mắc`
+  const summaryItems = [
+    [
+      'reconciliation-arrivals',
+      t('reconciliation.arrivals'),
+      data ? String(data.arrivals.length) : stayText,
+      Boolean(data),
+      data?.arrivals.length > 0,
+    ],
+    [
+      'reconciliation-departures',
+      t('reconciliation.departures'),
+      data ? String(data.departures.length) : stayText,
+      Boolean(data),
+      data?.departures.length > 0,
+    ],
+    [
+      'night-audit',
+      `${t('nightAudit.title')} · ${formatDate(auditDay)}`,
+      auditText,
+      true,
+      audit?.status === 'ready' && audit.blockers > 0,
+    ],
+  ]
+  function jump(event, id) {
+    event.preventDefault()
+    if (navBlocked) return
+    const target = document.getElementById(id)
+    if (!target) return
+    target.scrollIntoView?.({ block: 'start' })
+    target.focus({ preventScroll: true })
+  }
   return (
     <div className="day-reconciliation" data-i18n-ignore>
       <header className="day-reconciliation-heading">
@@ -215,10 +244,7 @@ export default function DayReconciliation() {
           <p>{t('reconciliation.intro')}</p>
         </div>
       </header>
-      <section
-        className="day-reconciliation-filter"
-        aria-label={t('reconciliation.current')}
-      >
+      <section className="day-reconciliation-filter" aria-label={t('reconciliation.current')}>
         <label htmlFor="reconciliation-date">
           {t('reconciliation.date')}
           <DateInput
@@ -240,11 +266,7 @@ export default function DayReconciliation() {
             <strong>{settings.timezone}</strong>
           </p>
         </div>
-        <button
-          type="button"
-          disabled={loading || busy || dialog || !valid}
-          onClick={reload}
-        >
+        <button type="button" disabled={loading || busy || dialog || !valid} onClick={reload}>
           <RefreshCw size={16} aria-hidden="true" />
           {t('reconciliation.reload')}
         </button>
@@ -253,12 +275,34 @@ export default function DayReconciliation() {
           <span>{t('reconciliation.boundary')}</span>
         </p>
       </section>
+      <nav className="day-reconciliation-summary" aria-labelledby="reconciliation-summary-heading">
+        <h2 id="reconciliation-summary-heading">Cần xử lý</h2>
+        <ul>
+          {summaryItems.map(([id, label, value, available, attention]) => (
+            <li key={id}>
+              {available ? (
+                <a
+                  className={`day-reconciliation-summary-item${attention ? ' is-attention' : ''}`}
+                  href={`#${id}`}
+                  data-summary={id}
+                  aria-disabled={navBlocked || undefined}
+                  onClick={(event) => jump(event, id)}
+                >
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </a>
+              ) : (
+                <span className="day-reconciliation-summary-item is-unavailable" data-summary={id}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </nav>
       {!valid && (
-        <p
-          id="reconciliation-date-error"
-          className="day-reconciliation-error"
-          role="alert"
-        >
+        <p id="reconciliation-date-error" className="day-reconciliation-error" role="alert">
           {t('reconciliation.invalidDate')}
         </p>
       )}
@@ -286,22 +330,14 @@ export default function DayReconciliation() {
         <>
           <section
             className="day-reconciliation-overview"
-            aria-label={
-              savedView
-                ? t('reconciliation.savedView')
-                : t('reconciliation.current')
-            }
+            aria-label={savedView ? t('reconciliation.savedView') : t('reconciliation.current')}
           >
             <div className="day-reconciliation-snapshot">
               <div>
                 <h2>
-                  <span
-                    className={`day-reconciliation-status${savedView ? ' is-saved' : ''}`}
-                  >
+                  <span className={`day-reconciliation-status${savedView ? ' is-saved' : ''}`}>
                     <span aria-hidden="true" />
-                    {savedView
-                      ? t('reconciliation.savedView')
-                      : t('reconciliation.current')}
+                    {savedView ? t('reconciliation.savedView') : t('reconciliation.current')}
                   </span>
                 </h2>
                 <p>
@@ -311,24 +347,17 @@ export default function DayReconciliation() {
                 {savedView && (
                   <p>
                     {t('reconciliation.by')}: <span>{savedView.actor}</span> ·{' '}
-                    {t('reconciliation.savedAt')}:{' '}
-                    {timestamp(savedView.createdAt, data.timezone)}
+                    {t('reconciliation.savedAt')}: {timestamp(savedView.createdAt, data.timezone)}
                   </p>
                 )}
               </div>
               {savedView ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setSelectedRecord(null)}
-                >
+                <button type="button" disabled={busy} onClick={() => setSelectedRecord(null)}>
                   <RefreshCw size={15} aria-hidden="true" />
                   {t('reconciliation.backToPreview')}
                 </button>
               ) : (
-                <span className="day-reconciliation-currency">
-                  {data.currency}
-                </span>
+                <span className="day-reconciliation-currency">{data.currency}</span>
               )}
             </div>
             {savedView && (
@@ -342,21 +371,10 @@ export default function DayReconciliation() {
                 </div>
               </div>
             )}
-            <div
-              className="day-reconciliation-cards"
-              aria-label={t('reconciliation.cashNote')}
-            >
+            <div className="day-reconciliation-cards" aria-label={t('reconciliation.cashNote')}>
               {[
-                {
-                  key: 'receipts',
-                  amount: data.summary.cashReceived,
-                  Icon: ArrowDownLeft,
-                },
-                {
-                  key: 'refunds',
-                  amount: data.summary.cashRefunded,
-                  Icon: ArrowUpRight,
-                },
+                { key: 'receipts', amount: data.summary.cashReceived, Icon: ArrowDownLeft },
+                { key: 'refunds', amount: data.summary.cashRefunded, Icon: ArrowUpRight },
                 { key: 'net', amount: data.summary.netReceipts, Icon: Wallet },
               ].map(({ key, amount, Icon }) => (
                 <div className={`day-reconciliation-card is-${key}`} key={key}>
@@ -380,11 +398,13 @@ export default function DayReconciliation() {
               title={t('reconciliation.arrivals')}
               rows={data.arrivals}
               kind="arrivals"
+              blocked={busy || dialog}
             />
             <StayList
               title={t('reconciliation.departures')}
               rows={data.departures}
               kind="departures"
+              blocked={busy || dialog}
             />
           </div>
           <p className="day-reconciliation-help day-reconciliation-stays-note">
@@ -399,9 +419,7 @@ export default function DayReconciliation() {
               <span className="day-reconciliation-section-icon">
                 <Wallet size={19} aria-hidden="true" />
               </span>
-              <h2 id="reconciliation-funds-heading">
-                {t('reconciliation.funds')}
-              </h2>
+              <h2 id="reconciliation-funds-heading">{t('reconciliation.funds')}</h2>
             </div>
             <div className="day-reconciliation-fund-list">
               {data.funds.length ? (
@@ -411,9 +429,7 @@ export default function DayReconciliation() {
                     key={`${fund.fundId}:${fund.currency}`}
                   >
                     <div className="day-reconciliation-fund-name">
-                      <span className="day-reconciliation-currency">
-                        {fund.currency}
-                      </span>
+                      <span className="day-reconciliation-currency">{fund.currency}</span>
                       <h3>{fund.fund}</h3>
                     </div>
                     <dl>
@@ -451,9 +467,7 @@ export default function DayReconciliation() {
               <div>
                 <h3>{t('reconciliation.confirmTitle')}</h3>
                 <p className="day-reconciliation-help">
-                  {canConfirm
-                    ? t('reconciliation.confirmHelp')
-                    : t('reconciliation.readOnly')}
+                  {canConfirm ? t('reconciliation.confirmHelp') : t('reconciliation.readOnly')}
                 </p>
               </div>
               <button
@@ -478,9 +492,7 @@ export default function DayReconciliation() {
             <span className="day-reconciliation-section-icon">
               <History size={19} aria-hidden="true" />
             </span>
-            <h2 id="reconciliation-history-heading">
-              {t('reconciliation.history')}
-            </h2>
+            <h2 id="reconciliation-history-heading">{t('reconciliation.history')}</h2>
           </div>
           {historyError && (
             <div className="day-reconciliation-error" role="alert">
@@ -527,8 +539,8 @@ export default function DayReconciliation() {
                 disabled={busy || dialog}
                 aria-pressed={savedView?.id === record.id}
                 onClick={() => {
-                  setSelectedRecord({ scope, day, record });
-                  setNotice('');
+                  setSelectedRecord({ scope, day, record })
+                  setNotice('')
                 }}
               >
                 {t('reconciliation.view')}
@@ -537,10 +549,7 @@ export default function DayReconciliation() {
             </article>
           ))}
           {totalPages > 1 && (
-            <nav
-              className="day-reconciliation-pagination"
-              aria-label={t('reconciliation.history')}
-            >
+            <nav className="day-reconciliation-pagination" aria-label={t('reconciliation.history')}>
               <button
                 type="button"
                 disabled={page === 1 || !history || busy}
@@ -569,11 +578,7 @@ export default function DayReconciliation() {
           error={dialogError}
           onClose={() => setDialog(false)}
         >
-          <form
-            className="day-reconciliation-dialog"
-            onSubmit={confirm}
-            data-i18n-ignore
-          >
+          <form className="day-reconciliation-dialog" onSubmit={confirm} data-i18n-ignore>
             <p>{t('reconciliation.confirmHelp')}</p>
             <dl>
               <div>
@@ -598,10 +603,7 @@ export default function DayReconciliation() {
                 aria-describedby="reconciliation-note-hint"
               />
             </label>
-            <p
-              id="reconciliation-note-hint"
-              className="day-reconciliation-help"
-            >
+            <p id="reconciliation-note-hint" className="day-reconciliation-help">
               {t('reconciliation.noteHint')}
             </p>
             <label className="day-reconciliation-ack">
@@ -615,36 +617,30 @@ export default function DayReconciliation() {
               <span>{t('reconciliation.acknowledge')}</span>
             </label>
             <div className="day-reconciliation-dialog-actions">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setDialog(false)}
-              >
+              <button type="button" disabled={busy} onClick={() => setDialog(false)}>
                 {t('reconciliation.cancel')}
               </button>
-              <button
-                type="submit"
-                className="is-primary"
-                disabled={busy || !acknowledged}
-              >
-                {busy
-                  ? t('reconciliation.saving')
-                  : t('reconciliation.confirm')}
+              <button type="submit" className="is-primary" disabled={busy || !acknowledged}>
+                {busy ? t('reconciliation.saving') : t('reconciliation.confirm')}
               </button>
             </div>
           </form>
         </FormDialog>
       )}
-      <NightAuditPanel />
+      <NightAuditPanel onSummary={setAuditSummary} />
     </div>
-  );
+  )
 }
 
-function StayList({ title, rows, kind }) {
-  const { t } = useI18n();
-  const Icon = kind === 'arrivals' ? LogIn : LogOut;
+function StayList({ title, rows, kind, blocked }) {
+  const { t } = useI18n()
+  const pms = usePms(),
+    location = useLocation()
+  const Icon = kind === 'arrivals' ? LogIn : LogOut
   return (
     <section
+      id={`reconciliation-${kind}`}
+      tabIndex={-1}
       className={`day-reconciliation-section day-reconciliation-stay-section is-${kind}`}
     >
       <div className="day-reconciliation-section-heading">
@@ -667,6 +663,24 @@ function StayList({ title, rows, kind }) {
                   <small>
                     {t('reconciliation.booking')}: {row.id}
                   </small>
+                  {!blocked && (
+                    <Link
+                      {...workflowLink(
+                        '/id/reservations?' +
+                          new URLSearchParams({
+                            booking: row.id,
+                            ...(kind === 'departures' ? { tab: 'payments' } : {}),
+                          }),
+                        row.id,
+                        pms,
+                        location,
+                      )}
+                    >
+                      {kind === 'departures'
+                        ? 'Mở thanh toán / trả phòng'
+                        : 'Mở booking / nhận phòng'}
+                    </Link>
+                  )}
                 </div>
               </div>
               <dl>
@@ -700,5 +714,5 @@ function StayList({ title, rows, kind }) {
         </div>
       )}
     </section>
-  );
+  )
 }

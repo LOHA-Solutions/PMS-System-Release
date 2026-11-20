@@ -1,53 +1,58 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { CalendarDays, Save, Users } from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { money } from '../../data/model';
-import { quantityText } from '../../inventory/values';
-import PricingManagement from './PricingManagement';
-import '../../components/DomainForms.css';
-import '../RatesInventory.css';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { Save, Users } from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { money } from '../../data/model'
+import { quantityText } from '../../inventory/values'
+import PricingManagement from './PricingManagement'
+import '../../components/DomainForms.css'
+import '../RatesInventory.css'
+import RateModeNav from '../components/RateModeNav.jsx'
+import { rateTypeIssue, rateTypeStatus, useRateView } from '../rateModes.js'
 
 export default function Rates() {
-  useI18n();
-  const { roomTypes, rooms, saveMaster, access, settings } = usePms();
-  const { tab } = useParams();
+  useI18n()
+  const { roomTypes, rooms, saveMaster, access, settings } = usePms()
+  const { tab } = useParams()
+  const view = useRateView({ timezone: settings.timezone, defaultNights: 7 })
+  const typeIssue = rateTypeIssue(rateTypeStatus(roomTypes, view.typeId))
   const [prices, setPrices] = useState({}),
     [busy, setBusy] = useState(''),
     [error, setError] = useState(''),
-    [message, setMessage] = useState('');
-  const writable = access('settings.write', 'ARI_MANAGEMENT', true).allowed;
-  const activeTypes = roomTypes.filter((type) => type.active !== false);
+    [message, setMessage] = useState('')
+  const writable = access('settings.write', 'ARI_MANAGEMENT', true).allowed
+  const activeTypes = roomTypes.filter(
+    (type) => type.active !== false && (!view.typeId || type.id === view.typeId),
+  )
   async function save(event, type) {
-    event.preventDefault();
-    if (busy || !writable) return;
-    setBusy(type.id);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (busy || !writable) return
+    setBusy(type.id)
+    setError('')
+    setMessage('')
     try {
-      await saveMaster('roomTypes', {
-        ...type,
-        price: decimalInput(prices[type.id] ?? type.price),
-      });
+      await saveMaster('roomTypes', { ...type, price: decimalInput(prices[type.id] ?? type.price) })
       setPrices((old) => {
-        const next = { ...old };
-        delete next[type.id];
-        return next;
-      });
-      setMessage(`Đã lưu giá cơ bản của ${type.name}.`);
+        const next = { ...old }
+        delete next[type.id]
+        return next
+      })
+      setMessage(`Đã lưu giá cơ bản của ${type.name}.`)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy('');
+      setBusy('')
     }
   }
-  if (tab === 'advanced') return <PricingManagement catalog="rules" />;
+  if (tab === 'advanced')
+    return (
+      <>
+        <RateModeNav current="advanced" busy={Boolean(busy)} />
+        <PricingManagement catalog="rules" />
+      </>
+    )
   return (
     <div className="pms-domain-page pms-rates-page">
       <header className="domain-toolbar rates-page-heading">
@@ -56,15 +61,19 @@ export default function Rates() {
           <h1>{tUi('nav.basicRates')}</h1>
           <p>{labelUi('Quản lý giá niêm yết mỗi đêm theo loại phòng.')}</p>
         </div>
-        <Link className="rates-link-button" to="/id/matrix-rate">
-          <CalendarDays size={16} aria-hidden="true" />{' '}
-          {labelUi('Xem giá theo ngày')}
-        </Link>
       </header>
+      <RateModeNav current="base" busy={Boolean(busy)} />
+      {typeIssue && (
+        <p role="alert" className="domain-error">
+          {typeIssue}{' '}
+          <button type="button" onClick={() => view.update({ typeId: '' })}>
+            Xem mọi loại phòng
+          </button>
+        </p>
+      )}
       <div className="rates-summary">
         <span>
-          <strong>{activeTypes.length}</strong>{' '}
-          {labelUi('loại phòng đang hoạt động')}
+          <strong>{activeTypes.length}</strong> {labelUi('loại phòng đang hoạt động')}
         </span>
         <span>
           {labelUi('Đơn vị giá:')} <strong>{settings.currency}</strong>
@@ -91,11 +100,7 @@ export default function Rates() {
         <div className="rates-section-heading">
           <div>
             <h2>{labelUi('Giá niêm yết theo loại phòng')}</h2>
-            <p>
-              {labelUi(
-                'Giá từng ngày và quy tắc nâng cao được xét khi báo giá.',
-              )}
-            </p>
+            <p>{labelUi('Giá từng ngày và quy tắc nâng cao được xét khi báo giá.')}</p>
           </div>
           <span className="rates-badge">{labelUi('Giá / đêm')}</span>
         </div>
@@ -116,28 +121,20 @@ export default function Rates() {
                     <strong>{type.name}</strong>
                     <small className="rates-muted">
                       {
-                        rooms.filter(
-                          (room) =>
-                            room.active !== false && room.typeId === type.id,
-                        ).length
+                        rooms.filter((room) => room.active !== false && room.typeId === type.id)
+                          .length
                       }{' '}
                       {tUi('common.roomsLower')}
                     </small>
                   </th>
                   <td>
                     <span className="rates-capacity">
-                      <Users size={14} aria-hidden="true" /> {type.capacity}{' '}
-                      người
+                      <Users size={14} aria-hidden="true" /> {type.capacity} người
                     </span>
                   </td>
-                  <td className="rates-price">
-                    {money(type.price, settings.currency)}
-                  </td>
+                  <td className="rates-price">{money(type.price, settings.currency)}</td>
                   <td>
-                    <form
-                      className="rates-inline-price"
-                      onSubmit={(event) => save(event, type)}
-                    >
+                    <form className="rates-inline-price" onSubmit={(event) => save(event, type)}>
                       <input
                         aria-label={`Giá ${type.name}`}
                         required
@@ -148,25 +145,16 @@ export default function Rates() {
                         disabled={!writable || Boolean(busy)}
                         value={prices[type.id] ?? quantityText(type.price)}
                         onChange={(event) =>
-                          setPrices((old) => ({
-                            ...old,
-                            [type.id]: event.target.value,
-                          }))
+                          setPrices((old) => ({ ...old, [type.id]: event.target.value }))
                         }
                       />
                       <button
                         className="rates-icon-button"
                         type="submit"
-                        disabled={
-                          !writable ||
-                          Boolean(busy) ||
-                          prices[type.id] === undefined
-                        }
+                        disabled={!writable || Boolean(busy) || prices[type.id] === undefined}
                       >
                         <Save size={15} aria-hidden="true" />{' '}
-                        {busy === type.id
-                          ? tUi('common.saving')
-                          : labelUi('Lưu giá')}
+                        {busy === type.id ? tUi('common.saving') : labelUi('Lưu giá')}
                       </button>
                     </form>
                   </td>
@@ -185,11 +173,9 @@ export default function Rates() {
           </table>
         </div>
         <p className="rates-table-note">
-          {labelUi(
-            'Thay đổi áp dụng cho báo giá mới. Đặt phòng đã tạo giữ nguyên giá đã chốt.',
-          )}
+          {labelUi('Thay đổi áp dụng cho báo giá mới. Đặt phòng đã tạo giữ nguyên giá đã chốt.')}
         </p>
       </section>
     </div>
-  );
+  )
 }

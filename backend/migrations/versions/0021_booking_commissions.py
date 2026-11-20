@@ -32,10 +32,18 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("tenant_id", "id"),
         sa.UniqueConstraint("tenant_id", "reservation_id"),
-        sa.ForeignKeyConstraint(["tenant_id", "reservation_id"], ["reservations.tenant_id", "reservations.id"]),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "reservation_id"], ["reservations.tenant_id", "reservations.id"]
+        ),
         sa.CheckConstraint("percent BETWEEN 0 AND 100", name="percent"),
-        sa.CheckConstraint("room_net >= 0 AND base_room_net >= 0 AND amount >= 0 AND base_amount >= 0", name="nonnegative_amounts"),
-        sa.CheckConstraint("currency IN ('VND','USD') AND base_currency IN ('VND','USD') AND exchange_rate > 0", name="currency_snapshot"),
+        sa.CheckConstraint(
+            "room_net >= 0 AND base_room_net >= 0 AND amount >= 0 AND base_amount >= 0",
+            name="nonnegative_amounts",
+        ),
+        sa.CheckConstraint(
+            "currency IN ('VND','USD') AND base_currency IN ('VND','USD') AND exchange_rate > 0",
+            name="currency_snapshot",
+        ),
     )
     op.create_table(
         "commission_payouts",
@@ -46,8 +54,13 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("tenant_id", "id"),
         sa.UniqueConstraint("tenant_id", "cash_document_id"),
-        sa.ForeignKeyConstraint(["tenant_id", "commission_id"], ["commission_settlements.tenant_id", "commission_settlements.id"]),
-        sa.ForeignKeyConstraint(["tenant_id", "cash_document_id"], ["cash_documents.tenant_id", "cash_documents.id"]),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "commission_id"],
+            ["commission_settlements.tenant_id", "commission_settlements.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "cash_document_id"], ["cash_documents.tenant_id", "cash_documents.id"]
+        ),
     )
     for table in ("commission_settlements", "commission_payouts"):
         protect_table(table)

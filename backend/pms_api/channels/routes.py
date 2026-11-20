@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import secrets
+from uuid import UUID
 
 from flask import current_app, g, request
 from sqlalchemy import func, select
@@ -177,7 +178,7 @@ class BookingReviewsView(CommonMethodView):
     def dispatch_request(tenant_id):
         from ..admin.channex_remote import page_number, query_values
 
-        args = query_values({"page", "pageSize"})
+        args = query_values({"page", "pageSize", "reviewId"})
         page, size = page_number(args.get("page", "1")), page_number(args.get("pageSize", "25"))
         if size > 100:
             raise ApiError(422, "invalid_pagination", "Mỗi trang tối đa 100 hồ sơ cần xử lý.")
@@ -185,6 +186,12 @@ class BookingReviewsView(CommonMethodView):
             ChannelBookingReview.tenant_id == tenant_id,
             ChannelBookingReview.resolved_at.is_(None),
         )
+        if "reviewId" in args:
+            try:
+                review_id = str(UUID(args["reviewId"]))
+            except ValueError:
+                raise ApiError(422, "invalid_filter", "Mã hồ sơ đối soát không hợp lệ.") from None
+            pending = pending.where(ChannelBookingReview.id == review_id)
         count = db.session.scalar(select(func.count()).select_from(pending.subquery()))
         reviews = list(
             db.session.scalars(
@@ -284,10 +291,14 @@ def manager_source_config(tenant_id, data):
             "Chọn tài khoản hệ thống hoặc nguồn của chính khách sạn này.",
         )
     existing = connection(tenant_id)
-    if account_id in MANAGER_KEYS and not (request.endpoint or "").startswith("channels.support_") and (
-        existing is None
-        or existing.property_id != uuid_input(data["propertyId"])
-        or existing.environment != MANAGER_KEYS[account_id][0]
+    if (
+        account_id in MANAGER_KEYS
+        and not (request.endpoint or "").startswith("channels.support_")
+        and (
+            existing is None
+            or existing.property_id != uuid_input(data["propertyId"])
+            or existing.environment != MANAGER_KEYS[account_id][0]
+        )
     ):
         raise ApiError(
             403,
@@ -434,7 +445,14 @@ class SaveMappingView(CommonMethodView):
         data = payload()
         if (
             not {"roomTypeId", "channexRoomTypeId", "channexRatePlanId", "active"} <= set(data)
-            or set(data) - {"roomTypeId", "channexRoomTypeId", "channexRatePlanId", "active", "inboundRatePlanIds"}
+            or set(data)
+            - {
+                "roomTypeId",
+                "channexRoomTypeId",
+                "channexRatePlanId",
+                "active",
+                "inboundRatePlanIds",
+            }
             or not isinstance(data["active"], bool)
             or not isinstance(data["roomTypeId"], str)
         ):
@@ -458,11 +476,15 @@ class SaveMappingView(CommonMethodView):
         )
         inbound = data.get("inboundRatePlanIds", row.inbound_rate_plan_ids if row else [])
         if (
-            not isinstance(inbound, list) or len(inbound) > 99
+            not isinstance(inbound, list)
+            or len(inbound) > 99
             or any(not isinstance(identifier, str) for identifier in inbound)
-            or len(set(inbound)) != len(inbound) or remote_rate in inbound
+            or len(set(inbound)) != len(inbound)
+            or remote_rate in inbound
         ):
-            raise ApiError(422, "invalid_channel_mapping", "Danh sách gói nhận đặt phòng không hợp lệ.")
+            raise ApiError(
+                422, "invalid_channel_mapping", "Danh sách gói nhận đặt phòng không hợp lệ."
+            )
         inbound = sorted(uuid_input(identifier) for identifier in inbound)
         if len(set(inbound)) != len(inbound) or remote_rate in inbound:
             raise ApiError(422, "invalid_channel_mapping", "Danh sách gói nhận đặt phòng bị trùng.")
@@ -479,7 +501,8 @@ class SaveMappingView(CommonMethodView):
             )
         if row and row.used_at and not set(row.inbound_rate_plan_ids or []) <= set(inbound):
             raise ApiError(
-                409, "channel_mapping_has_history",
+                409,
+                "channel_mapping_has_history",
                 "Không bỏ gói nhận đặt phòng khỏi ghép nối đã sử dụng; cần giữ lịch sử đồng bộ.",
             )
         if row and row.pause_requested:
@@ -492,7 +515,11 @@ class SaveMappingView(CommonMethodView):
             return mapping_json(row)
         if row and row.active and not data["active"] and row.used_at is not None:
             if inbound_changed:
-                raise ApiError(409, "channel_mapping_has_history", "Giữ nguyên các gói đã ghép khi yêu cầu đóng bán.")
+                raise ApiError(
+                    409,
+                    "channel_mapping_has_history",
+                    "Giữ nguyên các gói đã ghép khi yêu cầu đóng bán.",
+                )
             from .service import queue_job
 
             connection(tenant_id, active=True)
@@ -500,22 +527,31 @@ class SaveMappingView(CommonMethodView):
             row.pause_requested = True
             audit("channel.pause_requested", "room_type", room_type.id)
             return mapping_json(row)
-        target_modified = row is None or target_changed or inbound_changed or (data["active"] and not row.active)
+        target_modified = (
+            row is None or target_changed or inbound_changed or (data["active"] and not row.active)
+        )
         if data["active"] or target_modified:
             if not configuration:
                 raise ApiError(409, "channel_inactive", "Thiết lập kết nối trước khi ghép gói giá.")
             from .service import validate_mapping_target
 
             try:
-                client = ChannexClient(configuration.environment, load_credentials(configuration)["apiKey"])
+                client = ChannexClient(
+                    configuration.environment, load_credentials(configuration)["apiKey"]
+                )
                 validate_mapping_target(
-                    configuration, client, remote_room, remote_rate, inbound,
+                    configuration,
+                    client,
+                    remote_room,
+                    remote_rate,
+                    inbound,
                     (g.tenant.settings or {}).get("currency", "VND"),
                 )
             except ProviderError as error:
                 raise ApiError(
                     503 if error.retryable or error.code == "credentials_unavailable" else 422,
-                    error.code, "Chưa xác minh được ghép nối. Kiểm tra khách sạn, phòng, gói giá và tiền tệ Channex.",
+                    error.code,
+                    "Chưa xác minh được ghép nối. Kiểm tra khách sạn, phòng, gói giá và tiền tệ Channex.",
                 ) from None
         if configuration and target_modified:
             invalidate_inventory(configuration)
@@ -666,10 +702,7 @@ class WebhookView(CommonMethodView):
         if request.content_length is None or request.content_length > 131072:
             raise ApiError(413, "webhook_too_large", "Webhook vượt giới hạn.")
         data = payload()
-        if (
-            not isinstance(data.get("event"), str)
-            or data.get("property_id") != row.property_id
-        ):
+        if not isinstance(data.get("event"), str) or data.get("property_id") != row.property_id:
             raise ApiError(
                 422, "invalid_channel_webhook", "Webhook không đúng khách sạn hoặc sự kiện."
             )
@@ -681,7 +714,13 @@ class WebhookView(CommonMethodView):
         if data["event"] in INCIDENT_EVENTS:
             incident = receive_incident(tenant_id, data)
             return {"accepted": True, "incidentId": incident.id}, 202
-        if data["event"] not in {"booking", "booking_new", "booking_modification", "booking_cancellation", "non_acked_booking"}:
+        if data["event"] not in {
+            "booking",
+            "booking_new",
+            "booking_modification",
+            "booking_cancellation",
+            "non_acked_booking",
+        }:
             return {"accepted": True, "ignored": True}, 202
         body = data.get("payload") or {}
         if (

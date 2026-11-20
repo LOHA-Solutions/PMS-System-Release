@@ -1,47 +1,38 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useState } from 'react';
-import { usePms } from '../../data/usePms';
-import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js';
-import { timestamp } from '../../data/presentation';
-import { useInventoryQuery } from '../../inventory/useInventoryQuery';
-import { quantityText } from '../../inventory/values';
-import '../../components/DomainForms.css';
-import '../RatesInventory.css';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useState } from 'react'
+import { usePms } from '../../data/usePms'
+import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js'
+import { timestamp } from '../../data/presentation'
+import { useInventoryQuery } from '../../inventory/useInventoryQuery'
+import { quantityText } from '../../inventory/values'
+import '../../components/DomainForms.css'
+import '../RatesInventory.css'
 
 export default function ExchangeRates() {
-  const { tenantId, user, settings } = usePms();
-  return (
-    <ExchangeEditor key={`${tenantId}:${user?.id}:${settings.currency}`} />
-  );
+  const { tenantId, user, settings } = usePms()
+  return <ExchangeEditor key={`${tenantId}:${user?.id}:${settings.currency}`} />
 }
 function ExchangeEditor() {
-  useI18n();
-  const { saveExchangeRate, settings, access } = usePms();
-  const query = useInventoryQuery('/pricing');
-  const rows = query.data?.exchangeRates || [];
-  const [currency, setCurrency] = useState(
-    settings.currency === 'VND' ? 'USD' : 'VND',
-  );
+  useI18n()
+  const { saveExchangeRate, settings, access } = usePms()
+  const query = useInventoryQuery('/pricing')
+  const rows = query.data?.exchangeRates || []
+  const [currency, setCurrency] = useState(settings.currency === 'VND' ? 'USD' : 'VND')
   const [rate, setRate] = useState(null),
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
-    [busy, setBusy] = useState(false);
-  const writable = access('settings.write', 'MULTI_CURRENCY', true).allowed;
+    [busy, setBusy] = useState(false)
+  const writable = access('settings.write', 'MULTI_CURRENCY', true).allowed
   const currentRate =
-    rate ??
-    quantityText(rows.find((row) => row.currency === currency)?.rate ?? '');
+    rate ?? quantityText(rows.find((row) => row.currency === currency)?.rate ?? '')
 
   async function save(event) {
-    event.preventDefault();
-    if (busy || !writable) return;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (busy || !writable) return
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
       await saveExchangeRate({
         currency,
@@ -50,16 +41,14 @@ function ExchangeEditor() {
           min: '0.00000001',
           max: '99999999999.99999999',
         }),
-      });
-      setRate(null);
-      query.refresh();
-      setMessage(
-        'Đã lưu tỷ giá cho giao dịch mới. Giao dịch cũ giữ tỷ giá đã chốt.',
-      );
+      })
+      setRate(null)
+      query.refresh()
+      setMessage('Đã lưu tỷ giá cho giao dịch mới. Giao dịch cũ giữ tỷ giá đã chốt.')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
@@ -69,10 +58,7 @@ function ExchangeEditor() {
         <div>
           <span className="rates-kicker">{tUi('nav.rates')}</span>
           <h1>{tUi('nav.exchangeRates')}</h1>
-          <p>
-            Quản lý quy đổi ngoại tệ sang tiền tệ cơ sở {settings.currency} của
-            khách sạn.
-          </p>
+          <p>Quản lý quy đổi ngoại tệ sang tiền tệ cơ sở {settings.currency} của khách sạn.</p>
         </div>
       </header>
       {(error || query.error) && (
@@ -96,11 +82,7 @@ function ExchangeEditor() {
         <div className="rates-section-heading">
           <div>
             <h2>{labelUi('Tỷ giá hiện tại')}</h2>
-            <p>
-              {labelUi(
-                '1 đơn vị ngoại tệ tương đương giá trị quy đổi bên dưới.',
-              )}
-            </p>
+            <p>{labelUi('1 đơn vị ngoại tệ tương đương giá trị quy đổi bên dưới.')}</p>
           </div>
           <span className="rates-badge">Cơ sở: {settings.currency}</span>
         </div>
@@ -122,10 +104,7 @@ function ExchangeEditor() {
                 <tr>
                   <td>
                     <strong>{settings.currency}</strong>
-                    <span className="rates-muted">
-                      {' '}
-                      {labelUi('· Tiền tệ cơ sở')}
-                    </span>
+                    <span className="rates-muted"> {labelUi('· Tiền tệ cơ sở')}</span>
                   </td>
                   <td>1</td>
                   <td>—</td>
@@ -141,16 +120,15 @@ function ExchangeEditor() {
                       <td>{timestamp(row.updatedAt, settings.timezone)}</td>
                     </tr>
                   ))}
-                {!query.error &&
-                  !rows.some((row) => row.currency !== settings.currency) && (
-                    <tr>
-                      <td colSpan="3" className="rates-empty">
-                        {labelUi(
-                          'Chưa cấu hình tỷ giá ngoại tệ. Thêm tỷ giá để quy đổi khi đặt phòng.',
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                {!query.error && !rows.some((row) => row.currency !== settings.currency) && (
+                  <tr>
+                    <td colSpan="3" className="rates-empty">
+                      {labelUi(
+                        'Chưa cấu hình tỷ giá ngoại tệ. Thêm tỷ giá để quy đổi khi đặt phòng.',
+                      )}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -165,19 +143,13 @@ function ExchangeEditor() {
         <div className="rates-section-heading">
           <div>
             <h2>{labelUi('Cập nhật tỷ giá')}</h2>
-            <p>
-              {labelUi(
-                'Tỷ giá mới chỉ áp dụng cho giao dịch phát sinh sau khi lưu.',
-              )}
-            </p>
+            <p>{labelUi('Tỷ giá mới chỉ áp dụng cho giao dịch phát sinh sau khi lưu.')}</p>
           </div>
         </div>
         <form onSubmit={save}>
           <fieldset
             className="rates-form-section"
-            disabled={
-              !writable || busy || query.loading || Boolean(query.error)
-            }
+            disabled={!writable || busy || query.loading || Boolean(query.error)}
           >
             <div className="rates-form-grid">
               <label>
@@ -185,13 +157,11 @@ function ExchangeEditor() {
                 <select
                   value={currency}
                   onChange={(event) => {
-                    setCurrency(event.target.value);
-                    setRate(null);
+                    setCurrency(event.target.value)
+                    setRate(null)
                   }}
                 >
-                  {HOTEL_CURRENCY_CODES.filter(
-                    (code) => code !== settings.currency,
-                  ).map((code) => (
+                  {HOTEL_CURRENCY_CODES.filter((code) => code !== settings.currency).map((code) => (
                     <option key={code}>{code}</option>
                   ))}
                 </select>
@@ -212,9 +182,7 @@ function ExchangeEditor() {
             </div>
             <div className="rates-form-actions">
               <span className="rates-muted">
-                {labelUi(
-                  'Giá trị phải lớn hơn 0. Tỷ giá của tiền tệ cơ sở luôn bằng 1.',
-                )}
+                {labelUi('Giá trị phải lớn hơn 0. Tỷ giá của tiền tệ cơ sở luôn bằng 1.')}
               </span>
               <button type="submit" className="primary">
                 {busy ? tUi('common.saving') : labelUi('Lưu tỷ giá')}
@@ -224,5 +192,5 @@ function ExchangeEditor() {
         </form>
       </section>
     </div>
-  );
+  )
 }

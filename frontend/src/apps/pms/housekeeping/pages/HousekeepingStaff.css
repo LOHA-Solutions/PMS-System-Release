@@ -113,8 +113,7 @@
 }
 .hk-staff-page :is(input, select):focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px
-    color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
 .hk-staff-page input::placeholder {
   color: var(--text-muted);

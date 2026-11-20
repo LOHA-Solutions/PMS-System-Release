@@ -1,13 +1,9 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDateTime } from '../../../../shared/lib/date.js';
-import { getIntlLocale } from '../../../../shared/i18n/store.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDateTime } from '../../../../shared/lib/date.js'
+import { getIntlLocale } from '../../../../shared/i18n/store.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -18,16 +14,13 @@ import {
   RefreshCw,
   ScrollText,
   Users,
-} from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import { money } from '../../../pms/data/model';
-import {
-  currentMonthRange,
-  dateFilterRange,
-} from '../../billing/pages/saasBillingForm';
-import { planDistribution } from '../../../../shared/config/pricingPlans';
-import OperationsPanel from '../OperationsPanel';
-import './AdminDashboard.css';
+} from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import { money } from '../../../pms/data/model'
+import { currentMonthRange, dateFilterRange } from '../../billing/pages/saasBillingForm'
+import { planDistribution } from '../../../../shared/config/pricingPlans'
+import OperationsPanel from '../OperationsPanel'
+import './AdminDashboard.css'
 
 const eventLabels = {
   'tenant.created': 'Tạo khách sạn',
@@ -49,75 +42,59 @@ const eventLabels = {
   'saas.invoice_created': 'Tạo hóa đơn dịch vụ',
   'saas.payment_recorded': 'Thu tiền dịch vụ',
   'saas.invoice_voided': 'Hủy hóa đơn dịch vụ',
-};
+}
 const displayDate = (value) =>
-  Number.isFinite(Date.parse(value))
-    ? formatDateTime(value, 'UTC') + ' UTC'
-    : 'Chưa có thời gian';
+  Number.isFinite(Date.parse(value)) ? formatDateTime(value, 'UTC') + ' UTC' : 'Chưa có thời gian'
 
 export default function AdminDashboard() {
-  const { authGeneration } = usePms();
-  return <DashboardOverview key={authGeneration} />;
+  const { authGeneration } = usePms()
+  return <DashboardOverview key={authGeneration} />
 }
 
 function DashboardOverview() {
-  useI18n();
-  const { tenants, workspace, user, getManagerOverview, listPlans } = usePms();
-  const [rangeDraft, setRangeDraft] = useState(currentMonthRange);
-  const [range, setRange] = useState(() =>
-    dateFilterRange(rangeDraft.start, rangeDraft.through),
-  );
+  useI18n()
+  const { tenants, workspace, user, getManagerOverview, listPlans } = usePms()
+  const [rangeDraft, setRangeDraft] = useState(currentMonthRange)
+  const [range, setRange] = useState(() => dateFilterRange(rangeDraft.start, rangeDraft.through))
   const [revision, setRevision] = useState(0),
-    [filterError, setFilterError] = useState('');
+    [filterError, setFilterError] = useState('')
   const [data, setData] = useState({
     range: null,
     revision: -1,
     overview: null,
     plans: [],
     error: '',
-  });
+  })
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
     Promise.all([getManagerOverview(range.start, range.end), listPlans()])
       .then(([overview, catalog]) => {
         if (!cancelled)
-          setData({
-            range,
-            revision,
-            overview,
-            plans: catalog.plans || [],
-            error: '',
-          });
+          setData({ range, revision, overview, plans: catalog.plans || [], error: '' })
       })
       .catch((error) => {
         if (!cancelled)
-          setData({
-            range,
-            revision,
-            overview: null,
-            plans: [],
-            error: error.message,
-          });
-      });
+          setData({ range, revision, overview: null, plans: [], error: error.message })
+      })
     return () => {
-      cancelled = true;
-    };
-  }, [range, revision, getManagerOverview, listPlans]);
-  const current = data.range === range && data.revision === revision;
-  const loading = !current;
-  const overview = current ? data.overview : null;
-  const applyRange = (event) => {
-    event.preventDefault();
-    setFilterError('');
-    try {
-      setRange(dateFilterRange(rangeDraft.start, rangeDraft.through));
-    } catch (error) {
-      setFilterError(error.message);
+      cancelled = true
     }
-  };
-  const recentTenants = tenants.slice(-5).reverse();
-  const recentEvents = (workspace.auditLogs || []).slice(0, 5);
+  }, [range, revision, getManagerOverview, listPlans])
+  const current = data.range === range && data.revision === revision
+  const loading = !current
+  const overview = current ? data.overview : null
+  const applyRange = (event) => {
+    event.preventDefault()
+    setFilterError('')
+    try {
+      setRange(dateFilterRange(rangeDraft.start, rangeDraft.through))
+    } catch (error) {
+      setFilterError(error.message)
+    }
+  }
+  const recentTenants = tenants.slice(-5).reverse()
+  const recentEvents = (workspace.auditLogs || []).slice(0, 5)
   const stats = overview
     ? [
         {
@@ -146,7 +123,7 @@ function DashboardOverview() {
           Icon: Users,
         },
       ]
-    : [];
+    : []
 
   return (
     <div className="manager-page dashboard-page">
@@ -154,32 +131,19 @@ function DashboardOverview() {
         <div>
           <p className="manager-eyebrow">{labelUi('Không gian điều hành')}</p>
           <h2>{tUi('manager.overview')}</h2>
-          <p>
-            {labelUi('Theo dõi khách sạn, gói dịch vụ và thanh toán phần mềm.')}
-          </p>
+          <p>{labelUi('Theo dõi khách sạn, gói dịch vụ và thanh toán phần mềm.')}</p>
         </div>
-        <Link
-          to="/manager/billing"
-          className="manager-button manager-button-primary"
-        >
-          {labelUi('Quản lý thanh toán')}{' '}
-          <ArrowUpRight size={16} aria-hidden="true" />
+        <Link to="/manager/billing" className="manager-button manager-button-primary">
+          {labelUi('Quản lý thanh toán')} <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       </div>
 
       <OperationsPanel />
 
-      <form
-        className="manager-panel dashboard-date-filters"
-        onSubmit={applyRange}
-      >
+      <form className="manager-panel dashboard-date-filters" onSubmit={applyRange}>
         <div className="dashboard-filter-copy">
           <strong>{labelUi('Kỳ báo cáo thanh toán')}</strong>
-          <p>
-            {labelUi(
-              'Theo ngày tạo hóa đơn và ngày ghi nhận khoản thu, múi giờ UTC.',
-            )}
-          </p>
+          <p>{labelUi('Theo ngày tạo hóa đơn và ngày ghi nhận khoản thu, múi giờ UTC.')}</p>
         </div>
         <div className="dashboard-filter-controls">
           <label>
@@ -187,9 +151,7 @@ function DashboardOverview() {
             <DateInput
               required
               value={rangeDraft.start}
-              onChange={(start) =>
-                setRangeDraft((previous) => ({ ...previous, start }))
-              }
+              onChange={(start) => setRangeDraft((previous) => ({ ...previous, start }))}
             />
           </label>
           <label>
@@ -198,9 +160,7 @@ function DashboardOverview() {
               required
               min={rangeDraft.start || undefined}
               value={rangeDraft.through}
-              onChange={(through) =>
-                setRangeDraft((previous) => ({ ...previous, through }))
-              }
+              onChange={(through) => setRangeDraft((previous) => ({ ...previous, through }))}
             />
           </label>
           <div className="dashboard-filter-actions">
@@ -226,11 +186,7 @@ function DashboardOverview() {
       </form>
 
       {loading ? (
-        <div
-          className="manager-panel dashboard-empty"
-          role="status"
-          aria-busy="true"
-        >
+        <div className="manager-panel dashboard-empty" role="status" aria-busy="true">
           {labelUi('Đang tải tổng quan…')}
         </div>
       ) : data.error ? (
@@ -254,9 +210,7 @@ function DashboardOverview() {
                     <span>{labelUi(label)}</span>
                     <Icon size={19} aria-hidden="true" />
                   </dt>
-                  <dd className="dashboard-stat-value">
-                    {count.toLocaleString(getIntlLocale())}
-                  </dd>
+                  <dd className="dashboard-stat-value">{count.toLocaleString(getIntlLocale())}</dd>
                   <dd className="dashboard-stat-detail">{labelUi(detail)}</dd>
                 </div>
               ))}
@@ -268,9 +222,7 @@ function DashboardOverview() {
             >
               <div className="dashboard-panel-heading">
                 <div>
-                  <h3 id="dashboard-finance-title">
-                    {labelUi('Thanh toán dịch vụ theo tiền tệ')}
-                  </h3>
+                  <h3 id="dashboard-finance-title">{labelUi('Thanh toán dịch vụ theo tiền tệ')}</h3>
                   <p>
                     {labelUi(
                       'Hóa đơn và khoản thu theo kỳ đã chọn. Công nợ hiện tại bao gồm tất cả các kỳ.',
@@ -278,8 +230,7 @@ function DashboardOverview() {
                   </p>
                 </div>
                 <Link to="/manager/billing" className="dashboard-text-link">
-                  {labelUi('Xem hóa đơn')}{' '}
-                  <ArrowUpRight size={15} aria-hidden="true" />
+                  {labelUi('Xem hóa đơn')} <ArrowUpRight size={15} aria-hidden="true" />
                 </Link>
               </div>
               <div
@@ -316,9 +267,7 @@ function DashboardOverview() {
                     ))}
                     {!overview.currencies.length && (
                       <tr>
-                        <td colSpan={5}>
-                          {labelUi('Chưa có hóa đơn hoặc khoản thu.')}
-                        </td>
+                        <td colSpan={5}>{labelUi('Chưa có hóa đơn hoặc khoản thu.')}</td>
                       </tr>
                     )}
                   </tbody>
@@ -333,27 +282,20 @@ function DashboardOverview() {
               >
                 <div className="dashboard-panel-heading">
                   <div>
-                    <h3 id="dashboard-tenants-title">
-                      {labelUi('Khách sạn mới nhất')}
-                    </h3>
+                    <h3 id="dashboard-tenants-title">{labelUi('Khách sạn mới nhất')}</h3>
                     <p>{overview.tenants.total} khách sạn trong hệ thống</p>
                   </div>
                   <Building2 size={19} aria-hidden="true" />
                 </div>
                 {!recentTenants.length ? (
                   <p className="dashboard-empty" role="status">
-                    {labelUi(
-                      'Chưa có khách sạn. Mở Quản lý khách sạn để bắt đầu.',
-                    )}
+                    {labelUi('Chưa có khách sạn. Mở Quản lý khách sạn để bắt đầu.')}
                   </p>
                 ) : (
                   <ul className="dashboard-tenant-list">
                     {recentTenants.map((tenant) => (
                       <li key={tenant.id}>
-                        <span
-                          className="dashboard-tenant-avatar"
-                          aria-hidden="true"
-                        >
+                        <span className="dashboard-tenant-avatar" aria-hidden="true">
                           {tenant.name?.trim().charAt(0).toUpperCase() || 'K'}
                         </span>
                         <div className="dashboard-tenant-name">
@@ -374,16 +316,14 @@ function DashboardOverview() {
                           className="dashboard-text-link"
                           aria-label={`Gói dịch vụ của ${tenant.name}`}
                         >
-                          {tUi('header.plan')}{' '}
-                          <ArrowUpRight size={14} aria-hidden="true" />
+                          {tUi('header.plan')} <ArrowUpRight size={14} aria-hidden="true" />
                         </Link>
                       </li>
                     ))}
                   </ul>
                 )}
                 <Link to="/manager/tenants" className="dashboard-panel-footer">
-                  {labelUi('Xem tất cả khách sạn')}{' '}
-                  <ArrowRight size={16} aria-hidden="true" />
+                  {labelUi('Xem tất cả khách sạn')} <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               </section>
 
@@ -393,50 +333,42 @@ function DashboardOverview() {
               >
                 <div className="dashboard-panel-heading">
                   <div>
-                    <h3 id="dashboard-plans-title">
-                      {labelUi('Phân phối gói')}
-                    </h3>
+                    <h3 id="dashboard-plans-title">{labelUi('Phân phối gói')}</h3>
                     <p>{labelUi('Gói đang hiệu lực của khách sạn')}</p>
                   </div>
                   <Layers3 size={19} aria-hidden="true" />
                 </div>
                 <div className="dashboard-plan-content">
-                  {planDistribution(overview.plans, data.plans).map(
-                    ({ code, count, name }) => {
-                      return (
-                        <div
-                          className={`dashboard-plan-row dashboard-plan-${code.toLowerCase()}`}
-                          key={code}
-                        >
-                          <div>
-                            <span>
-                              <strong>{code}</strong>
-                              <small>{name}</small>
-                            </span>
-                            <b>
-                              {count.toLocaleString(getIntlLocale())}{' '}
-                              <small>{tUi('common.hotelLower')}</small>
-                            </b>
-                          </div>
-                          <meter
-                            min="0"
-                            max={overview.tenants.total || 1}
-                            value={count}
-                            aria-label={`${name}: ${count} trên ${overview.tenants.total} khách sạn`}
-                          >
-                            {count}/{overview.tenants.total}
-                          </meter>
+                  {planDistribution(overview.plans, data.plans).map(({ code, count, name }) => {
+                    return (
+                      <div
+                        className={`dashboard-plan-row dashboard-plan-${code.toLowerCase()}`}
+                        key={code}
+                      >
+                        <div>
+                          <span>
+                            <strong>{code}</strong>
+                            <small>{name}</small>
+                          </span>
+                          <b>
+                            {count.toLocaleString(getIntlLocale())}{' '}
+                            <small>{tUi('common.hotelLower')}</small>
+                          </b>
                         </div>
-                      );
-                    },
-                  )}
+                        <meter
+                          min="0"
+                          max={overview.tenants.total || 1}
+                          value={count}
+                          aria-label={`${name}: ${count} trên ${overview.tenants.total} khách sạn`}
+                        >
+                          {count}/{overview.tenants.total}
+                        </meter>
+                      </div>
+                    )
+                  })}
                   <div className="dashboard-unassigned">
                     <span>{labelUi('Chưa có gói hiệu lực')}</span>
-                    <strong>
-                      {overview.plans.unassigned.toLocaleString(
-                        getIntlLocale(),
-                      )}
-                    </strong>
+                    <strong>{overview.plans.unassigned.toLocaleString(getIntlLocale())}</strong>
                   </div>
                   <p className="dashboard-plan-note">
                     {labelUi(
@@ -445,8 +377,7 @@ function DashboardOverview() {
                   </p>
                 </div>
                 <Link to="/manager/billing" className="dashboard-panel-footer">
-                  {labelUi('Quản lý gói dịch vụ')}{' '}
-                  <ArrowRight size={16} aria-hidden="true" />
+                  {labelUi('Quản lý gói dịch vụ')} <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               </section>
             </div>
@@ -457,18 +388,11 @@ function DashboardOverview() {
             >
               <div className="dashboard-panel-heading">
                 <div>
-                  <h3 id="dashboard-payments-title">
-                    {labelUi('Khoản thu gần đây')}
-                  </h3>
-                  <p>
-                    {labelUi(
-                      'Các khoản thanh toán được ghi nhận trong kỳ báo cáo',
-                    )}
-                  </p>
+                  <h3 id="dashboard-payments-title">{labelUi('Khoản thu gần đây')}</h3>
+                  <p>{labelUi('Các khoản thanh toán được ghi nhận trong kỳ báo cáo')}</p>
                 </div>
                 <Link to="/manager/billing" className="dashboard-text-link">
-                  {labelUi('Quản lý thanh toán')}{' '}
-                  <ArrowUpRight size={15} aria-hidden="true" />
+                  {labelUi('Quản lý thanh toán')} <ArrowUpRight size={15} aria-hidden="true" />
                 </Link>
               </div>
               {!overview.recentPayments.length ? (
@@ -479,19 +403,14 @@ function DashboardOverview() {
                 <ul className="dashboard-payment-list">
                   {overview.recentPayments.map((payment, index) => (
                     <li
-                      key={
-                        payment.id ||
-                        `${payment.invoiceNumber}:${payment.createdAt}:${index}`
-                      }
+                      key={payment.id || `${payment.invoiceNumber}:${payment.createdAt}:${index}`}
                     >
                       <div>
                         <strong>{payment.tenantName}</strong>
                         <p>{payment.invoiceNumber}</p>
                       </div>
                       <strong>{money(payment.amount, payment.currency)}</strong>
-                      <time dateTime={payment.createdAt}>
-                        {displayDate(payment.createdAt)}
-                      </time>
+                      <time dateTime={payment.createdAt}>{displayDate(payment.createdAt)}</time>
                     </li>
                   ))}
                 </ul>
@@ -502,18 +421,14 @@ function DashboardOverview() {
       )}
 
       {user?.globalRole === 'SUPER_ADMIN' && (
-        <section
-          className="manager-panel dashboard-audit"
-          aria-labelledby="dashboard-audit-title"
-        >
+        <section className="manager-panel dashboard-audit" aria-labelledby="dashboard-audit-title">
           <div className="dashboard-panel-heading">
             <div>
               <h3 id="dashboard-audit-title">{labelUi('Nhật ký gần đây')}</h3>
               <p>{labelUi('Các sự kiện được ghi nhận trên hệ thống')}</p>
             </div>
             <Link to="/manager/logs" className="dashboard-text-link">
-              {labelUi('Xem nhật ký')}{' '}
-              <ArrowUpRight size={15} aria-hidden="true" />
+              {labelUi('Xem nhật ký')} <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           </div>
           {!recentEvents.length ? (
@@ -529,20 +444,15 @@ function DashboardOverview() {
                   </span>
                   <div>
                     <strong>
-                      {eventLabels[log.event] ||
-                        log.event ||
-                        labelUi('Sự kiện hệ thống')}
+                      {eventLabels[log.event] || log.event || labelUi('Sự kiện hệ thống')}
                     </strong>
                     <p>
                       {log.tenantId
-                        ? tenants.find((tenant) => tenant.id === log.tenantId)
-                            ?.name || log.tenantId
+                        ? tenants.find((tenant) => tenant.id === log.tenantId)?.name || log.tenantId
                         : labelUi('Toàn hệ thống')}
                     </p>
                   </div>
-                  <time dateTime={log.createdAt || undefined}>
-                    {displayDate(log.createdAt)}
-                  </time>
+                  <time dateTime={log.createdAt || undefined}>{displayDate(log.createdAt)}</time>
                 </li>
               ))}
             </ul>
@@ -550,5 +460,5 @@ function DashboardOverview() {
         </section>
       )}
     </div>
-  );
+  )
 }

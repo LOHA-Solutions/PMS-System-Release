@@ -1,82 +1,73 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate } from '../../../../shared/lib/date.js';
-import { useEffect, useRef, useState } from 'react';
-import { usePms } from '../../data/usePms';
-import { bookingRooms, money, today } from '../../data/model';
-import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider';
-import { useI18n } from '../../../../shared/i18n/useI18n';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate } from '../../../../shared/lib/date.js'
+import { useEffect, useRef, useState } from 'react'
+import { usePms } from '../../data/usePms'
+import { bookingRooms, money, today } from '../../data/model'
+import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider'
+import { useI18n } from '../../../../shared/i18n/useI18n'
 
 export default function StayChangeForm(props) {
-  const { tenantId, user, authGeneration } = usePms();
+  const { tenantId, user, authGeneration } = usePms()
   return (
     <StayChangeEditor
-      key={JSON.stringify([
-        tenantId,
-        user?.id,
-        authGeneration,
-        props.booking.id,
-      ])}
+      key={JSON.stringify([tenantId, user?.id, authGeneration, props.booking.id])}
       {...props}
     />
-  );
+  )
 }
 
 function StayChangeEditor({ booking, group, onDone, onCancel }) {
-  const { t } = useI18n();
-  const pms = usePms();
+  const { t } = useI18n()
+  const pms = usePms()
   const [draft, setDraft] = useState(() => ({
     rooms: bookingRooms(booking),
     checkOut: booking.checkOut,
     effectiveDate: today(pms.settings.timezone),
     expectedVersion: booking.version,
-  }));
+  }))
   const [reason, setReason] = useState(''),
-    [confirmedOta, setConfirmedOta] = useState(false);
+    [confirmedOta, setConfirmedOta] = useState(false)
   const [preview, setPreview] = useState(null),
     [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
-  const section = useRef(null);
+    [busy, setBusy] = useState(false)
+  const section = useRef(null)
   const inFlight = useRef(false),
     intent = useRef(null),
-    dirty = useRef(false);
-  const mounted = useRef(true);
+    dirty = useRef(false)
+  const mounted = useRef(true)
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
     return () => {
-      mounted.current = false;
-    };
-  }, []);
+      mounted.current = false
+    }
+  }, [])
   const { requestLeave } = useDraftGuard({
     group,
     dirty: () =>
       dirty.current ||
-      Boolean(
-        section.current?.querySelector(
-          '.date-input-control [aria-invalid="true"]',
-        ),
-      ),
+      Boolean(section.current?.querySelector('.date-input-control [aria-invalid="true"]')),
     pending: () => inFlight.current,
     onDiscard: () => {
-      dirty.current = false;
+      dirty.current = false
     },
-  });
+  })
   const change = (value) => {
-    dirty.current = true;
-    setDraft(value);
-    setPreview(null);
-    intent.current = null;
-    setError('');
-  };
+    dirty.current = true
+    setDraft(value)
+    setPreview(null)
+    intent.current = null
+    setError('')
+  }
   async function act(confirm) {
-    const invalid = section.current?.querySelector('[aria-invalid="true"]');
+    const invalid = section.current?.querySelector('[aria-invalid="true"]')
     if (invalid) {
-      invalid.reportValidity();
-      return;
+      invalid.reportValidity()
+      return
     }
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
     try {
       if (confirm) {
         const body = {
@@ -84,31 +75,30 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
           previewToken: preview.previewToken,
           reason,
           confirmOta: confirmedOta,
-        };
-        if (!intent.current) intent.current = crypto.randomUUID();
-        await pms.confirmStayChange(booking.id, body, intent.current);
-        if (!mounted.current) return;
-        dirty.current = false;
-        onDone();
+        }
+        if (!intent.current) intent.current = crypto.randomUUID()
+        await pms.confirmStayChange(booking.id, body, intent.current)
+        if (!mounted.current) return
+        dirty.current = false
+        onDone()
       } else {
-        const input = { ...draft, expectedVersion: booking.version };
-        const result = await pms.previewStayChange(booking.id, input);
-        if (!mounted.current) return;
-        setDraft(input);
-        setPreview(result);
+        const input = { ...draft, expectedVersion: booking.version }
+        const result = await pms.previewStayChange(booking.id, input)
+        if (!mounted.current) return
+        setDraft(input)
+        setPreview(result)
       }
     } catch (err) {
       if (mounted.current) {
-        setError(err.message);
-        if (['preview_changed', 'stale_booking'].includes(err.code))
-          setPreview(null);
+        setError(err.message)
+        if (['preview_changed', 'stale_booking'].includes(err.code)) setPreview(null)
       }
     } finally {
-      inFlight.current = false;
-      if (mounted.current) setBusy(false);
+      inFlight.current = false
+      if (mounted.current) setBusy(false)
     }
   }
-  const total = (value) => money(value, booking.currency);
+  const total = (value) => money(value, booking.currency)
   return (
     <section
       ref={section}
@@ -121,19 +111,13 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
       <form
         className="booking-detail-form"
         onSubmit={(event) => {
-          event.preventDefault();
-          act(false);
+          event.preventDefault()
+          act(false)
         }}
       >
         <fieldset
           disabled={busy}
-          style={{
-            border: 0,
-            margin: 0,
-            padding: 0,
-            minWidth: 0,
-            display: 'contents',
-          }}
+          style={{ border: 0, margin: 0, padding: 0, minWidth: 0, display: 'contents' }}
         >
           {draft.rooms.map((number, index) => (
             <label className="booking-detail-field" key={index}>
@@ -155,10 +139,7 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
                 {pms.rooms
                   .filter((room) => room.active !== false)
                   .map((room) => (
-                    <option
-                      key={room.uuid || room.id}
-                      value={room.number || room.id}
-                    >
+                    <option key={room.uuid || room.id} value={room.number || room.id}>
                       {room.number || room.id}
                     </option>
                   ))}
@@ -167,11 +148,7 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
           ))}
           <label className="booking-detail-field">
             <span>{t('stayChange.effectiveDate')}</span>
-            <DateInput
-              className="booking-detail-input"
-              value={draft.effectiveDate}
-              readOnly
-            />
+            <DateInput className="booking-detail-input" value={draft.effectiveDate} readOnly />
           </label>
           <label className="booking-detail-field">
             <span>{t('stayChange.checkOut')}</span>
@@ -196,8 +173,8 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
       {preview && (
         <form
           onSubmit={(event) => {
-            event.preventDefault();
-            act(true);
+            event.preventDefault()
+            act(true)
           }}
         >
           <dl className="booking-detail-summary">
@@ -230,15 +207,11 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
           </details>
           {Number(preview.refundRequired) > 0 && (
             <p role="status">
-              {t('stayChange.refundFirst', {
-                amount: total(preview.refundRequired),
-              })}
+              {t('stayChange.refundFirst', { amount: total(preview.refundRequired) })}
             </p>
           )}
           {preview.checkoutNow && Number(preview.balance) > 0 && (
-            <p role="status">
-              {t('stayChange.payFirst', { amount: total(preview.balance) })}
-            </p>
+            <p role="status">{t('stayChange.payFirst', { amount: total(preview.balance) })}</p>
           )}
           <label className="booking-detail-field">
             <span>{t('stayChange.reason')}</span>
@@ -249,9 +222,9 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
               value={reason}
               disabled={busy}
               onChange={(event) => {
-                dirty.current = true;
-                intent.current = null;
-                setReason(event.target.value);
+                dirty.current = true
+                intent.current = null
+                setReason(event.target.value)
               }}
             />
           </label>
@@ -263,8 +236,8 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
                 checked={confirmedOta}
                 disabled={busy}
                 onChange={(event) => {
-                  intent.current = null;
-                  setConfirmedOta(event.target.checked);
+                  intent.current = null
+                  setConfirmedOta(event.target.checked)
                 }}
               />{' '}
               {t('stayChange.ota')}
@@ -296,5 +269,5 @@ function StayChangeEditor({ booking, group, onDone, onCancel }) {
         {t('common.close')}
       </button>
     </section>
-  );
+  )
 }

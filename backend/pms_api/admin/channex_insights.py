@@ -58,7 +58,7 @@ def provider_money(value):
         ):
             raise ValueError
         return format(amount, "f")
-    except InvalidOperation, ValueError:
+    except (InvalidOperation, ValueError):
         raise ProviderError("provider_invalid_response") from None
 
 
@@ -95,7 +95,7 @@ def booking_json(entity, property_id):
         inserted = (
             inserted.replace(tzinfo=UTC) if inserted.tzinfo is None else inserted.astimezone(UTC)
         )
-    except ValueError, KeyError, OverflowError:
+    except (ValueError, KeyError, OverflowError):
         raise ProviderError("provider_invalid_response") from None
     return {
         "id": remote_id(entity.get("id")),

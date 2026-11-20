@@ -37,9 +37,15 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("tenant_id", "id"),
         sa.UniqueConstraint("tenant_id", "fingerprint"),
-        sa.CheckConstraint("event_code IN ('sync_error','sync_warning','rate_error')", name="event"),
+        sa.CheckConstraint(
+            "event_code IN ('sync_error','sync_warning','rate_error')", name="event"
+        ),
     )
-    op.create_index("ix_channel_sync_incidents_pending", "channel_sync_incidents", ["tenant_id", "resolved_at", "created_at"])
+    op.create_index(
+        "ix_channel_sync_incidents_pending",
+        "channel_sync_incidents",
+        ["tenant_id", "resolved_at", "created_at"],
+    )
     op.create_table(
         "channel_review_resolutions",
         sa.Column("id", sa.String(40), primary_key=True),
@@ -52,8 +58,13 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("tenant_id", "id"),
         sa.UniqueConstraint("tenant_id", "review_id"),
-        sa.ForeignKeyConstraint(["tenant_id", "review_id"], ["channel_booking_reviews.tenant_id", "channel_booking_reviews.id"]),
-        sa.ForeignKeyConstraint(["tenant_id", "reservation_id"], ["reservations.tenant_id", "reservations.id"]),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "review_id"],
+            ["channel_booking_reviews.tenant_id", "channel_booking_reviews.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "reservation_id"], ["reservations.tenant_id", "reservations.id"]
+        ),
         sa.CheckConstraint("length(btrim(reason)) > 0", name="reason"),
     )
     op.create_table(
@@ -64,15 +75,24 @@ def upgrade():
         sa.Column("fingerprint", sa.String(64), nullable=False),
         sa.Column("response", JSONB, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("tenant_id", "id"), sa.UniqueConstraint("tenant_id", "key"),
+        sa.UniqueConstraint("tenant_id", "id"),
+        sa.UniqueConstraint("tenant_id", "key"),
     )
-    for table in ("channel_sync_incidents", "channel_review_resolutions", "channel_action_receipts"):
+    for table in (
+        "channel_sync_incidents",
+        "channel_review_resolutions",
+        "channel_action_receipts",
+    ):
         op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
         op.execute(f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY')
         scope = pms_scope(table)
         op.execute(f'CREATE POLICY tenant_scope ON "{table}" USING ({scope}) WITH CHECK ({scope})')
-    op.execute(f'CREATE POLICY channel_support ON channel_sync_incidents USING ({SUPPORT}) WITH CHECK ({SUPPORT})')
-    op.execute(f'CREATE POLICY channel_support ON channel_action_receipts USING ({SUPPORT}) WITH CHECK ({SUPPORT})')
+    op.execute(
+        f"CREATE POLICY channel_support ON channel_sync_incidents USING ({SUPPORT}) WITH CHECK ({SUPPORT})"
+    )
+    op.execute(
+        f"CREATE POLICY channel_support ON channel_action_receipts USING ({SUPPORT}) WITH CHECK ({SUPPORT})"
+    )
     append_only("channel_review_resolutions")
     append_only("channel_action_receipts")
 
@@ -87,6 +107,10 @@ def downgrade():
         END $$""")
     op.execute("DROP POLICY channel_support ON channel_sync_incidents")
     op.execute("DROP POLICY channel_support ON channel_action_receipts")
-    for table in ("channel_action_receipts", "channel_review_resolutions", "channel_sync_incidents"):
+    for table in (
+        "channel_action_receipts",
+        "channel_review_resolutions",
+        "channel_sync_incidents",
+    ):
         unprotect_table(table)
         op.drop_table(table)

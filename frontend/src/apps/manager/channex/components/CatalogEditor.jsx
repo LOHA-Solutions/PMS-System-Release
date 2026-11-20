@@ -1,14 +1,10 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { BedDouble, Info, Save, ShieldCheck, Tag, X } from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import LegacyOverlay from '../../../pms/components/LegacyOverlay';
-import { channexCatalogInput, environmentLabel } from '../presentation';
-import { uncertainChannelWrite } from '../channelForms';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { BedDouble, Info, Save, ShieldCheck, Tag, X } from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import LegacyOverlay from '../../../pms/components/LegacyOverlay'
+import { channexCatalogInput, environmentLabel } from '../presentation'
+import { uncertainChannelWrite } from '../channelForms'
 
 const overlayStyle = {
   position: 'fixed',
@@ -19,12 +15,12 @@ const overlayStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: 12,
-};
+}
 const roomFields = [
   ['adults', 'Người lớn', 1, 50],
   ['children', 'Trẻ em', 0, 50],
   ['infants', 'Em bé', 0, 50],
-];
+]
 
 export default function CatalogEditor({
   kind,
@@ -36,11 +32,11 @@ export default function CatalogEditor({
   onSaved,
   onReload,
 }) {
-  useI18n();
-  const { saveChannexRoomType, saveChannexRatePlan } = usePms();
+  useI18n()
+  const { saveChannexRoomType, saveChannexRatePlan } = usePms()
   const editing = Boolean(item.id),
-    isRoom = kind === 'room';
-  const title = `${editing ? 'Sửa' : 'Thêm'} ${isRoom ? 'loại phòng' : 'gói giá'}`;
+    isRoom = kind === 'room'
+  const title = `${editing ? 'Sửa' : 'Thêm'} ${isRoom ? 'loại phòng' : 'gói giá'}`
   const [draft, setDraft] = useState(() =>
     isRoom
       ? {
@@ -56,66 +52,53 @@ export default function CatalogEditor({
           currency: item.currency || property.currency || '',
           rate: item.rate ?? '',
         },
-  );
+  )
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [uncertain, setUncertain] = useState(false);
+    [uncertain, setUncertain] = useState(false)
   const mounted = useRef(true),
-    submitting = useRef(false);
+    submitting = useRef(false)
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
     return () => {
-      mounted.current = false;
-    };
-  }, []);
-  const close = () => {
-    if (!submitting.current) onClose();
-  };
-  const update = (field, value) =>
-    setDraft((previous) => ({ ...previous, [field]: value }));
-  async function save(event) {
-    event.preventDefault();
-    if (submitting.current || uncertain) return;
-    let input;
-    try {
-      input = {
-        ...(editing ? { id: item.id } : {}),
-        ...channexCatalogInput(kind, draft, editing),
-      };
-    } catch (failure) {
-      setError(failure.message);
-      return;
+      mounted.current = false
     }
-    submitting.current = true;
-    setBusy(true);
-    setError('');
+  }, [])
+  const close = () => {
+    if (!submitting.current) onClose()
+  }
+  const update = (field, value) => setDraft((previous) => ({ ...previous, [field]: value }))
+  async function save(event) {
+    event.preventDefault()
+    if (submitting.current || uncertain) return
+    let input
     try {
-      await (isRoom ? saveChannexRoomType : saveChannexRatePlan)(
-        account.id,
-        property.id,
-        input,
-      );
+      input = { ...(editing ? { id: item.id } : {}), ...channexCatalogInput(kind, draft, editing) }
+    } catch (failure) {
+      setError(failure.message)
+      return
+    }
+    submitting.current = true
+    setBusy(true)
+    setError('')
+    try {
+      await (isRoom ? saveChannexRoomType : saveChannexRatePlan)(account.id, property.id, input)
       if (mounted.current)
         onSaved(
           `Đã ${editing ? 'cập nhật' : 'tạo'} ${isRoom ? 'loại phòng' : 'gói giá'} trên Channex.`,
-        );
+        )
     } catch (failure) {
       if (mounted.current) {
-        setError(failure.message || 'Chưa lưu được. Vui lòng thử lại.');
-        setUncertain(uncertainChannelWrite(failure));
+        setError(failure.message || 'Chưa lưu được. Vui lòng thử lại.')
+        setUncertain(uncertainChannelWrite(failure))
       }
     } finally {
-      submitting.current = false;
-      if (mounted.current) setBusy(false);
+      submitting.current = false
+      if (mounted.current) setBusy(false)
     }
   }
   return (
-    <LegacyOverlay
-      modal
-      title={labelUi(title)}
-      onClose={close}
-      style={overlayStyle}
-    >
+    <LegacyOverlay modal title={labelUi(title)} onClose={close} style={overlayStyle}>
       <div className="channex-editor">
         <div className="channex-editor-heading">
           <span className="channex-editor-icon">
@@ -126,9 +109,7 @@ export default function CatalogEditor({
             )}
           </span>
           <div>
-            <span className="channex-editor-eyebrow">
-              {labelUi('Danh mục Channex')}
-            </span>
+            <span className="channex-editor-eyebrow">{labelUi('Danh mục Channex')}</span>
             <h2>{labelUi(title)}</h2>
             <p>
               {property.name} · {environmentLabel(account.environment)}
@@ -157,29 +138,19 @@ export default function CatalogEditor({
                   'Kết quả lưu chưa xác định. Tải lại danh mục để kiểm tra trước khi gửi lại.',
                 )}
               </p>
-              <button
-                type="button"
-                className="manager-button"
-                onClick={onReload}
-              >
+              <button type="button" className="manager-button" onClick={onReload}>
                 {labelUi('Đóng & tải lại danh mục')}
               </button>
             </div>
           )}
-          <fieldset
-            disabled={busy || uncertain}
-            className="channex-editor-fields"
-          >
+          <fieldset disabled={busy || uncertain} className="channex-editor-fields">
             <label>
-              {labelUi('Tên')}{' '}
-              {isRoom ? labelUi('loại phòng') : labelUi('gói giá')}
+              {labelUi('Tên')} {isRoom ? labelUi('loại phòng') : labelUi('gói giá')}
               <input
                 required
                 maxLength={255}
                 placeholder={
-                  isRoom
-                    ? labelUi('Ví dụ: Deluxe, Couple…')
-                    : labelUi('Ví dụ: Couple Standard')
+                  isRoom ? labelUi('Ví dụ: Deluxe, Couple…') : labelUi('Ví dụ: Couple Standard')
                 }
                 value={draft.name}
                 onChange={(event) => update('name', event.target.value)}
@@ -197,9 +168,7 @@ export default function CatalogEditor({
                     step={1}
                     disabled={Boolean(item.mapped)}
                     value={draft.countOfRooms}
-                    onChange={(event) =>
-                      update('countOfRooms', event.target.value)
-                    }
+                    onChange={(event) => update('countOfRooms', event.target.value)}
                   />
                 </label>
                 <div className="channex-editor-section">
@@ -216,9 +185,7 @@ export default function CatalogEditor({
                           step={1}
                           disabled={Boolean(item.mapped)}
                           value={draft[field]}
-                          onChange={(event) =>
-                            update(field, event.target.value)
-                          }
+                          onChange={(event) => update(field, event.target.value)}
                         />
                       </label>
                     ))}
@@ -242,9 +209,7 @@ export default function CatalogEditor({
                       <select
                         required
                         value={draft.roomTypeId}
-                        onChange={(event) =>
-                          update('roomTypeId', event.target.value)
-                        }
+                        onChange={(event) => update('roomTypeId', event.target.value)}
                       >
                         <option value="" disabled>
                           {labelUi('Chọn loại phòng')}
@@ -263,9 +228,7 @@ export default function CatalogEditor({
                         pattern="[A-Z]{3}"
                         maxLength={3}
                         value={draft.currency}
-                        onChange={(event) =>
-                          update('currency', event.target.value.toUpperCase())
-                        }
+                        onChange={(event) => update('currency', event.target.value.toUpperCase())}
                         placeholder="VND, USD…"
                       />
                     </label>
@@ -274,8 +237,7 @@ export default function CatalogEditor({
                   <p className="channex-editor-hint">
                     <BedDouble size={15} aria-hidden="true" />
                     {rooms.find((room) => room.id === item.roomTypeId)?.name ||
-                      item.roomTypeId}{' '}
-                    · {item.currency}
+                      item.roomTypeId} · {item.currency}
                   </p>
                 )}
                 <label>
@@ -304,12 +266,7 @@ export default function CatalogEditor({
             )}
           </fieldset>
           <div className="channex-editor-actions">
-            <button
-              type="button"
-              className="manager-button"
-              disabled={busy}
-              onClick={close}
-            >
+            <button type="button" className="manager-button" disabled={busy} onClick={close}>
               {tUi('common.cancel')}
             </button>
             <button
@@ -324,5 +281,5 @@ export default function CatalogEditor({
         </form>
       </div>
     </LegacyOverlay>
-  );
+  )
 }

@@ -1,11 +1,7 @@
-import { formatDateTime } from '../../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import React, { useEffect, useRef, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { formatDateTime } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import React, { useEffect, useRef, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   Users,
   ShieldCheck,
@@ -16,18 +12,15 @@ import {
   CheckCircle2,
   Edit3,
   RefreshCw,
-} from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import LegacyOverlay from '../../../pms/components/LegacyOverlay';
-import { getThemeTokens } from '../../theme';
-import { SYSTEM_ROLES, systemUserInput } from './systemUserForm';
-import { emailPattern } from '../../../../shared/lib/validation.js';
-import './AdminUsers.css';
+} from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import LegacyOverlay from '../../../pms/components/LegacyOverlay'
+import { getThemeTokens } from '../../theme'
+import { SYSTEM_ROLES, systemUserInput } from './systemUserForm'
+import { emailPattern } from '../../../../shared/lib/validation.js'
+import './AdminUsers.css'
 
-const roleLabels = {
-  SUPER_ADMIN: 'Super Admin',
-  SYSTEM_MANAGER: 'System Manager',
-};
+const roleLabels = { SUPER_ADMIN: 'Super Admin', SYSTEM_MANAGER: 'System Manager' }
 const rolePermissions = [
   { name: 'Quản trị khách sạn', manager: true },
   { name: 'Gói cước & thanh toán', manager: true },
@@ -35,93 +28,88 @@ const rolePermissions = [
   { name: 'Nhân sự nội bộ & vai trò hệ thống', manager: false },
   { name: 'Cờ tính năng toàn hệ thống', manager: false },
   { name: 'Nhật ký kiểm toán toàn hệ thống', manager: false },
-];
+]
 const emptyDraft = () => ({
   name: '',
   email: '',
   password: '',
   globalRole: 'SYSTEM_MANAGER',
   active: true,
-});
-const displayDate = (value) => (value ? formatDateTime(value) : '—');
+})
+const displayDate = (value) => (value ? formatDateTime(value) : '—')
 
 export default function AdminUsers() {
-  useI18n();
-  const {
-    searchQuery: globalSearch,
-    isDarkMode,
-    theme,
-  } = useOutletContext() || {};
-  const t = theme || getThemeTokens(isDarkMode);
-  const { user, listSystemUsers, saveSystemUser } = usePms();
-  const [activeTab, setActiveTab] = useState('users');
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState('');
-  const [saveError, setSaveError] = useState('');
-  const [revision, setRevision] = useState(0);
-  const [search, setSearch] = useState('');
-  const [toastMessage, setToastMessage] = useState('');
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [newUser, setNewUser] = useState(emptyDraft);
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
-  const requestScope = useRef(0);
-  const canManage =
-    user?.globalRole === 'SUPER_ADMIN' && user?.active !== false;
-  const sessionKey = `${user?.id || ''}:${user?.globalRole || ''}:${user?.active !== false}`;
+  useI18n()
+  const { searchQuery: globalSearch, isDarkMode, theme } = useOutletContext() || {}
+  const t = theme || getThemeTokens(isDarkMode)
+  const { user, listSystemUsers, saveSystemUser } = usePms()
+  const [activeTab, setActiveTab] = useState('users')
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [revision, setRevision] = useState(0)
+  const [search, setSearch] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
+  const [newUser, setNewUser] = useState(emptyDraft)
+  const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
+  const requestScope = useRef(0)
+  const canManage = user?.globalRole === 'SUPER_ADMIN' && user?.active !== false
+  const sessionKey = `${user?.id || ''}:${user?.globalRole || ''}:${user?.active !== false}`
 
   useEffect(() => {
-    const scope = ++requestScope.current;
-    busyRef.current = false;
+    const scope = ++requestScope.current
+    busyRef.current = false
     Promise.resolve()
       .then(() => {
-        if (requestScope.current !== scope) return null;
-        setUsers([]);
-        setLoading(true);
-        setListError('');
-        setSaveError('');
-        setToastMessage('');
-        setIsAddUserModalOpen(false);
-        setEditingUser(null);
-        setNewUser(emptyDraft());
-        setBusy(false);
-        return canManage ? listSystemUsers() : null;
+        if (requestScope.current !== scope) return null
+        setUsers([])
+        setLoading(true)
+        setListError('')
+        setSaveError('')
+        setToastMessage('')
+        setIsAddUserModalOpen(false)
+        setEditingUser(null)
+        setNewUser(emptyDraft())
+        setBusy(false)
+        return canManage ? listSystemUsers() : null
       })
       .then((result) => {
-        if (requestScope.current === scope && result) setUsers(result.users);
+        if (requestScope.current === scope && result) setUsers(result.users)
       })
       .catch((err) => {
         if (requestScope.current === scope)
-          setListError(err.message || 'Không thể tải danh sách tài khoản.');
+          setListError(err.message || 'Không thể tải danh sách tài khoản.')
       })
       .finally(() => {
-        if (requestScope.current === scope) setLoading(false);
-      });
+        if (requestScope.current === scope) setLoading(false)
+      })
     return () => {
-      requestScope.current += 1;
-    };
-  }, [listSystemUsers, sessionKey, canManage, revision]);
+      requestScope.current += 1
+    }
+  }, [listSystemUsers, sessionKey, canManage, revision])
 
   useEffect(() => {
-    if (!toastMessage) return;
-    const timer = setTimeout(() => setToastMessage(''), 3500);
-    return () => clearTimeout(timer);
-  }, [toastMessage]);
+    if (!toastMessage) return
+    const timer = setTimeout(() => setToastMessage(''), 3500)
+    return () => clearTimeout(timer)
+  }, [toastMessage])
 
   const closeModal = () => {
-    if (busyRef.current) return;
-    setIsAddUserModalOpen(false);
-    setEditingUser(null);
-    setNewUser(emptyDraft());
-    setSaveError('');
-  };
+    if (busyRef.current) return
+    setIsAddUserModalOpen(false)
+    setEditingUser(null)
+    setNewUser(emptyDraft())
+    setSaveError('')
+  }
   const openModal = (account) => {
-    if (busyRef.current || loading || !canManage) return;
-    setEditingUser(account || null);
-    setSaveError('');
-    setToastMessage('');
+    if (busyRef.current || loading || !canManage) return
+    setEditingUser(account || null)
+    setSaveError('')
+    setToastMessage('')
     setNewUser(
       account
         ? {
@@ -132,57 +120,51 @@ export default function AdminUsers() {
             active: account.active,
           }
         : emptyDraft(),
-    );
-    setIsAddUserModalOpen(true);
-  };
+    )
+    setIsAddUserModalOpen(true)
+  }
   const handleSaveUser = async (event) => {
-    event.preventDefault();
-    if (busyRef.current || !canManage) return;
-    const scope = requestScope.current;
-    busyRef.current = true;
-    setBusy(true);
-    setSaveError('');
-    setToastMessage('');
+    event.preventDefault()
+    if (busyRef.current || !canManage) return
+    const scope = requestScope.current
+    busyRef.current = true
+    setBusy(true)
+    setSaveError('')
+    setToastMessage('')
     try {
-      const saved = await saveSystemUser(
-        systemUserInput(newUser, editingUser?.id),
-      );
-      if (requestScope.current !== scope) return;
+      const saved = await saveSystemUser(systemUserInput(newUser, editingUser?.id))
+      if (requestScope.current !== scope) return
       setUsers((previous) =>
         editingUser
-          ? previous.map((account) =>
-              account.id === saved.id ? saved : account,
-            )
+          ? previous.map((account) => (account.id === saved.id ? saved : account))
           : [...previous, saved],
-      );
+      )
       setToastMessage(
         editingUser
           ? `Đã cập nhật tài khoản [${saved.name}].`
           : `Đã tạo tài khoản [${saved.name}].`,
-      );
-      setIsAddUserModalOpen(false);
-      setEditingUser(null);
-      setNewUser(emptyDraft());
+      )
+      setIsAddUserModalOpen(false)
+      setEditingUser(null)
+      setNewUser(emptyDraft())
     } catch (err) {
       if (requestScope.current === scope)
-        setSaveError(
-          err.message || 'Không thể lưu tài khoản. Vui lòng thử lại.',
-        );
+        setSaveError(err.message || 'Không thể lưu tài khoản. Vui lòng thử lại.')
     } finally {
       if (requestScope.current === scope) {
-        busyRef.current = false;
-        setBusy(false);
+        busyRef.current = false
+        setBusy(false)
       }
     }
-  };
+  }
 
-  const effectiveSearch = (search || globalSearch || '').trim().toLowerCase();
+  const effectiveSearch = (search || globalSearch || '').trim().toLowerCase()
   const filteredUsers = users.filter((account) =>
     `${account.name} ${account.email} ${account.globalRole} ${roleLabels[account.globalRole]}`
       .toLowerCase()
       .includes(effectiveSearch),
-  );
-  const editingSelf = editingUser?.id === user?.id;
+  )
+  const editingSelf = editingUser?.id === user?.id
   const inputStyle = {
     width: '100%',
     minWidth: 0,
@@ -193,14 +175,14 @@ export default function AdminUsers() {
     color: t.textPrimary,
     fontSize: '13px',
     fontWeight: '600',
-  };
+  }
   const labelStyle = {
     display: 'block',
     fontSize: '12px',
     fontWeight: '700',
     color: t.textPrimary,
     marginBottom: '6px',
-  };
+  }
   const buttonStyle = {
     minHeight: '40px',
     padding: '10px 16px',
@@ -214,8 +196,8 @@ export default function AdminUsers() {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-  };
-  const cellStyle = { padding: '16px 20px', whiteSpace: 'nowrap' };
+  }
+  const cellStyle = { padding: '16px 20px', whiteSpace: 'nowrap' }
 
   if (!canManage)
     return (
@@ -231,7 +213,7 @@ export default function AdminUsers() {
       >
         {labelUi('Chỉ Super Admin có quyền quản lý tài khoản hệ thống.')}
       </div>
-    );
+    )
 
   return (
     <div className="manager-page admin-users-page">
@@ -325,8 +307,8 @@ export default function AdminUsers() {
             <div style={{ fontSize: '12.5px', color: t.textSecondary }}>
               {!loading && !listError && (
                 <span>
-                  {labelUi('Hiển thị')} <strong>{filteredUsers.length}</strong>{' '}
-                  / {users.length} tài khoản
+                  {labelUi('Hiển thị')} <strong>{filteredUsers.length}</strong> / {users.length} tài
+                  khoản
                 </span>
               )}
             </div>
@@ -355,47 +337,31 @@ export default function AdminUsers() {
                     borderBottom: `1px solid ${t.border}`,
                   }}
                 >
-                  {[
-                    'Nhân viên',
-                    'Vai trò (Role)',
-                    'Trạng thái',
-                    'Ngày tạo',
-                    'Thao tác',
-                  ].map((label) => (
-                    <th
-                      key={label}
-                      scope="col"
-                      style={{
-                        padding: '14px 20px',
-                        fontWeight: '700',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {labelUi(label)}
-                    </th>
-                  ))}
+                  {['Nhân viên', 'Vai trò (Role)', 'Trạng thái', 'Ngày tạo', 'Thao tác'].map(
+                    (label) => (
+                      <th
+                        key={label}
+                        scope="col"
+                        style={{ padding: '14px 20px', fontWeight: '700', whiteSpace: 'nowrap' }}
+                      >
+                        {labelUi(label)}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td
-                      colSpan={5}
-                      style={{ padding: '32px 24px', color: t.textSecondary }}
-                    >
-                      <span role="status">
-                        {labelUi('Đang tải tài khoản từ máy chủ…')}
-                      </span>
+                    <td colSpan={5} style={{ padding: '32px 24px', color: t.textSecondary }}>
+                      <span role="status">{labelUi('Đang tải tài khoản từ máy chủ…')}</span>
                     </td>
                   </tr>
                 )}
                 {!loading && listError && (
                   <tr>
                     <td colSpan={5} style={{ padding: '24px' }}>
-                      <p
-                        role="alert"
-                        style={{ color: t.danger, margin: '0 0 12px' }}
-                      >
+                      <p role="alert" style={{ color: t.danger, margin: '0 0 12px' }}>
                         {listError}
                       </p>
                       <button
@@ -411,16 +377,11 @@ export default function AdminUsers() {
                 )}
                 {!loading && !listError && filteredUsers.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={5}
-                      style={{ padding: '32px 24px', color: t.textSecondary }}
-                    >
+                    <td colSpan={5} style={{ padding: '32px 24px', color: t.textSecondary }}>
                       <span role="status">
                         {users.length
                           ? labelUi('Không có tài khoản phù hợp với tìm kiếm.')
-                          : labelUi(
-                              'Chưa có tài khoản hệ thống. Thêm quản trị viên để bắt đầu.',
-                            )}
+                          : labelUi('Chưa có tài khoản hệ thống. Thêm quản trị viên để bắt đầu.')}
                       </span>
                     </td>
                   </tr>
@@ -435,22 +396,14 @@ export default function AdminUsers() {
                         transition: 'background-color 0.15s ease',
                       }}
                       onMouseEnter={(event) => {
-                        event.currentTarget.style.backgroundColor =
-                          t.bgSurfaceHover;
+                        event.currentTarget.style.backgroundColor = t.bgSurfaceHover
                       }}
                       onMouseLeave={(event) => {
-                        event.currentTarget.style.backgroundColor =
-                          'transparent';
+                        event.currentTarget.style.backgroundColor = 'transparent'
                       }}
                     >
                       <td style={cellStyle}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                          }}
-                        >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div
                             aria-hidden="true"
                             style={{
@@ -470,12 +423,7 @@ export default function AdminUsers() {
                             {account.name.charAt(0)}
                           </div>
                           <div>
-                            <div
-                              style={{
-                                fontWeight: '800',
-                                color: t.textPrimary,
-                              }}
-                            >
+                            <div style={{ fontWeight: '800', color: t.textPrimary }}>
                               {account.name}
                               {account.id === user.id && (
                                 <span
@@ -489,12 +437,7 @@ export default function AdminUsers() {
                                 </span>
                               )}
                             </div>
-                            <div
-                              style={{
-                                fontSize: '11px',
-                                color: t.textSecondary,
-                              }}
-                            >
+                            <div style={{ fontSize: '11px', color: t.textSecondary }}>
                               {account.email}
                             </div>
                           </div>
@@ -508,13 +451,9 @@ export default function AdminUsers() {
                             padding: '4px 10px',
                             borderRadius: '10px',
                             backgroundColor:
-                              account.globalRole === 'SUPER_ADMIN'
-                                ? t.aquaBg
-                                : t.bgInput,
+                              account.globalRole === 'SUPER_ADMIN' ? t.aquaBg : t.bgInput,
                             color:
-                              account.globalRole === 'SUPER_ADMIN'
-                                ? t.aquaText
-                                : t.textPrimary,
+                              account.globalRole === 'SUPER_ADMIN' ? t.aquaText : t.textPrimary,
                             border: `1px solid ${account.globalRole === 'SUPER_ADMIN' ? t.aquaBorder : t.border}`,
                             display: 'inline-block',
                           }}
@@ -530,18 +469,10 @@ export default function AdminUsers() {
                             color: account.active ? t.success : t.textSecondary,
                           }}
                         >
-                          {account.active
-                            ? tUi('common.active')
-                            : tUi('common.inactive')}
+                          {account.active ? tUi('common.active') : tUi('common.inactive')}
                         </span>
                       </td>
-                      <td
-                        style={{
-                          ...cellStyle,
-                          fontSize: '12px',
-                          color: t.textSecondary,
-                        }}
-                      >
+                      <td style={{ ...cellStyle, fontSize: '12px', color: t.textSecondary }}>
                         {displayDate(account.createdAt)}
                       </td>
                       <td style={cellStyle}>
@@ -549,11 +480,7 @@ export default function AdminUsers() {
                           aria-label={`Chỉnh sửa tài khoản ${account.name}`}
                           disabled={busy}
                           onClick={() => openModal(account)}
-                          style={{
-                            ...buttonStyle,
-                            padding: '8px 12px',
-                            fontSize: '12px',
-                          }}
+                          style={{ ...buttonStyle, padding: '8px 12px', fontSize: '12px' }}
                         >
                           <Edit3 size={14} aria-hidden="true" />
                           {labelUi('Chỉnh sửa')}
@@ -570,25 +497,10 @@ export default function AdminUsers() {
       {activeTab === 'matrix' && (
         <div className="manager-panel admin-users-matrix">
           <div style={{ marginBottom: '20px' }}>
-            <h2
-              style={{
-                fontSize: '16px',
-                fontWeight: '800',
-                color: t.textPrimary,
-                margin: 0,
-              }}
-            >
-              {labelUi(
-                'Ma trận phân quyền vai trò (Role-based access control)',
-              )}
+            <h2 style={{ fontSize: '16px', fontWeight: '800', color: t.textPrimary, margin: 0 }}>
+              {labelUi('Ma trận phân quyền vai trò (Role-based access control)')}
             </h2>
-            <p
-              style={{
-                fontSize: '12px',
-                color: t.textSecondary,
-                margin: '4px 0 0',
-              }}
-            >
+            <p style={{ fontSize: '12px', color: t.textSecondary, margin: '4px 0 0' }}>
               {labelUi(
                 'Quyền cố định theo vai trò hệ thống. Bảng chỉ để xem; thay đổi vai trò trong thông tin tài khoản.',
               )}
@@ -618,11 +530,7 @@ export default function AdminUsers() {
                 >
                   <th
                     scope="col"
-                    style={{
-                      padding: '16px 20px',
-                      fontWeight: '800',
-                      color: t.textPrimary,
-                    }}
+                    style={{ padding: '16px 20px', fontWeight: '800', color: t.textPrimary }}
                   >
                     {labelUi('Chức năng & Hành động')}
                   </th>
@@ -644,27 +552,14 @@ export default function AdminUsers() {
               </thead>
               <tbody>
                 {rolePermissions.map((permission) => (
-                  <tr
-                    key={permission.name}
-                    style={{ borderBottom: `1px solid ${t.borderSubtle}` }}
-                  >
-                    <td
-                      style={{
-                        padding: '14px 20px',
-                        color: t.textPrimary,
-                        fontWeight: '600',
-                      }}
-                    >
+                  <tr key={permission.name} style={{ borderBottom: `1px solid ${t.borderSubtle}` }}>
+                    <td style={{ padding: '14px 20px', color: t.textPrimary, fontWeight: '600' }}>
                       {permission.name}
                     </td>
                     {SYSTEM_ROLES.map((role) => {
-                      const allowed =
-                        role === 'SUPER_ADMIN' || permission.manager;
+                      const allowed = role === 'SUPER_ADMIN' || permission.manager
                       return (
-                        <td
-                          key={role}
-                          style={{ padding: '14px', textAlign: 'center' }}
-                        >
+                        <td key={role} style={{ padding: '14px', textAlign: 'center' }}>
                           <span
                             style={{
                               display: 'inline-flex',
@@ -675,20 +570,14 @@ export default function AdminUsers() {
                             }}
                           >
                             {allowed ? (
-                              <Check
-                                size={16}
-                                strokeWidth={2.5}
-                                aria-hidden="true"
-                              />
+                              <Check size={16} strokeWidth={2.5} aria-hidden="true" />
                             ) : (
                               <X size={14} aria-hidden="true" />
                             )}
-                            {allowed
-                              ? labelUi('Được phép')
-                              : labelUi('Không có quyền')}
+                            {allowed ? labelUi('Được phép') : labelUi('Không có quyền')}
                           </span>
                         </td>
-                      );
+                      )
                     })}
                   </tr>
                 ))}
@@ -745,24 +634,13 @@ export default function AdminUsers() {
             >
               <div>
                 <h2
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: '800',
-                    color: t.textPrimary,
-                    margin: 0,
-                  }}
+                  style={{ fontSize: '18px', fontWeight: '800', color: t.textPrimary, margin: 0 }}
                 >
                   {editingUser
                     ? `Chỉnh sửa tài khoản: ${editingUser.name}`
                     : labelUi('Thêm quản trị viên nội bộ')}
                 </h2>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    color: t.textSecondary,
-                    margin: '4px 0 0',
-                  }}
-                >
+                <p style={{ fontSize: '12px', color: t.textSecondary, margin: '4px 0 0' }}>
                   {labelUi('Thông tin và vai trò được lưu trên máy chủ.')}
                 </p>
               </div>
@@ -770,12 +648,7 @@ export default function AdminUsers() {
                 aria-label={labelUi('Đóng hộp thoại')}
                 disabled={busy}
                 onClick={closeModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} color={t.textSecondary} aria-hidden="true" />
               </button>
@@ -793,25 +666,20 @@ export default function AdminUsers() {
               }}
             >
               {saveError && (
-                <p
-                  role="alert"
-                  style={{ color: t.danger, fontSize: '13px', margin: 0 }}
-                >
+                <p role="alert" style={{ color: t.danger, fontSize: '13px', margin: 0 }}>
                   {saveError}
                 </p>
               )}
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns:
-                    'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))',
                   gap: '12px',
                 }}
               >
                 <div>
                   <label htmlFor="system-user-name" style={labelStyle}>
-                    {tUi('hk.staffName')}{' '}
-                    <span style={{ color: t.danger }}>*</span>
+                    {tUi('hk.staffName')} <span style={{ color: t.danger }}>*</span>
                   </label>
                   <input
                     id="system-user-name"
@@ -823,10 +691,7 @@ export default function AdminUsers() {
                     placeholder={labelUi('Ví dụ: Lê Tuấn Anh')}
                     value={newUser.name}
                     onChange={(event) =>
-                      setNewUser((previous) => ({
-                        ...previous,
-                        name: event.target.value,
-                      }))
+                      setNewUser((previous) => ({ ...previous, name: event.target.value }))
                     }
                     style={inputStyle}
                   />
@@ -847,24 +712,15 @@ export default function AdminUsers() {
                     placeholder="anh.lt@pmscloud.vn"
                     value={newUser.email}
                     onChange={(event) =>
-                      setNewUser((previous) => ({
-                        ...previous,
-                        email: event.target.value,
-                      }))
+                      setNewUser((previous) => ({ ...previous, email: event.target.value }))
                     }
                     style={inputStyle}
-                    aria-describedby={
-                      editingUser ? 'system-user-email-help' : undefined
-                    }
+                    aria-describedby={editingUser ? 'system-user-email-help' : undefined}
                   />
                   {editingUser && (
                     <p
                       id="system-user-email-help"
-                      style={{
-                        color: t.textSecondary,
-                        fontSize: '11px',
-                        margin: '6px 0 0',
-                      }}
+                      style={{ color: t.textSecondary, fontSize: '11px', margin: '6px 0 0' }}
                     >
                       {labelUi('Email đăng nhập không thể thay đổi.')}
                     </p>
@@ -879,15 +735,10 @@ export default function AdminUsers() {
                     disabled={busy || editingSelf}
                     value={newUser.globalRole}
                     onChange={(event) =>
-                      setNewUser((previous) => ({
-                        ...previous,
-                        globalRole: event.target.value,
-                      }))
+                      setNewUser((previous) => ({ ...previous, globalRole: event.target.value }))
                     }
                     style={inputStyle}
-                    aria-describedby={
-                      editingSelf ? 'system-user-self-help' : undefined
-                    }
+                    aria-describedby={editingSelf ? 'system-user-self-help' : undefined}
                   >
                     {SYSTEM_ROLES.map((role) => (
                       <option key={role} value={role}>
@@ -912,9 +763,7 @@ export default function AdminUsers() {
                     }
                     style={inputStyle}
                     aria-describedby={
-                      editingSelf
-                        ? 'system-user-self-help'
-                        : 'system-user-active-help'
+                      editingSelf ? 'system-user-self-help' : 'system-user-active-help'
                     }
                   >
                     <option value="active">{tUi('common.active')}</option>
@@ -923,11 +772,7 @@ export default function AdminUsers() {
                 </div>
               </div>
               <p
-                id={
-                  editingSelf
-                    ? 'system-user-self-help'
-                    : 'system-user-active-help'
-                }
+                id={editingSelf ? 'system-user-self-help' : 'system-user-active-help'}
                 style={{ color: t.textSecondary, fontSize: '12px', margin: 0 }}
               >
                 {editingSelf
@@ -941,8 +786,7 @@ export default function AdminUsers() {
               {!editingUser && (
                 <div>
                   <label htmlFor="system-user-password" style={labelStyle}>
-                    {labelUi('Mật khẩu ban đầu')}{' '}
-                    <span style={{ color: t.danger }}>*</span>
+                    {labelUi('Mật khẩu ban đầu')} <span style={{ color: t.danger }}>*</span>
                   </label>
                   <input
                     id="system-user-password"
@@ -954,21 +798,14 @@ export default function AdminUsers() {
                     autoComplete="new-password"
                     value={newUser.password}
                     onChange={(event) =>
-                      setNewUser((previous) => ({
-                        ...previous,
-                        password: event.target.value,
-                      }))
+                      setNewUser((previous) => ({ ...previous, password: event.target.value }))
                     }
                     style={inputStyle}
                     aria-describedby="system-user-password-help"
                   />
                   <p
                     id="system-user-password-help"
-                    style={{
-                      fontSize: '11px',
-                      color: t.textSecondary,
-                      margin: '6px 0 0',
-                    }}
+                    style={{ fontSize: '11px', color: t.textSecondary, margin: '6px 0 0' }}
                   >
                     {labelUi('Từ 12 đến 128 ký tự.')}
                   </p>
@@ -986,12 +823,7 @@ export default function AdminUsers() {
                   borderTop: `1px solid ${t.borderSubtle}`,
                 }}
               >
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={closeModal}
-                  style={buttonStyle}
-                >
+                <button type="button" disabled={busy} onClick={closeModal} style={buttonStyle}>
                   {labelUi('Hủy bỏ')}
                 </button>
                 <button
@@ -1020,5 +852,5 @@ export default function AdminUsers() {
         </LegacyOverlay>
       )}
     </div>
-  );
+  )
 }

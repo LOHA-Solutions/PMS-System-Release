@@ -1131,12 +1131,7 @@
   .channex-hotel-list li > .manager-button {
     grid-column: 1 / -1;
   }
-  :is(
-      .channex-hotel-controls,
-      .channex-source-field,
-      .channex-filters,
-      .channex-editor
-    )
+  :is(.channex-hotel-controls, .channex-source-field, .channex-filters, .channex-editor)
     :is(input, select) {
     min-height: 44px;
     font-size: 16px;

@@ -57,8 +57,7 @@
   flex-shrink: 0;
 }
 
-.channex-surface
-  :is(.manager-button, .manager-icon-button):hover:not(:disabled) {
+.channex-surface :is(.manager-button, .manager-icon-button):hover:not(:disabled) {
   filter: brightness(0.96);
 }
 .channex-surface button:disabled {
@@ -129,11 +128,7 @@
   white-space: nowrap;
 }
 .channex-data-view .manager-table tbody tr:nth-child(even) {
-  background: color-mix(
-    in srgb,
-    var(--manager-soft, #f3f7fa) 45%,
-    var(--manager-surface, #fff)
-  );
+  background: color-mix(in srgb, var(--manager-soft, #f3f7fa) 45%, var(--manager-surface, #fff));
 }
 .channex-data-view .manager-table tbody tr:hover {
   background: var(--manager-accent-bg, #eaf4fc);

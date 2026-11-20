@@ -67,9 +67,7 @@
   color: var(--accent-primary, #086ab4);
   background: #edf3f9;
 }
-.inventory-settings-section
-  .inventory-settings-tabs
-  button[aria-pressed='true'] {
+.inventory-settings-section .inventory-settings-tabs button[aria-pressed='true'] {
   border-color: #dce7f0;
   background: white;
   color: var(--accent-primary, #086ab4);

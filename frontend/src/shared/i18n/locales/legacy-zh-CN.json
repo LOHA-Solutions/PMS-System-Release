@@ -525,6 +525,7 @@
   "Email liên hệ: {0}": "联系邮箱：{0}",
   "Email người dùng": "用户邮箱",
   "Email đã được sử dụng. Dùng tài khoản đã có hoặc email khác.": "电子邮件已被使用。使用现有帐户或其他电子邮件。",
+  "Email đã được sử dụng. Vui lòng dùng email khác để thêm nhân viên.": "该邮箱已被使用。请使用其他邮箱添加员工。",
   "Email đăng nhập Owner": "业主登录邮箱",
   "Email đăng nhập không thể thay đổi.": "登录电子邮件无法更改。",
   "Email đăng nhập không được đổi trong quản lý nhân viên.": "员工管理中无法更改登录电子邮件。",

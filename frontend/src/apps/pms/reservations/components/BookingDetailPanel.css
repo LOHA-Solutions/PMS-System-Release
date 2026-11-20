@@ -177,8 +177,7 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
-.booking-detail-panel
-  :is(button, input, select, .booking-detail-table-wrap):focus-visible {
+.booking-detail-panel :is(button, input, select, .booking-detail-table-wrap):focus-visible {
   outline: 2px solid var(--accent-primary, #086ab4);
   outline-offset: 3px;
 }
@@ -493,6 +492,53 @@
   border-color: #90bbdb;
   background: #edf6fd;
   color: #0961a1;
+}
+.booking-detail-room-field {
+  grid-column: 1 / -1;
+}
+.booking-detail-room-field .booking-detail-help {
+  margin: 0;
+}
+.booking-detail-room-options label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.booking-detail-room-search-label {
+  color: var(--text-secondary, #5a7084);
+  font-size: 12px;
+  font-weight: 500;
+}
+.booking-detail-room-candidates {
+  max-height: min(240px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+}
+.booking-detail-room-candidates:focus-visible {
+  outline: 2px solid var(--accent-primary, #086ab4);
+  outline-offset: 3px;
+}
+.booking-detail-room-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(240px, 40dvh);
+  overflow-y: auto;
+}
+.booking-detail-room-chips li {
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #90bbdb;
+  border-radius: 6px;
+  background: #edf6fd;
+  color: #0961a1;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .booking-detail-money-input {
   display: flex;

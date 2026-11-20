@@ -1,19 +1,15 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import { formatDate } from '../../../../shared/lib/date.js';
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { money, today } from '../../data/model';
-import { usePms } from '../../data/usePms';
-import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js';
-import { commissionRateLabel } from '../commissionPresentation';
-import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider.jsx';
-import '../../components/DomainForms.css';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import { formatDate } from '../../../../shared/lib/date.js'
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { money, today } from '../../data/model'
+import { usePms } from '../../data/usePms'
+import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js'
+import { commissionRateLabel } from '../commissionPresentation'
+import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider.jsx'
+import '../../components/DomainForms.css'
 
 const statuses = {
   UNPAID: 'Chưa chi',
@@ -21,33 +17,28 @@ const statuses = {
   PAID: 'Đã chi đủ',
   NEEDS_REVIEW: 'Cần đối soát',
   OVERPAID: 'Cần thu hồi',
-};
+}
 const formTitles = {
   settle: 'Chốt hoa hồng',
   pay: 'Chi hoa hồng',
   review: 'Đối soát lại hoa hồng',
   recover: 'Thu hồi hoa hồng',
-};
+}
 
 export default function Commissions() {
-  const pms = usePms();
-  return (
-    <CommissionPage
-      key={`${pms.tenantId}:${pms.user?.id}:${pms.authGeneration}`}
-      pms={pms}
-    />
-  );
+  const pms = usePms()
+  return <CommissionPage key={`${pms.tenantId}:${pms.user?.id}:${pms.authGeneration}`} pms={pms} />
 }
 
 function CommissionPage({ pms }) {
-  useI18n();
+  useI18n()
   const {
     settings,
     workspaceRevision,
     funds = [],
     bookingSources = [],
     cashbookCategories = [],
-  } = pms;
+  } = pms
   const [filters, setFilters] = useState({
     startDate: '',
     endDate: today(settings.timezone),
@@ -56,101 +47,84 @@ function CommissionPage({ pms }) {
     status: '',
     page: 1,
     pageSize: 20,
-  });
+  })
   const [result, setResult] = useState(null),
-    [reload, setReload] = useState(0);
+    [reload, setReload] = useState(0)
   const [form, setForm] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState('')
   const current = useRef(pms),
     mounted = useRef(true),
     inFlight = useRef(false),
-    opener = useRef(null);
-  const canWrite = pms.access('cashbook.write').allowed;
+    opener = useRef(null)
+  const canWrite = pms.access('cashbook.write').allowed
   const filterKey = JSON.stringify(filters),
-    requestKey = JSON.stringify([filterKey, workspaceRevision, reload]);
+    requestKey = JSON.stringify([filterKey, workspaceRevision, reload])
   const loaded = result?.key === requestKey,
     data = loaded ? result.data : null,
-    loading = !loaded;
-  const totalPages = Math.max(
-    1,
-    Math.ceil((data?.pagination?.totalItems || 0) / filters.pageSize),
-  );
+    loading = !loaded
+  const totalPages = Math.max(1, Math.ceil((data?.pagination?.totalItems || 0) / filters.pageSize))
   const currencies = [
-    ...new Set([
-      settings.currency,
-      ...HOTEL_CURRENCY_CODES,
-      ...funds.map((fund) => fund.currency),
-    ]),
-  ].filter(Boolean);
+    ...new Set([settings.currency, ...HOTEL_CURRENCY_CODES, ...funds.map((fund) => fund.currency)]),
+  ].filter(Boolean)
   const selected =
     form?.mode === 'settle'
-      ? data?.candidates.find(
-          (candidate) => candidate.bookingId === form?.record.bookingId,
-        )
-      : data?.items.find((item) => item.id === form?.record.id);
+      ? data?.candidates.find((candidate) => candidate.bookingId === form?.record.bookingId)
+      : data?.items.find((item) => item.id === form?.record.id)
   const activeFunds = funds.filter(
     (fund) =>
-      fund.active !== false &&
-      (fund.currency || settings.currency) === form?.record.currency,
-  );
+      fund.active !== false && (fund.currency || settings.currency) === form?.record.currency,
+  )
   const expenseCategories = cashbookCategories.filter(
     (category) =>
       category.active !== false &&
       category.type === (form?.mode === 'recover' ? 'INCOME' : 'EXPENSE'),
-  );
+  )
   const blocked =
-    (form?.mode === 'pay' &&
-      (selected?.needsReview || Number(selected?.balance) <= 0)) ||
-    (form?.mode === 'recover' &&
-      (selected?.needsReview || Number(selected?.recoveryDue) <= 0)) ||
-    (form?.mode === 'review' && (!form.preview || form.preview.blockedByOta));
+    (form?.mode === 'pay' && (selected?.needsReview || Number(selected?.balance) <= 0)) ||
+    (form?.mode === 'recover' && (selected?.needsReview || Number(selected?.recoveryDue) <= 0)) ||
+    (form?.mode === 'review' && (!form.preview || form.preview.blockedByOta))
   const guard = useDraftGuard({
     dirty: Boolean(form?.dirty),
     pending: () => inFlight.current,
     onDiscard: () => {
-      setForm(null);
-      setError('');
+      setForm(null)
+      setError('')
     },
-  });
+  })
 
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
     return () => {
-      mounted.current = false;
-    };
-  }, []);
+      mounted.current = false
+    }
+  }, [])
   useEffect(() => {
-    current.current = pms;
-  }, [pms]);
+    current.current = pms
+  }, [pms])
   useEffect(() => {
-    let active = true;
+    let active = true
     current.current
       .getCommissions(JSON.parse(filterKey))
       .then((data) => {
-        if (active) setResult({ key: requestKey, data, error: '' });
+        if (active) setResult({ key: requestKey, data, error: '' })
       })
       .catch((error) => {
-        if (active)
-          setResult({ key: requestKey, data: null, error: error.message });
-      });
+        if (active) setResult({ key: requestKey, data: null, error: error.message })
+      })
     return () => {
-      active = false;
-    };
-  }, [requestKey, filterKey]);
+      active = false
+    }
+  }, [requestKey, filterKey])
 
   async function open(mode, record, event) {
-    opener.current = event.currentTarget;
-    setError('');
-    setNotice('');
-    const loadId = crypto.randomUUID();
+    opener.current = event.currentTarget
+    setError('')
+    setNotice('')
+    const loadId = crypto.randomUUID()
     const previous =
-      mode === 'review' &&
-      form?.mode === 'review' &&
-      form.record.id === record.id
-        ? form
-        : null;
+      mode === 'review' && form?.mode === 'review' && form.record.id === record.id ? form : null
     setForm({
       mode,
       record,
@@ -161,8 +135,7 @@ function CommissionPage({ pms }) {
       fundId:
         funds.find(
           (fund) =>
-            fund.active !== false &&
-            (fund.currency || settings.currency) === record.currency,
+            fund.active !== false && (fund.currency || settings.currency) === record.currency,
         )?.id || '',
       categoryId: '',
       note: '',
@@ -170,10 +143,10 @@ function CommissionPage({ pms }) {
       dirty: previous?.dirty || false,
       intent: crypto.randomUUID(),
       preview: null,
-    });
+    })
     if (mode === 'review') {
       try {
-        const preview = await pms.getCommissionReview(record.id);
+        const preview = await pms.getCommissionReview(record.id)
         if (mounted.current)
           setForm((value) =>
             value?.loadId !== loadId
@@ -182,8 +155,7 @@ function CommissionPage({ pms }) {
                   ...value,
                   preview,
                   providerAmount:
-                    preview.evidence?.providerCommission?.providerAmount ??
-                    preview.current.amount,
+                    preview.evidence?.providerCommission?.providerAmount ?? preview.current.amount,
                   allocations: Object.fromEntries(
                     preview.charges
                       .filter((line) => line.allocatable)
@@ -194,24 +166,22 @@ function CommissionPage({ pms }) {
                       ]),
                   ),
                 },
-          );
+          )
       } catch (error) {
         if (mounted.current)
           setForm((previous) =>
-            previous?.loadId !== loadId
-              ? previous
-              : { ...previous, previewError: error.message },
-          );
+            previous?.loadId !== loadId ? previous : { ...previous, previewError: error.message },
+          )
       }
     }
   }
   function close() {
-    if (inFlight.current) return;
+    if (inFlight.current) return
     guard.requestLeave(() => {
-      setForm(null);
-      setError('');
-      opener.current?.focus();
-    });
+      setForm(null)
+      setError('')
+      opener.current?.focus()
+    })
   }
   function change(name, value) {
     setForm((previous) => ({
@@ -219,18 +189,17 @@ function CommissionPage({ pms }) {
       [name]: value,
       dirty: true,
       intent: crypto.randomUUID(),
-    }));
+    }))
   }
   function filter(name, value) {
-    setFilters((previous) => ({ ...previous, [name]: value, page: 1 }));
+    setFilters((previous) => ({ ...previous, [name]: value, page: 1 }))
   }
   async function submit(event) {
-    event.preventDefault();
-    if (inFlight.current || !canWrite || loading || !selected || blocked)
-      return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
+    event.preventDefault()
+    if (inFlight.current || !canWrite || loading || !selected || blocked) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
     try {
       if (form.mode === 'settle') {
         await pms.settleCommission({
@@ -241,65 +210,56 @@ function CommissionPage({ pms }) {
                 confirmLegacyRate: form.confirmLegacyRate,
               }
             : {}),
-        });
+        })
       } else if (form.mode === 'review') {
         await pms.reviewCommission(
           form.record.id,
           {
             previewToken: form.preview.previewToken,
-            allocations: Object.entries(form.allocations).map(
-              ([chargeId, roomAmount]) => {
-                const amount = String(
-                  form.preview.charges.find((line) => line.id === chargeId)
-                    .amount,
-                );
-                return {
-                  chargeId,
-                  roomAmount: decimalInput(roomAmount, {
-                    min: amount.startsWith('-') ? amount : '0',
-                    max: amount.startsWith('-') ? '0' : amount,
-                  }),
-                };
-              },
-            ),
+            allocations: Object.entries(form.allocations).map(([chargeId, roomAmount]) => {
+              const amount = String(
+                form.preview.charges.find((line) => line.id === chargeId).amount,
+              )
+              return {
+                chargeId,
+                roomAmount: decimalInput(roomAmount, {
+                  min: amount.startsWith('-') ? amount : '0',
+                  max: amount.startsWith('-') ? '0' : amount,
+                }),
+              }
+            }),
             reason: form.reason,
             ...(form.record.calculationBasis === 'provider_amount'
               ? { providerAmount: decimalInput(form.providerAmount) }
               : {}),
           },
           form.intent,
-        );
+        )
       } else if (form.mode === 'recover') {
         await pms.recoverCommission(
           form.record.id,
           {
-            amount: decimalInput(form.amount, {
-              min: '0.0001',
-              max: selected.recoveryDue,
-            }),
+            amount: decimalInput(form.amount, { min: '0.0001', max: selected.recoveryDue }),
             fundId: form.fundId,
             note: form.note,
             ...(form.categoryId ? { categoryId: form.categoryId } : {}),
           },
           form.intent,
-        );
+        )
       } else {
         await pms.payCommission(
           form.record.id,
           {
-            amount: decimalInput(form.amount, {
-              min: '0.0001',
-              max: selected.balance,
-            }),
+            amount: decimalInput(form.amount, { min: '0.0001', max: selected.balance }),
             fundId: form.fundId,
             note: form.note,
             ...(form.categoryId ? { categoryId: form.categoryId } : {}),
           },
           form.intent,
-        );
+        )
       }
       if (mounted.current) {
-        setForm(null);
+        setForm(null)
         setNotice(
           form.mode === 'settle'
             ? 'Đã chốt hoa hồng theo cơ sở tiền phòng.'
@@ -308,20 +268,20 @@ function CommissionPage({ pms }) {
               : form.mode === 'recover'
                 ? 'Đã ghi phiếu thu hồi hoa hồng.'
                 : 'Đã ghi phiếu chi hoa hồng.',
-        );
-        setReload((value) => value + 1);
-        opener.current?.focus();
+        )
+        setReload((value) => value + 1)
+        opener.current?.focus()
       }
     } catch (error) {
-      if (mounted.current) setError(error.message);
+      if (mounted.current) setError(error.message)
     } finally {
-      inFlight.current = false;
-      if (mounted.current) setBusy(false);
+      inFlight.current = false
+      if (mounted.current) setBusy(false)
     }
   }
   function cashbookLink(payment, currency) {
-    const fund = funds.find((fund) => fund.id === payment.fundId);
-    return `/id/cashflow/${fund?.type?.toUpperCase() === 'BANK' ? 'bank' : 'cash'}?${new URLSearchParams({ documentId: payment.cashDocumentId, currency })}`;
+    const fund = funds.find((fund) => fund.id === payment.fundId)
+    return `/id/cashflow/${fund?.type?.toUpperCase() === 'BANK' ? 'bank' : 'cash'}?${new URLSearchParams({ documentId: payment.cashDocumentId, currency })}`
   }
 
   return (
@@ -357,11 +317,7 @@ function CommissionPage({ pms }) {
           </button>
         </p>
       )}
-      <section
-        className="domain-stats"
-        aria-label={labelUi('Tổng hoa hồng')}
-        aria-busy={loading}
-      >
+      <section className="domain-stats" aria-label={labelUi('Tổng hoa hồng')} aria-busy={loading}>
         {[
           ['accrued', 'Đã chốt'],
           ['paid', 'Đã chi'],
@@ -369,11 +325,7 @@ function CommissionPage({ pms }) {
         ].map(([key, label]) => (
           <div key={key}>
             {labelUi(label)}
-            <strong>
-              {data?.summary
-                ? money(data.summary[key], data.summary.currency)
-                : '—'}
-            </strong>
+            <strong>{data?.summary ? money(data.summary[key], data.summary.currency) : '—'}</strong>
           </div>
         ))}
       </section>
@@ -419,9 +371,7 @@ function CommissionPage({ pms }) {
                 {bookingSources.map((source) => (
                   <option key={source.id} value={source.id}>
                     {source.name}
-                    {source.active === false
-                      ? ' ' + labelUi('(ngừng dùng)')
-                      : ''}
+                    {source.active === false ? ' ' + labelUi('(ngừng dùng)') : ''}
                   </option>
                 ))}
               </select>
@@ -446,10 +396,7 @@ function CommissionPage({ pms }) {
       </section>
 
       {form && (
-        <section
-          className="domain-panel"
-          aria-labelledby="commission-form-title"
-        >
+        <section className="domain-panel" aria-labelledby="commission-form-title">
           <form onSubmit={submit} aria-busy={busy}>
             <h2 id="commission-form-title">
               {labelUi(formTitles[form.mode])} · {form.record.guestName}
@@ -501,9 +448,7 @@ function CommissionPage({ pms }) {
                       {form.previewError && (
                         <button
                           type="button"
-                          onClick={(event) =>
-                            open('review', form.record, event)
-                          }
+                          onClick={(event) => open('review', form.record, event)}
                         >
                           {tUi('common.retry')}
                         </button>
@@ -521,27 +466,20 @@ function CommissionPage({ pms }) {
                       </button>
                       <p>
                         Tiền phòng theo giá đêm:{' '}
-                        <strong>
-                          {money(
-                            form.preview.roomSubtotal,
-                            form.record.currency,
-                          )}
-                        </strong>
-                        . Phân bổ rõ phần phí/giảm giá thuộc tiền phòng; dịch vụ
-                        và thuế không tính hoa hồng.
+                        <strong>{money(form.preview.roomSubtotal, form.record.currency)}</strong>.
+                        Phân bổ rõ phần phí/giảm giá thuộc tiền phòng; dịch vụ và thuế không tính
+                        hoa hồng.
                       </p>
                       {form.preview.blockedByOta && (
                         <p role="alert" className="domain-error">
-                          Cần xử lý booking OTA đang chờ trước khi đối soát hoa
-                          hồng.
+                          Cần xử lý booking OTA đang chờ trước khi đối soát hoa hồng.
                         </p>
                       )}
                       <div className="domain-fields">
                         {form.preview.charges.map((line) =>
                           line.allocatable ? (
                             <label key={line.id}>
-                              {line.description} ·{' '}
-                              {money(line.amount, form.record.currency)}
+                              {line.description} · {money(line.amount, form.record.currency)}
                               <span>Phần thuộc tiền phòng</span>
                               <input
                                 aria-label={`Phần tiền phòng ${line.description}`}
@@ -549,12 +487,8 @@ function CommissionPage({ pms }) {
                                 inputMode="decimal"
                                 pattern="-?[0-9]{1,15}([.][0-9]{1,4})?"
                                 maxLength={21}
-                                min={
-                                  Number(line.amount) < 0 ? line.amount : '0'
-                                }
-                                max={
-                                  Number(line.amount) > 0 ? line.amount : '0'
-                                }
+                                min={Number(line.amount) < 0 ? line.amount : '0'}
+                                max={Number(line.amount) > 0 ? line.amount : '0'}
                                 required
                                 value={form.allocations[line.id]}
                                 onChange={(event) =>
@@ -567,8 +501,7 @@ function CommissionPage({ pms }) {
                             </label>
                           ) : (
                             <p key={line.id}>
-                              {line.description}:{' '}
-                              {money(line.amount, form.record.currency)} · Không
+                              {line.description}: {money(line.amount, form.record.currency)} · Không
                               tính hoa hồng.
                             </p>
                           ),
@@ -578,12 +511,9 @@ function CommissionPage({ pms }) {
                         <p>
                           Đã hoàn cho khách:{' '}
                           {form.preview.refunds
-                            .map((refund) =>
-                              money(refund.amount, form.record.currency),
-                            )
+                            .map((refund) => money(refund.amount, form.record.currency))
                             .join(', ')}
-                          . Đối chiếu với khoản giảm tiền tương ứng; không trừ
-                          hai lần.
+                          . Đối chiếu với khoản giảm tiền tương ứng; không trừ hai lần.
                         </p>
                       )}
                       {form.record.calculationBasis === 'provider_amount' ? (
@@ -598,15 +528,12 @@ function CommissionPage({ pms }) {
                             step="0.0001"
                             required
                             value={form.providerAmount}
-                            onChange={(event) =>
-                              change('providerAmount', event.target.value)
-                            }
+                            onChange={(event) => change('providerAmount', event.target.value)}
                           />
                         </label>
                       ) : (
                         <p>
-                          Giữ tỷ lệ đã chốt:{' '}
-                          <strong>{form.record.percent}%</strong>. Hệ thống tính
+                          Giữ tỷ lệ đã chốt: <strong>{form.record.percent}%</strong>. Hệ thống tính
                           lại trên tiền phòng sau phân bổ.
                         </p>
                       )}
@@ -616,9 +543,7 @@ function CommissionPage({ pms }) {
                           required
                           maxLength={1000}
                           value={form.reason}
-                          onChange={(event) =>
-                            change('reason', event.target.value)
-                          }
+                          onChange={(event) => change('reason', event.target.value)}
                         />
                       </label>
                     </>
@@ -629,12 +554,7 @@ function CommissionPage({ pms }) {
                   {form.record.calculationBasis === 'provider_amount' ? (
                     <p>
                       {labelUi('Theo số tiền OTA')}:{' '}
-                      <strong>
-                        {money(
-                          form.record.providerAmount,
-                          form.record.currency,
-                        )}
-                      </strong>
+                      <strong>{money(form.record.providerAmount, form.record.currency)}</strong>
                     </p>
                   ) : form.record.missingRate ? (
                     <>
@@ -657,31 +577,21 @@ function CommissionPage({ pms }) {
                             max="100"
                             step="0.0001"
                             value={form.legacyPercent}
-                            onChange={(event) =>
-                              change('legacyPercent', event.target.value)
-                            }
+                            onChange={(event) => change('legacyPercent', event.target.value)}
                           />
                         </label>
                       </div>
                       <label
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          marginBottom: 16,
-                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}
                       >
                         <input
                           type="checkbox"
                           required
                           checked={form.confirmLegacyRate}
-                          onChange={(event) =>
-                            change('confirmLegacyRate', event.target.checked)
-                          }
+                          onChange={(event) => change('confirmLegacyRate', event.target.checked)}
                           style={{ width: 'auto', minHeight: 0 }}
                         />
-                        {labelUi(
-                          'Tôi xác nhận tỷ lệ hoa hồng cho đặt phòng cũ này.',
-                        )}
+                        {labelUi('Tôi xác nhận tỷ lệ hoa hồng cho đặt phòng cũ này.')}
                       </label>
                     </>
                   ) : (
@@ -702,18 +612,12 @@ function CommissionPage({ pms }) {
                       labelUi('Theo số tiền OTA')
                     ) : (
                       <>
-                        <strong>
-                          {money(form.record.roomNet, form.record.currency)}
-                        </strong>{' '}
-                        × {form.record.percent}%
+                        <strong>{money(form.record.roomNet, form.record.currency)}</strong> ×{' '}
+                        {form.record.percent}%
                       </>
                     )}
-                    . Hoa hồng:{' '}
-                    <strong>
-                      {money(form.record.amount, form.record.currency)}
-                    </strong>
-                    . {form.mode === 'recover' ? 'Cần thu hồi' : 'Còn phải chi'}
-                    :{' '}
+                    . Hoa hồng: <strong>{money(form.record.amount, form.record.currency)}</strong>.{' '}
+                    {form.mode === 'recover' ? 'Cần thu hồi' : 'Còn phải chi'}:{' '}
                     <strong>
                       {money(
                         form.mode === 'recover'
@@ -742,21 +646,15 @@ function CommissionPage({ pms }) {
                         }
                         step="0.0001"
                         value={form.amount}
-                        onChange={(event) =>
-                          change('amount', event.target.value)
-                        }
+                        onChange={(event) => change('amount', event.target.value)}
                       />
                     </label>
                     <label>
-                      {form.mode === 'recover'
-                        ? 'Quỹ nhận lại'
-                        : labelUi('Quỹ chi')}
+                      {form.mode === 'recover' ? 'Quỹ nhận lại' : labelUi('Quỹ chi')}
                       <select
                         required
                         value={form.fundId}
-                        onChange={(event) =>
-                          change('fundId', event.target.value)
-                        }
+                        onChange={(event) => change('fundId', event.target.value)}
                       >
                         <option value="">{labelUi('Chọn quỹ')}</option>
                         {activeFunds.map((fund) => (
@@ -767,14 +665,10 @@ function CommissionPage({ pms }) {
                       </select>
                     </label>
                     <label>
-                      {form.mode === 'recover'
-                        ? 'Danh mục thu'
-                        : labelUi('Danh mục chi')}
+                      {form.mode === 'recover' ? 'Danh mục thu' : labelUi('Danh mục chi')}
                       <select
                         value={form.categoryId}
-                        onChange={(event) =>
-                          change('categoryId', event.target.value)
-                        }
+                        onChange={(event) => change('categoryId', event.target.value)}
                       >
                         <option value="">{labelUi('Chưa phân loại')}</option>
                         {expenseCategories.map((category) => (
@@ -787,8 +681,7 @@ function CommissionPage({ pms }) {
                   </div>
                   {!activeFunds.length && (
                     <p role="alert" className="domain-error">
-                      Chưa có quỹ đang hoạt động bằng {form.record.currency} để
-                      chi hoa hồng.
+                      Chưa có quỹ đang hoạt động bằng {form.record.currency} để chi hoa hồng.
                     </p>
                   )}
                   <label>
@@ -888,10 +781,7 @@ function CommissionPage({ pms }) {
                       <button
                         type="button"
                         disabled={
-                          busy ||
-                          Boolean(form) ||
-                          record.needsReview ||
-                          Number(record.balance) <= 0
+                          busy || Boolean(form) || record.needsReview || Number(record.balance) <= 0
                         }
                         onClick={(event) => open('pay', record, event)}
                       >
@@ -916,29 +806,23 @@ function CommissionPage({ pms }) {
                     </>
                   )}
                   {record.needsReview && (
-                    <p>
-                      {labelUi(
-                        'Cần đối soát chiết khấu hoặc điều chỉnh lưu trú.',
-                      )}
-                    </p>
+                    <p>{labelUi('Cần đối soát chiết khấu hoặc điều chỉnh lưu trú.')}</p>
                   )}
                   <details>
                     <summary>{labelUi('Cơ sở và lịch sử chi')}</summary>
                     <p>
-                      Cơ sở tiền phòng: {money(record.roomNet, record.currency)}{' '}
-                      · {labelUi(commissionRateLabel(record))}.
+                      Cơ sở tiền phòng: {money(record.roomNet, record.currency)} ·{' '}
+                      {labelUi(commissionRateLabel(record))}.
                     </p>
                     <p>
-                      Cơ sở tiền quy đổi đã chốt:{' '}
-                      {money(record.baseRoomNet, record.baseCurrency)}. Hoa hồng
-                      quy đổi: {money(record.baseAmount, record.baseCurrency)}.
+                      Cơ sở tiền quy đổi đã chốt: {money(record.baseRoomNet, record.baseCurrency)}.
+                      Hoa hồng quy đổi: {money(record.baseAmount, record.baseCurrency)}.
                     </p>
                     {record.payments.length ? (
                       <ul>
                         {record.payments.map((payment) => (
                           <li key={payment.id}>
-                            {formatDate(payment.date)} ·{' '}
-                            {money(payment.amount, record.currency)} ·{' '}
+                            {formatDate(payment.date)} · {money(payment.amount, record.currency)} ·{' '}
                             <Link to={cashbookLink(payment, record.currency)}>
                               Phiếu {payment.cashDocumentId}
                             </Link>
@@ -955,8 +839,8 @@ function CommissionPage({ pms }) {
                         <ul>
                           {record.recoveries.map((payment) => (
                             <li key={payment.id}>
-                              {formatDate(payment.date)} ·{' '}
-                              {money(payment.amount, record.currency)} ·{' '}
+                              {formatDate(payment.date)} · {money(payment.amount, record.currency)}{' '}
+                              ·{' '}
                               <Link to={cashbookLink(payment, record.currency)}>
                                 Phiếu {payment.cashDocumentId}
                               </Link>
@@ -975,8 +859,7 @@ function CommissionPage({ pms }) {
                         <ul>
                           {record.reviews.map((review) => (
                             <li key={review.id}>
-                              {review.createdAt} ·{' '}
-                              {money(review.amount, record.currency)} ·{' '}
+                              {review.createdAt} · {money(review.amount, record.currency)} ·{' '}
                               {review.reason}
                             </li>
                           ))}
@@ -1013,9 +896,7 @@ function CommissionPage({ pms }) {
         aria-labelledby="commission-candidates-title"
         aria-busy={loading}
       >
-        <h2 id="commission-candidates-title">
-          {labelUi('Đặt phòng đã trả phòng, chưa chốt')}
-        </h2>
+        <h2 id="commission-candidates-title">{labelUi('Đặt phòng đã trả phòng, chưa chốt')}</h2>
         <table>
           <thead>
             <tr>
@@ -1087,30 +968,23 @@ function CommissionPage({ pms }) {
         <span>
           {data?.pagination?.totalItems ??
             (data?.items.length || 0) + (data?.candidates.length || 0)}{' '}
-          đặt phòng · Trang {filters.page}/{totalPages}. Tổng hoa hồng gồm toàn
-          bộ kỳ đang lọc.
+          đặt phòng · Trang {filters.page}/{totalPages}. Tổng hoa hồng gồm toàn bộ kỳ đang lọc.
         </span>
         <button
           type="button"
           disabled={loading || busy || Boolean(form) || filters.page <= 1}
-          onClick={() =>
-            setFilters((previous) => ({ ...previous, page: previous.page - 1 }))
-          }
+          onClick={() => setFilters((previous) => ({ ...previous, page: previous.page - 1 }))}
         >
           {labelUi('Trang trước')}
         </button>
         <button
           type="button"
-          disabled={
-            loading || busy || Boolean(form) || filters.page >= totalPages
-          }
-          onClick={() =>
-            setFilters((previous) => ({ ...previous, page: previous.page + 1 }))
-          }
+          disabled={loading || busy || Boolean(form) || filters.page >= totalPages}
+          onClick={() => setFilters((previous) => ({ ...previous, page: previous.page + 1 }))}
         >
           {labelUi('Trang sau')}
         </button>
       </nav>
     </div>
-  );
+  )
 }

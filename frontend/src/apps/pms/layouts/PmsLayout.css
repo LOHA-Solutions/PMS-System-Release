@@ -29,8 +29,7 @@
 .pms-shell :is(button, input, select, textarea) {
   font-family: inherit;
 }
-.pms-shell
-  :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+.pms-shell :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--accent-primary);
   outline-offset: 3px;
 }
@@ -115,51 +114,6 @@
   font-size: 9px;
   letter-spacing: 2px;
   margin-top: 5px;
-}
-.pms-hotel-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #31506a;
-  background: #1b3650;
-  margin-bottom: 12px;
-}
-.pms-hotel-selector > svg {
-  flex-shrink: 0;
-  color: #def09f;
-}
-.pms-hotel-selector > div {
-  min-width: 0;
-  flex: 1;
-}
-.pms-hotel-selector label {
-  display: block;
-  color: #b6c7d7;
-  font-size: 8px;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
-}
-.pms-hotel-selector select {
-  width: 100%;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: white;
-  cursor: pointer;
-}
-.pms-hotel-selector option {
-  background: #122b44;
-  color: white;
-}
-.pms-hotel-selector small {
-  font-size: 10px;
-  color: #b6c7d7;
-  display: block;
-  margin-top: 6px;
 }
 .pms-sidebar-nav {
   flex: 1;
@@ -260,8 +214,7 @@
 .pms-collapse-toggle {
   color: #a7bfd3;
 }
-.pms-sidebar-close,
-.pms-hotel-selector > button {
+.pms-sidebar-close {
   border: 0;
   background: transparent;
   color: white;
@@ -272,8 +225,7 @@
   padding-inline: 8px;
 }
 .pms-sidebar.is-collapsed .loha-brand > span:last-child,
-.pms-sidebar.is-collapsed .pms-nav-link > span,
-.pms-sidebar.is-collapsed .pms-hotel-selector > svg {
+.pms-sidebar.is-collapsed .pms-nav-link > span {
   display: none;
 }
 .pms-sidebar.is-collapsed .pms-sidebar-brand {
@@ -282,11 +234,6 @@
 .pms-sidebar.is-collapsed .pms-nav-link {
   justify-content: center;
   padding-inline: 0;
-}
-.pms-sidebar.is-collapsed .pms-hotel-selector {
-  padding: 0;
-  justify-content: center;
-  border: 0;
 }
 .pms-workspace {
   flex: 1;
@@ -320,6 +267,8 @@
 }
 .pms-topbar-context > div {
   min-width: 0;
+  flex: 0 1 auto;
+  max-width: clamp(130px, 28vw, 220px);
 }
 .pms-topbar-context span {
   display: block;
@@ -336,6 +285,30 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.pms-topbar-context label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  cursor: default;
+}
+.pms-topbar-context select {
+  display: block;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  min-width: 0;
+}
+.pms-topbar-context select option {
+  background: white;
+  color: var(--text-primary);
 }
 .pms-topbar-actions {
   display: flex;
@@ -814,10 +787,6 @@
   .pms-account-trigger {
     justify-content: center;
   }
-  .pms-mobile-navigation .pms-hotel-selector select {
-    min-height: 44px;
-    font-size: 16px;
-  }
   .pms-shell .pms-topbar-actions .loha-language-switcher {
     max-width: 160px;
   }
@@ -834,8 +803,7 @@
     min-width: 44px !important;
     min-height: 44px !important;
   }
-  .pms-shell
-    :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  .pms-shell :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
     min-height: 44px !important;
     font-size: 1rem !important;
   }

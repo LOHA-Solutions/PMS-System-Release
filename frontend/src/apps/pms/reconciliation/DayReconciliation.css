@@ -189,6 +189,68 @@
   color: var(--accent-primary);
 }
 
+.day-reconciliation-summary {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #cddfec;
+  border-radius: 12px;
+  background: #f6fafd;
+}
+.day-reconciliation-summary ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.day-reconciliation-summary li {
+  min-width: 0;
+}
+.day-reconciliation-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.day-reconciliation-summary-item strong {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.day-reconciliation-summary-item.is-attention strong {
+  color: #a62c28;
+}
+.day-reconciliation-summary-item.is-unavailable {
+  color: var(--text-muted);
+}
+a.day-reconciliation-summary-item:not([aria-disabled='true']):hover {
+  border-color: #b6c9d9;
+  background: var(--bg-main);
+}
+a.day-reconciliation-summary-item[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.day-reconciliation-stay-section,
+.day-reconciliation .night-audit-panel {
+  scroll-margin-top: 16px;
+}
+
 .day-reconciliation-error,
 .day-reconciliation-success,
 .day-reconciliation-notice {
@@ -421,8 +483,7 @@
   background: #edf5fb;
   border-color: #deebf5;
 }
-.day-reconciliation-stay-section.is-departures
-  .day-reconciliation-section-icon {
+.day-reconciliation-stay-section.is-departures .day-reconciliation-section-icon {
   color: #a16a22;
   background: #fcf6ec;
   border-color: #f3e8d7;

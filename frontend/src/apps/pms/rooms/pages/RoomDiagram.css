@@ -143,6 +143,63 @@
   font: inherit;
   font-size: 13px;
 }
+.loha-rooms-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 220px;
+  min-width: 160px;
+}
+.loha-rooms-search > svg {
+  position: absolute;
+  left: 10px;
+  color: var(--text-secondary, #5a7084);
+  pointer-events: none;
+}
+.loha-rooms-search input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px 8px 32px;
+  border: 1px solid #aabccb;
+  border-radius: 8px;
+  color: var(--text-primary, #122b44);
+  background: var(--bg-card, #fff);
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.loha-rooms-search input:focus-visible {
+  outline: 2px solid var(--accent-primary, #086ab4);
+  outline-offset: 2px;
+}
+.loha-rooms-results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 16px 0;
+  font-size: 12px;
+  color: var(--text-secondary, #5a7084);
+}
+.loha-rooms .loha-rooms-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color, #dce5ee);
+  border-radius: 6px;
+  background: var(--bg-card, #fff);
+  color: var(--accent-primary, #086ab4);
+  font-size: 12px;
+  font-weight: 600;
+}
+.loha-room-ref {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  opacity: 0.85;
+}
 .loha-rooms-visually-hidden {
   position: absolute;
   width: 1px;
@@ -259,18 +316,41 @@
   grid-template-columns: 1fr;
 }
 .loha-rooms .loha-room-card {
+  --room-card-bg: #eff4f8;
+  --room-card-border: #cbd9e3;
+  --room-card-text: #3d586d;
   display: flex;
   flex-direction: column;
   min-width: 0;
   width: 100%;
   text-align: left;
   padding: 0;
-  border: 1px solid var(--border-color, #dce5ee);
+  border: 1px solid var(--room-card-border);
   border-radius: 10px;
   overflow: hidden;
-  background: var(--bg-card, #fff);
-  color: var(--text-primary, #122b44);
+  background: var(--room-card-bg);
+  color: var(--room-card-text);
   transition: border-color 0.15s;
+}
+.loha-rooms .loha-room-card.room-confirmed {
+  --room-card-bg: #e7f3fc;
+  --room-card-border: #b5d8f2;
+  --room-card-text: #0961a1;
+}
+.loha-rooms .loha-room-card.room-occupied {
+  --room-card-bg: #e8f4d5;
+  --room-card-border: #c6dfa5;
+  --room-card-text: #315815;
+}
+.loha-rooms .loha-room-card.room-dirty {
+  --room-card-bg: #fff5df;
+  --room-card-border: #ead49e;
+  --room-card-text: #805b15;
+}
+.loha-rooms .loha-room-card.room-blocked {
+  --room-card-bg: #fff0f1;
+  --room-card-border: #efc5c9;
+  --room-card-text: #a3343d;
 }
 .loha-rooms .loha-room-card:hover {
   border-color: var(--accent-primary, #086ab4);
@@ -282,29 +362,38 @@
   gap: 12px;
   padding: 12px 12px 10px;
 }
-.loha-room-card-top > strong {
+.loha-room-card-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.loha-room-card-top > strong,
+.loha-room-card-title > strong {
   font-size: 15px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .loha-room-card-icons {
   display: flex;
   gap: 7px;
-  color: var(--text-secondary, #5a7084);
+  flex-shrink: 0;
 }
-.loha-room-card-icons > svg:first-child:not(:last-child) {
-  color: #99701e;
+.loha-room-cleaning-icon {
+  color: #805b15;
 }
 .loha-room-type {
-  padding: 0 12px;
-  color: var(--text-secondary, #5a7084);
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 .loha-room-card-body {
-  padding: 12px;
+  padding: 8px 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 100px;
+  min-width: 0;
+  min-height: 76px;
   flex: 1;
 }
 .loha-room-guest {
@@ -313,14 +402,13 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.loha-room-guest > svg {
+  flex-shrink: 0;
 }
 .loha-room-stay {
   font-size: 11px;
-  color: var(--text-secondary, #5a7084);
-}
-.loha-room-booking-code {
-  font-size: 10px;
-  color: var(--text-secondary, #5a7084);
   overflow-wrap: anywhere;
 }
 .loha-room-empty {
@@ -330,7 +418,6 @@
   flex-direction: column;
   gap: 8px;
   min-height: 70px;
-  color: var(--text-secondary, #5a7084);
   font-size: 12px;
 }
 .loha-room-empty svg {
@@ -339,14 +426,6 @@
 .loha-room-empty small {
   font-size: 10px;
   color: #8e681d;
-}
-.loha-room-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px 12px;
-  border-top: 1px solid var(--border-color, #dce5ee);
 }
 .loha-room-status {
   display: inline-block;
@@ -371,10 +450,6 @@
 .loha-room-status.room-blocked {
   background: #fff0f1;
   color: #a3343d;
-}
-.loha-room-payment {
-  color: var(--text-secondary, #5a7084);
-  font-size: 10px;
 }
 .loha-rooms-empty {
   text-align: center;
@@ -503,28 +578,19 @@
     flex-wrap: wrap;
   }
   .is-list .loha-room-card-top {
-    width: 140px;
+    width: 280px;
+    max-width: 100%;
     flex-shrink: 0;
-  }
-  .is-list .loha-room-type {
-    width: 110px;
-    flex-shrink: 0;
-    padding: 12px;
   }
   .is-list .loha-room-card-body {
     min-height: 0;
-    min-width: 0;
     padding: 12px;
-    flex: 1 1 120px;
-  }
-  .is-list .loha-room-card-footer {
-    border-top: 0;
-    padding: 12px;
-    flex-direction: column;
+    flex: 1 1 180px;
   }
   .is-list .loha-room-empty {
     min-height: 0;
     flex-direction: row;
+    justify-content: flex-start;
   }
 }
 @media (max-width: 1100px) {
@@ -610,8 +676,16 @@
     height: 44px;
     flex-shrink: 0;
   }
-  .loha-rooms-filters select {
+  .loha-rooms-filters select,
+  .loha-rooms-search input {
     font-size: 16px;
+  }
+  .loha-rooms-search input,
+  .loha-rooms .loha-rooms-clear {
+    min-height: 44px;
+  }
+  .loha-rooms-search {
+    flex: 1 1 100%;
   }
 }
 @media (max-width: 600px) {

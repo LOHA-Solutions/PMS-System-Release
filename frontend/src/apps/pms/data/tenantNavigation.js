@@ -11,14 +11,14 @@ export function requestTenantSelection({
   apply,
   fail,
 }) {
-  if (id === tenantId) return false;
+  if (id === tenantId) return false
   if (!hotels.some((hotel) => hotel.id === id))
-    return fail(new Error('Bạn không có quyền vào khách sạn này.'));
-  const token = scope.current();
+    return fail(new Error('Bạn không có quyền vào khách sạn này.'))
+  const token = scope.current()
   return requestLeave(() => {
-    if (!scope.isCurrent(token)) return;
-    clearDrafts();
-    scope.select(id);
-    apply(id);
-  });
+    if (!scope.isCurrent(token)) return
+    clearDrafts()
+    scope.select(id)
+    apply(id)
+  })
 }

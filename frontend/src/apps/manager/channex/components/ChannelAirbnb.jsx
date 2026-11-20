@@ -1,20 +1,10 @@
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ArrowUpRight,
-  Link2,
-  RefreshCw,
-  ShieldCheck,
-  Trash2,
-} from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import { useChannexQuery } from '../useChannexQuery';
-import { uncertainChannelWrite } from '../channelForms';
-import { DataState } from './RemoteData';
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowUpRight, Link2, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import { useChannexQuery } from '../useChannexQuery'
+import { uncertainChannelWrite } from '../channelForms'
+import { DataState } from './RemoteData'
 
 export default function ChannelAirbnb({
   account,
@@ -30,94 +20,88 @@ export default function ChannelAirbnb({
   onReload,
   onBusy,
 }) {
-  useI18n();
-  const pms = usePms();
+  useI18n()
+  const pms = usePms()
   const {
     createChannexAirbnbLink,
     getChannexAirbnbListings,
     saveChannexAirbnbMapping,
     deleteChannexAirbnbMapping,
-  } = operations || pms;
+  } = operations || pms
   const [link, setLink] = useState(null),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
-    [uncertain, setUncertain] = useState(false);
-  const url = link?.name === name && link?.groupId === groupId ? link.url : '';
+    [uncertain, setUncertain] = useState(false)
+  const url = link?.name === name && link?.groupId === groupId ? link.url : ''
   const [listingId, setListingId] = useState(''),
     [ratePlanId, setRatePlanId] = useState(''),
-    [removal, setRemoval] = useState(null);
+    [removal, setRemoval] = useState(null)
   const mounted = useRef(true),
-    working = useRef(false);
+    working = useRef(false)
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
     return () => {
-      mounted.current = false;
-    };
-  }, []);
+      mounted.current = false
+    }
+  }, [])
   const request = useCallback(
     () =>
       channel
         ? getChannexAirbnbListings(account.id, property.id, channel.id)
         : Promise.resolve({ listings: [] }),
     [getChannexAirbnbListings, account.id, property.id, channel],
-  );
-  const query = useChannexQuery(request, 'listings');
+  )
+  const query = useChannexQuery(request, 'listings')
   async function run(callback, write = false) {
-    if (working.current || uncertain || !canWrite) return;
-    working.current = true;
-    setBusy(true);
-    onBusy(true);
-    setError('');
+    if (working.current || uncertain || !canWrite) return
+    working.current = true
+    setBusy(true)
+    onBusy(true)
+    setError('')
     try {
-      await callback();
+      await callback()
     } catch (failure) {
       if (mounted.current) {
-        setError(failure.message || 'Chưa hoàn tất thao tác Airbnb.');
-        if (write) setUncertain(uncertainChannelWrite(failure));
+        setError(failure.message || 'Chưa hoàn tất thao tác Airbnb.')
+        if (write) setUncertain(uncertainChannelWrite(failure))
       }
     } finally {
-      working.current = false;
+      working.current = false
       if (mounted.current) {
-        setBusy(false);
-        onBusy(false);
+        setBusy(false)
+        onBusy(false)
       }
     }
   }
   function ownerLink() {
     run(async () => {
       if (!name.trim() || (!channel && !groupId))
-        throw new Error('Nhập tên kết nối và chọn nhóm Channex trước.');
+        throw new Error('Nhập tên kết nối và chọn nhóm Channex trước.')
       const input = {
         name: name.trim(),
         returnOrigin: window.location.origin,
         ...(channel ? { channelId: channel.id } : { groupId }),
-      };
-      const result = await createChannexAirbnbLink(
-        account.id,
-        property.id,
-        input,
-      );
-      const destination = new URL(result.url);
+      }
+      const result = await createChannexAirbnbLink(account.id, property.id, input)
+      const destination = new URL(result.url)
       if (destination.protocol !== 'https:')
-        throw new Error('Đường dẫn xác thực Airbnb chưa hợp lệ.');
-      if (mounted.current) setLink({ url: destination.href, name, groupId });
-    });
+        throw new Error('Đường dẫn xác thực Airbnb chưa hợp lệ.')
+      if (mounted.current) setLink({ url: destination.href, name, groupId })
+    })
   }
   function saveMapping() {
     run(async () => {
-      if (!listingId || !ratePlanId)
-        throw new Error('Chọn listing Airbnb và gói giá Channex.');
-      const result = await saveChannexAirbnbMapping(
-        account.id,
-        property.id,
-        channel.id,
-        { listingId, ratePlanId, revision: channel.revision },
-      );
+      if (!listingId || !ratePlanId) throw new Error('Chọn listing Airbnb và gói giá Channex.')
+      const result = await saveChannexAirbnbMapping(account.id, property.id, channel.id, {
+        listingId,
+        ratePlanId,
+        revision: channel.revision,
+      })
       if (mounted.current) {
-        if (result.status === 'pending') setUncertain('pending');
-        else onSaved('Đã ghép listing Airbnb với gói giá Channex.');
+        if (result.status === 'pending') setUncertain('pending')
+        else onSaved('Đã ghép listing Airbnb với gói giá Channex.')
       }
-    }, true);
+    }, true)
   }
   function unmap() {
     run(async () => {
@@ -127,15 +111,12 @@ export default function ChannelAirbnb({
         channel.id,
         removal.id,
         { revision: channel.revision, confirm: true },
-      );
+      )
       if (mounted.current) {
-        if (result.status === 'pending') setUncertain('pending');
-        else
-          onSaved(
-            'Đã bỏ ghép listing Airbnb. Kiểm tra trạng thái bán phòng trên Airbnb.',
-          );
+        if (result.status === 'pending') setUncertain('pending')
+        else onSaved('Đã bỏ ghép listing Airbnb. Kiểm tra trạng thái bán phòng trên Airbnb.')
       }
-    }, true);
+    }, true)
   }
   return (
     <div className="channex-editor-section channex-airbnb">
@@ -167,9 +148,7 @@ export default function ChannelAirbnb({
               ? labelUi(
                   'Airbnb đã nhận yêu cầu và đang xử lý. Tải lại kênh để kiểm tra ghép nối trước khi gửi thêm thao tác.',
                 )
-              : labelUi(
-                  'Kết quả ghép nối chưa xác định. Tải lại kênh trước khi gửi lại.',
-                )}
+              : labelUi('Kết quả ghép nối chưa xác định. Tải lại kênh trước khi gửi lại.')}
           </p>
           <button type="button" className="manager-button" onClick={onReload}>
             {labelUi('Đóng & tải lại')}
@@ -269,16 +248,14 @@ export default function ChannelAirbnb({
           <div className="channex-channel-current-mappings">
             <h3>{labelUi('Listing đã ghép')}</h3>
             {!(channel.mappings || []).length && (
-              <p className="channex-channel-note">
-                {labelUi('Chưa có listing được ghép.')}
-              </p>
+              <p className="channex-channel-note">{labelUi('Chưa có listing được ghép.')}</p>
             )}
             {(channel.mappings || []).map((mapping) => (
               <div className="channex-channel-mapping-head" key={mapping.id}>
                 <div>
                   <strong>
-                    {rateOptions.find((rate) => rate.id === mapping.ratePlanId)
-                      ?.name || mapping.ratePlanId}
+                    {rateOptions.find((rate) => rate.id === mapping.ratePlanId)?.name ||
+                      mapping.ratePlanId}
                   </strong>
                   <small>
                     {query.data?.listings?.find(
@@ -332,5 +309,5 @@ export default function ChannelAirbnb({
         </>
       )}
     </div>
-  );
+  )
 }

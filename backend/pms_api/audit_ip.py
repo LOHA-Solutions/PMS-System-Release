@@ -60,7 +60,9 @@ def ip_info(value, source=None):
         scope = "multicast"
     elif address.version == 4 and address in SHARED_NETWORK:
         scope = "shared"
-    elif any(address.version == network.version and address in network for network in PRIVATE_NETWORKS):
+    elif any(
+        address.version == network.version and address in network for network in PRIVATE_NETWORKS
+    ):
         scope = "private"
     elif address.is_reserved or getattr(address, "is_site_local", False):
         scope = "reserved"

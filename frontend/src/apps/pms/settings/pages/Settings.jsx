@@ -1,10 +1,6 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Building2,
   Bed,
@@ -19,23 +15,24 @@ import {
   ClipboardList,
   Layers3,
   Link2,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js';
-import { CORE_ROLES as ROLE_ACTIONS } from '../../data/api';
-import { ROLE_NAMES } from '../../data/access';
-import { AccessMessage } from '../../../../shared/components/AccessControl';
-import { useRevealActive } from '../../components/useRevealActive';
-import IntegrationWorkspace from '../../channel-manager/pages/IntegrationWorkspace';
-import InventorySettings from '../../inventory/pages/InventorySettings';
-import PricingExchangeRates from '../../rates-inventory/pages/ExchangeRates';
-import CommissionPage from '../../finance/pages/Commissions';
-import RoomLocations from './RoomLocations.jsx';
-import InventoryUnits from './InventoryUnits.jsx';
-import { BusinessProfile, BusinessPolicies } from './BusinessSettings.jsx';
-import { MasterGrid, BookingSources } from './SettingsCatalogs.jsx';
-import './InventorySettingsShell.css';
-import './Settings.css';
+} from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js'
+import { CORE_ROLES as ROLE_ACTIONS } from '../../data/api'
+import { ROLE_NAMES } from '../../data/access'
+import { AccessMessage } from '../../../../shared/components/AccessControl'
+import { useRevealActive } from '../../components/useRevealActive'
+import IntegrationWorkspace from '../../channel-manager/pages/IntegrationWorkspace'
+import InventorySettings from '../../inventory/pages/InventorySettings'
+import PricingExchangeRates from '../../rates-inventory/pages/ExchangeRates'
+import CommissionPage from '../../finance/pages/Commissions'
+import RoomLocations from './RoomLocations.jsx'
+import RoomTypesGrid from './RoomTypesGrid.jsx'
+import InventoryUnits from './InventoryUnits.jsx'
+import { BusinessProfile, BusinessPolicies } from './BusinessSettings.jsx'
+import { MasterGrid, BookingSources } from './SettingsCatalogs.jsx'
+import './InventorySettingsShell.css'
+import './Settings.css'
 
 const SETTING_GROUPS = [
   {
@@ -99,11 +96,11 @@ const SETTING_GROUPS = [
     icon: ShieldCheck,
     tabs: [['roles', 'settings.roles']],
   },
-];
+]
 
 function SettingsTabs({ tabs, value, onChange, label, nested = false }) {
-  const ref = useRef(null);
-  useRevealActive(ref, value);
+  const ref = useRef(null)
+  useRevealActive(ref, value)
   return (
     <div
       ref={ref}
@@ -112,39 +109,31 @@ function SettingsTabs({ tabs, value, onChange, label, nested = false }) {
       aria-label={label}
     >
       {tabs.map(([id, key, Icon]) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={value === id}
-          onClick={() => onChange(id)}
-        >
+        <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)}>
           {Icon && <Icon size={16} aria-hidden="true" />}
           <span>{tUi(key)}</span>
         </button>
       ))}
     </div>
-  );
+  )
 }
 
 export default function Settings() {
-  useI18n();
+  useI18n()
   const pms = usePms(),
-    { tenantId } = pms;
-  const [params, setParams] = useSearchParams();
+    { tenantId } = pms
+  const [params, setParams] = useSearchParams()
   const groups = SETTING_GROUPS.filter(
-    (group) =>
-      pms.routeAccess('/id/settings').allowed || group.id === 'channels',
-  );
-  const group =
-    groups.find((candidate) => candidate.id === params.get('section')) ||
-    groups[0];
-  const requested = params.get('tab');
+    (group) => pms.routeAccess('/id/settings').allowed || group.id === 'channels',
+  )
+  const group = groups.find((candidate) => candidate.id === params.get('section')) || groups[0]
+  const requested = params.get('tab')
   const tab = group.tabs
     ? group.tabs.find(([id]) => id === requested)?.[0] || group.tabs[0][0]
-    : requested || 'overview';
-  const navigationRef = useRef(null);
-  useRevealActive(navigationRef, group.id);
-  const Icon = group.icon;
+    : requested || 'overview'
+  const navigationRef = useRef(null)
+  useRevealActive(navigationRef, group.id)
+  const Icon = group.icon
 
   function content() {
     switch (group.id) {
@@ -155,7 +144,7 @@ export default function Settings() {
           <BusinessPolicies key={tenantId} />
         ) : (
           <BookingSources key={tenantId} />
-        );
+        )
       case 'rooms':
         return tab === 'room_types' ? (
           <RoomTypesGrid key={tenantId} />
@@ -168,7 +157,7 @@ export default function Settings() {
             title={tUi('settings.beds')}
             fields={[{ key: 'name', label: 'Tên loại giường' }]}
           />
-        );
+        )
       case 'services':
         return tab === 'services' ? (
           <ServiceCategories key={tenantId} />
@@ -185,7 +174,7 @@ export default function Settings() {
           />
         ) : (
           <BookingSources key={tenantId} />
-        );
+        )
       case 'accounting':
         return tab === 'transactions' ? (
           <CashbookCategories key={tenantId} />
@@ -197,15 +186,15 @@ export default function Settings() {
           </div>
         ) : (
           <Commissions key={tenantId} />
-        );
+        )
       case 'inventory':
         return tab === 'units' ? (
           <InventoryUnits key={tenantId} />
         ) : (
           <InventorySettings catalog={tab} />
-        );
+        )
       case 'channels': {
-        const access = pms.access('channels.view', 'OTA_SYNC', false);
+        const access = pms.access('channels.view', 'OTA_SYNC', false)
         return access.allowed ? (
           <IntegrationWorkspace
             key={`${tenantId}:${pms.authGeneration}`}
@@ -215,21 +204,18 @@ export default function Settings() {
           />
         ) : (
           <AccessMessage result={access} />
-        );
+        )
       }
       case 'system':
-        return <RoleMatrix />;
+        return <RoleMatrix />
       default:
-        return null;
+        return null
     }
   }
 
   return (
     <div className="pms-settings">
-      <aside
-        className="pms-settings-navigation"
-        aria-label={tUi('nav.settingsShort')}
-      >
+      <aside className="pms-settings-navigation" aria-label={tUi('nav.settingsShort')}>
         <div className="pms-settings-navigation-heading">
           <h1>{tUi('nav.settingsShort')}</h1>
           <p>{tUi('settings.catalogs')}</p>
@@ -240,7 +226,7 @@ export default function Settings() {
           aria-label={tUi('settings.catalogs')}
         >
           {groups.map((item) => {
-            const GroupIcon = item.icon;
+            const GroupIcon = item.icon
             return (
               <button
                 key={item.id}
@@ -251,7 +237,7 @@ export default function Settings() {
                 <GroupIcon size={18} aria-hidden="true" />
                 <span>{labelUi(item.name)}</span>
               </button>
-            );
+            )
           })}
         </nav>
       </aside>
@@ -274,9 +260,7 @@ export default function Settings() {
               <SettingsTabs
                 tabs={group.tabs}
                 value={tab}
-                onChange={(value) =>
-                  setParams({ section: group.id, tab: value })
-                }
+                onChange={(value) => setParams({ section: group.id, tab: value })}
                 label={labelUi(group.name)}
               />
             )}
@@ -285,48 +269,12 @@ export default function Settings() {
         </div>
       </div>
     </div>
-  );
-}
-
-function RoomTypesGrid() {
-  useI18n();
-  const { roomTypes, rooms } = usePms();
-  const rows = roomTypes.map((type) => ({
-    ...type,
-    roomNumbers: rooms
-      .filter((room) => room.typeId === type.id && room.active !== false)
-      .map((room) => room.id)
-      .join(', '),
-  }));
-  return (
-    <MasterGrid
-      catalog="roomTypes"
-      title={tUi('settings.roomTypes')}
-      description={tUi('settingsUi.roomCount', {
-        count: rooms.filter((room) => room.active !== false).length,
-      })}
-      rows={rows}
-      fields={[
-        { key: 'code', label: 'Mã' },
-        { key: 'name', label: 'Tên Loại Phòng' },
-        { key: 'roomNumbers', label: 'Danh sách số phòng' },
-        { key: 'capacity', label: 'Sức chứa', type: 'number', default: 2 },
-        { key: 'price', label: 'Giá niêm yết', type: 'number' },
-      ]}
-      transform={(item) => ({
-        ...item,
-        roomNumbers: item.roomNumbers
-          .split(',')
-          .map((number) => number.trim().replace(/^R(?=\d)/i, ''))
-          .filter(Boolean),
-      })}
-    />
-  );
+  )
 }
 
 function ServiceCategories() {
-  useI18n();
-  const { serviceCategories, units } = usePms();
+  useI18n()
+  const { serviceCategories, units } = usePms()
   return (
     <>
       <MasterGrid
@@ -340,6 +288,7 @@ function ServiceCategories() {
       />
       <MasterGrid
         catalog="services"
+        searchable
         title={tUi('settings.categoryServices')}
         description={tUi('settings.posServices')}
         fields={[
@@ -355,19 +304,17 @@ function ServiceCategories() {
           {
             key: 'unit',
             label: 'Đơn vị tính',
-            options: units
-              .filter((unit) => unit.active !== false)
-              .map((unit) => unit.name),
+            options: units.filter((unit) => unit.active !== false).map((unit) => unit.name),
           },
         ]}
       />
     </>
-  );
+  )
 }
 
 function PaymentMethods() {
-  useI18n();
-  const { settings } = usePms();
+  useI18n()
+  const { settings } = usePms()
   return (
     <>
       <MasterGrid
@@ -408,14 +355,15 @@ function PaymentMethods() {
         ]}
       />
     </>
-  );
+  )
 }
 
 function CashbookCategories() {
-  useI18n();
+  useI18n()
   return (
     <MasterGrid
       catalog="cashbookCategories"
+      searchable
       title={tUi('settings.cashCategories')}
       description={tUi('settings.cashCategoryHint')}
       activation
@@ -432,19 +380,18 @@ function CashbookCategories() {
         },
       ]}
     />
-  );
+  )
 }
 
 function Commissions() {
-  useI18n();
-  const { commissionTypes } = usePms();
-  const [tab, setTab] = useState('settlements');
+  useI18n()
+  const { commissionTypes } = usePms()
+  const [tab, setTab] = useState('settlements')
   const typeOptions = commissionTypes.map((type) => ({
     value: type.id,
-    label:
-      type.name + (type.active === false ? ` (${tUi('common.inactive')})` : ''),
+    label: type.name + (type.active === false ? ` (${tUi('common.inactive')})` : ''),
     disabled: type.active === false,
-  }));
+  }))
   return (
     <div className="pms-settings-commissions">
       <SettingsTabs
@@ -459,9 +406,7 @@ function Commissions() {
         label={tUi('settings.commissions')}
       />
       {tab !== 'settlements' && (
-        <p className="pms-settings-hint">
-          {tUi('settings.commissionCatalogHint')}
-        </p>
+        <p className="pms-settings-hint">{tUi('settings.commissionCatalogHint')}</p>
       )}
       {tab === 'settlements' ? (
         <div className="pms-settings-embedded">
@@ -491,22 +436,18 @@ function Commissions() {
             activation
             fields={[
               { key: 'name', label: 'Tên đối tượng nhận hoa hồng' },
-              {
-                key: 'typeId',
-                label: 'Loại chi phí hoa hồng',
-                options: typeOptions,
-              },
+              { key: 'typeId', label: 'Loại chi phí hoa hồng', options: typeOptions },
             ]}
           />
         </>
       )}
     </div>
-  );
+  )
 }
 
 function RoleMatrix() {
-  useI18n();
-  const roles = ['HOTEL_OWNER', 'FRONT_DESK', 'HOUSEKEEPING', 'ACCOUNTANT'];
+  useI18n()
+  const roles = ['HOTEL_OWNER', 'FRONT_DESK', 'HOUSEKEEPING', 'ACCOUNTANT']
   const actions = [
     ['rooms.view', 'Xem sơ đồ phòng'],
     ['reservations.view', 'Xem đặt phòng'],
@@ -516,7 +457,7 @@ function RoleMatrix() {
     ['reports.view', 'Xem báo cáo'],
     ['settings.write', 'Cài đặt khách sạn'],
     ['users.write', 'Quản lý người dùng'],
-  ];
+  ]
   return (
     <section className="pms-settings-panel">
       <header className="pms-settings-panel-heading">
@@ -546,8 +487,7 @@ function RoleMatrix() {
                 <th scope="row">{labelUi(name)}</th>
                 {roles.map((role) => (
                   <td key={role}>
-                    {ROLE_ACTIONS[role].includes('*') ||
-                    ROLE_ACTIONS[role].includes(action) ? (
+                    {ROLE_ACTIONS[role].includes('*') || ROLE_ACTIONS[role].includes(action) ? (
                       <span className="pms-settings-permission">✓</span>
                     ) : (
                       <span className="pms-settings-muted">—</span>
@@ -560,5 +500,5 @@ function RoleMatrix() {
         </table>
       </div>
     </section>
-  );
+  )
 }

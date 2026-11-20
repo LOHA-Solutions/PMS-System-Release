@@ -74,8 +74,10 @@ def provider_error(error, *, mutation=False):
 
 
 def support_hotels():
-    return [SimpleNamespace(tenant_id=tenant_id) for tenant_id in
-            db.session.scalars(select(Tenant.id).order_by(Tenant.id))]
+    return [
+        SimpleNamespace(tenant_id=tenant_id)
+        for tenant_id in db.session.scalars(select(Tenant.id).order_by(Tenant.id))
+    ]
 
 
 def hotel_access(tenant_id, action):
@@ -89,17 +91,16 @@ def authorize_remote_property(client, property_id):
         return
     action = client._pms_action
     account_tenant = client._pms_tenant_id
-    candidates = (
-        [account_tenant] if account_tenant else
-        [row.tenant_id for row in support_hotels()]
-    )
+    candidates = [account_tenant] if account_tenant else [row.tenant_id for row in support_hotels()]
     for tenant_id in candidates:
         set_context(g.user.id, tenant_id, is_system=True, channel_support=True)
-        linked = db.session.scalar(select(ChannelConnection.id).where(
-            ChannelConnection.tenant_id == tenant_id,
-            ChannelConnection.environment == environment,
-            ChannelConnection.property_id == property_id,
-        ))
+        linked = db.session.scalar(
+            select(ChannelConnection.id).where(
+                ChannelConnection.tenant_id == tenant_id,
+                ChannelConnection.environment == environment,
+                ChannelConnection.property_id == property_id,
+            )
+        )
         if linked:
             hotel_access(tenant_id, action)
             return
@@ -320,14 +321,21 @@ class RemotePropertiesView(CommonMethodView):
         environment, client = account_client(args.get("accountId"))
         try:
             if client._pms_tenant_id:
-                connection = db.session.scalar(select(ChannelConnection).where(
-                    ChannelConnection.tenant_id == client._pms_tenant_id
-                ))
+                connection = db.session.scalar(
+                    select(ChannelConnection).where(
+                        ChannelConnection.tenant_id == client._pms_tenant_id
+                    )
+                )
                 rows = [verify_property(client, connection.property_id)] if page == 1 else []
                 return {
                     "environment": environment,
                     "properties": [property_json(row, environment) for row in rows],
-                    "pagination": {"page": page, "pageSize": PAGE_SIZE, "totalItems": 1, "totalPages": 1},
+                    "pagination": {
+                        "page": page,
+                        "pageSize": PAGE_SIZE,
+                        "totalItems": 1,
+                        "totalPages": 1,
+                    },
                 }
             rows, pagination = read_page(client.properties(page), page)
             return {

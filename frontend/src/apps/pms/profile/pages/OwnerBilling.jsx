@@ -1,92 +1,72 @@
-import { useEffect, useState } from 'react';
-import { Download, Printer, RefreshCw, X } from 'lucide-react';
-import { useI18n } from '../../../../shared/i18n/useI18n.js';
-import { getIntlLocale } from '../../../../shared/i18n/store.js';
-import { usePms } from '../../data/usePms.js';
-import { money } from '../../data/model.js';
-import LegacyOverlay from '../../components/LegacyOverlay.jsx';
+import { useEffect, useState } from 'react'
+import { Download, Printer, RefreshCw, X } from 'lucide-react'
+import { useI18n } from '../../../../shared/i18n/useI18n.js'
+import { getIntlLocale } from '../../../../shared/i18n/store.js'
+import { usePms } from '../../data/usePms.js'
+import { money } from '../../data/model.js'
+import LegacyOverlay from '../../components/LegacyOverlay.jsx'
 import {
   billingDate,
   historyActionLabel,
   invoiceStatusLabel,
   paymentMethodLabel,
   subscriptionStatusLabel,
-} from './billingDisplay.js';
-import {
-  downloadBillingDocument,
-  openBillingDocument,
-} from './billingDocument.js';
-import './OwnerBilling.css';
+} from './billingDisplay.js'
+import { downloadBillingDocument, openBillingDocument } from './billingDocument.js'
+import './OwnerBilling.css'
 
 function useBillingResource(loader, parameter) {
-  const [revision, setRevision] = useState(0);
-  const [data, setData] = useState(null);
+  const [revision, setRevision] = useState(0)
+  const [data, setData] = useState(null)
   useEffect(() => {
-    let current = true;
+    let current = true
     Promise.resolve()
       .then(() => loader(parameter))
       .then((result) => {
-        if (current)
-          setData({ loader, parameter, revision, result, error: '' });
+        if (current) setData({ loader, parameter, revision, result, error: '' })
       })
       .catch((error) => {
-        if (current)
-          setData({
-            loader,
-            parameter,
-            revision,
-            result: null,
-            error: error.message,
-          });
-      });
+        if (current) setData({ loader, parameter, revision, result: null, error: error.message })
+      })
     return () => {
-      current = false;
-    };
-  }, [loader, parameter, revision]);
+      current = false
+    }
+  }, [loader, parameter, revision])
   const current =
-    data?.loader === loader &&
-    data?.parameter === parameter &&
-    data?.revision === revision;
+    data?.loader === loader && data?.parameter === parameter && data?.revision === revision
   return {
     loading: !current,
     result: current ? data.result : null,
     error: current ? data.error : '',
     retry: () => setRevision((value) => value + 1),
-  };
+  }
 }
 
 function ResourceState({ resource }) {
-  const { t } = useI18n();
+  const { t } = useI18n()
   if (resource.loading)
     return (
       <p className="pms-billing-state" role="status">
         {t('common.loading')}
       </p>
-    );
+    )
   if (resource.error)
     return (
       <div className="pms-billing-state">
         <p className="pms-profile-feedback is-error" role="alert">
           {resource.error}
         </p>
-        <button
-          type="button"
-          className="pms-profile-button"
-          onClick={resource.retry}
-        >
+        <button type="button" className="pms-profile-button" onClick={resource.retry}>
           {t('common.retry')}
         </button>
       </div>
-    );
-  return null;
+    )
+  return null
 }
 
 function Pagination({ pagination, page, onPage, label }) {
-  const { t } = useI18n();
-  const pages = Math.max(
-    1,
-    Math.ceil(pagination.totalItems / pagination.pageSize),
-  );
+  const { t } = useI18n()
+  const pages = Math.max(1, Math.ceil(pagination.totalItems / pagination.pageSize))
   return (
     <nav className="pms-billing-pagination" aria-label={label}>
       <p>
@@ -115,11 +95,11 @@ function Pagination({ pagination, page, onPage, label }) {
         </button>
       </div>
     </nav>
-  );
+  )
 }
 
 function InvoiceAmounts({ invoice }) {
-  const { t } = useI18n();
+  const { t } = useI18n()
   return (
     <dl className="pms-billing-totals">
       {['amount', 'paid', 'balance'].map((key) => (
@@ -129,16 +109,16 @@ function InvoiceAmounts({ invoice }) {
         </div>
       ))}
     </dl>
-  );
+  )
 }
 
 export default function OwnerBilling() {
-  const { t } = useI18n();
-  const { getOwnBilling, settings } = usePms();
-  const resource = useBillingResource(getOwnBilling);
-  const subscription = resource.result?.subscription;
-  const timezone = settings?.timezone || 'Asia/Ho_Chi_Minh';
-  const [invoiceId, setInvoiceId] = useState(null);
+  const { t } = useI18n()
+  const { getOwnBilling, settings } = usePms()
+  const resource = useBillingResource(getOwnBilling)
+  const subscription = resource.result?.subscription
+  const timezone = settings?.timezone || 'Asia/Ho_Chi_Minh'
+  const [invoiceId, setInvoiceId] = useState(null)
   return (
     <div className="pms-billing">
       <section aria-labelledby="pms-billing-title" aria-busy={resource.loading}>
@@ -164,13 +144,9 @@ export default function OwnerBilling() {
               <div className="pms-billing-subscription-heading">
                 <div>
                   <p>{t('billing.currentPlan')}</p>
-                  <h3>
-                    {subscription?.planName || t('billing.noSubscription')}
-                  </h3>
+                  <h3>{subscription?.planName || t('billing.noSubscription')}</h3>
                 </div>
-                <span className="pms-billing-status">
-                  {subscriptionStatusLabel(subscription)}
-                </span>
+                <span className="pms-billing-status">{subscriptionStatusLabel(subscription)}</span>
               </div>
               {subscription && (
                 <dl className="pms-billing-details">
@@ -199,10 +175,7 @@ export default function OwnerBilling() {
               {subscription?.operationalAccess?.active && (
                 <p role="status" className="pms-billing-notice">
                   {t('billing.operationalAccess', {
-                    until: billingDate(
-                      subscription.operationalAccess.until,
-                      timezone,
-                    ),
+                    until: billingDate(subscription.operationalAccess.until, timezone),
                   })}
                   <br />
                   {t('billing.operationalAccessHint')}
@@ -236,15 +209,15 @@ export default function OwnerBilling() {
         />
       )}
     </div>
-  );
+  )
 }
 
 function Invoices({ timezone, onOpen }) {
-  const { t } = useI18n();
-  const { listOwnBillingInvoices } = usePms();
-  const [page, setPage] = useState(1);
-  const resource = useBillingResource(listOwnBillingInvoices, page);
-  const invoices = resource.result?.invoices || [];
+  const { t } = useI18n()
+  const { listOwnBillingInvoices } = usePms()
+  const [page, setPage] = useState(1)
+  const resource = useBillingResource(listOwnBillingInvoices, page)
+  const invoices = resource.result?.invoices || []
   return (
     <section
       className="pms-billing-section"
@@ -275,14 +248,7 @@ function Invoices({ timezone, onOpen }) {
             <table className="pms-billing-table">
               <thead>
                 <tr>
-                  {[
-                    'invoice',
-                    'description',
-                    'amount',
-                    'paid',
-                    'balance',
-                    'dueDate',
-                  ].map((key) => (
+                  {['invoice', 'description', 'amount', 'paid', 'balance', 'dueDate'].map((key) => (
                     <th scope="col" key={key}>
                       {t(`billing.${key}`)}
                     </th>
@@ -300,17 +266,13 @@ function Invoices({ timezone, onOpen }) {
                         {billingDate(invoice.createdAt, timezone, false)}
                       </span>
                     </td>
-                    <td className="pms-billing-description">
-                      {invoice.description}
-                    </td>
+                    <td className="pms-billing-description">{invoice.description}</td>
                     <td>{money(invoice.amount, invoice.currency)}</td>
                     <td>{money(invoice.paid, invoice.currency)}</td>
                     <td>{money(invoice.balance, invoice.currency)}</td>
                     <td>{billingDate(invoice.dueDate, timezone, false)}</td>
                     <td>
-                      <span
-                        className={`pms-billing-status is-${invoice.status}`}
-                      >
+                      <span className={`pms-billing-status is-${invoice.status}`}>
                         {invoiceStatusLabel(invoice.status)}
                       </span>
                     </td>
@@ -319,9 +281,7 @@ function Invoices({ timezone, onOpen }) {
                         type="button"
                         className="pms-profile-button"
                         onClick={() => onOpen(invoice.id)}
-                        aria-label={t('billing.viewInvoice', {
-                          number: invoice.number,
-                        })}
+                        aria-label={t('billing.viewInvoice', { number: invoice.number })}
                       >
                         {t('common.details')}
                       </button>
@@ -345,15 +305,15 @@ function Invoices({ timezone, onOpen }) {
         </>
       )}
     </section>
-  );
+  )
 }
 
 function PlanHistory({ timezone }) {
-  const { t } = useI18n();
-  const { listOwnBillingHistory } = usePms();
-  const [page, setPage] = useState(1);
-  const resource = useBillingResource(listOwnBillingHistory, page);
-  const history = resource.result?.history || [];
+  const { t } = useI18n()
+  const { listOwnBillingHistory } = usePms()
+  const [page, setPage] = useState(1)
+  const resource = useBillingResource(listOwnBillingHistory, page)
+  const history = resource.result?.history || []
   return (
     <section
       className="pms-billing-section"
@@ -408,22 +368,15 @@ function PlanHistory({ timezone }) {
                     <td>
                       <strong>{row.planName}</strong>
                       <span className="pms-billing-secondary">
-                        {historyActionLabel(row.action)} ·{' '}
-                        {subscriptionStatusLabel(row)}
+                        {historyActionLabel(row.action)} · {subscriptionStatusLabel(row)}
                       </span>
                     </td>
                     <td>{row.roomCount ?? '—'}</td>
                     <td>{billingDate(row.effectiveDate, timezone)}</td>
                     <td>
-                      {row.endDate
-                        ? billingDate(row.endDate, timezone)
-                        : t('billing.noExpiry')}
+                      {row.endDate ? billingDate(row.endDate, timezone) : t('billing.noExpiry')}
                     </td>
-                    <td>
-                      {row.amount == null
-                        ? '—'
-                        : money(row.amount, row.currency)}
-                    </td>
+                    <td>{row.amount == null ? '—' : money(row.amount, row.currency)}</td>
                   </tr>
                 ))}
                 {!history.length && (
@@ -443,21 +396,21 @@ function PlanHistory({ timezone }) {
         </>
       )}
     </section>
-  );
+  )
 }
 
 function InvoiceDocument({ invoiceId, timezone, onClose }) {
-  const { t } = useI18n();
-  const { getOwnBillingInvoice } = usePms();
-  const resource = useBillingResource(getOwnBillingInvoice, invoiceId);
-  const invoice = resource.result;
-  const [printError, setPrintError] = useState('');
+  const { t } = useI18n()
+  const { getOwnBillingInvoice } = usePms()
+  const resource = useBillingResource(getOwnBillingInvoice, invoiceId)
+  const invoice = resource.result
+  const [printError, setPrintError] = useState('')
   function documentAction(action) {
-    setPrintError('');
+    setPrintError('')
     try {
-      action(invoice, timezone);
+      action(invoice, timezone)
     } catch (error) {
-      setPrintError(error.message);
+      setPrintError(error.message)
     }
   }
   return (
@@ -537,9 +490,7 @@ function InvoiceDocument({ invoiceId, timezone, onClose }) {
                   {invoice.refunds.map((refund) => (
                     <li key={refund.id}>
                       <div>
-                        <strong>
-                          −{money(refund.amount, invoice.currency)}
-                        </strong>
+                        <strong>−{money(refund.amount, invoice.currency)}</strong>
                         <time dateTime={refund.createdAt}>
                           {billingDate(refund.createdAt, timezone)}
                         </time>
@@ -583,5 +534,5 @@ function InvoiceDocument({ invoiceId, timezone, onClose }) {
         )}
       </div>
     </LegacyOverlay>
-  );
+  )
 }

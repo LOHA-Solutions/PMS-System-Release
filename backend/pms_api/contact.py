@@ -72,7 +72,7 @@ def smtp_settings():
         if str(port) != str(raw_port) or not 1 <= port <= 65535:
             raise ValueError
         sender = validate_email(values["FROM"])
-    except ValueError, TypeError, ApiError:
+    except (ValueError, TypeError, ApiError):
         raise ApiError(
             503,
             "contact_unavailable",
@@ -132,7 +132,7 @@ def send_contact_mail(values, settings):
         if client is not None:
             try:
                 client.quit()
-            except smtplib.SMTPException, OSError:
+            except (smtplib.SMTPException, OSError):
                 try:
                     client.close()
                 except OSError:

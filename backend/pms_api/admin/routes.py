@@ -187,7 +187,9 @@ class CustomerAccountsView(CommonMethodView):
         if set(request.args) - {"search"} or len(request.args.getlist("search")) != 1:
             raise ApiError(422, "invalid_search", "Chỉ tìm tài khoản theo tên hoặc email.")
         search = request.args["search"].strip()
-        if not 2 <= len(search) <= 254 or any(ord(char) < 32 or ord(char) == 127 for char in search):
+        if not 2 <= len(search) <= 254 or any(
+            ord(char) < 32 or ord(char) == 127 for char in search
+        ):
             raise ApiError(422, "invalid_search", "Từ khóa tìm kiếm cần từ 2 đến 254 ký tự.")
         return jsonify(users=customer_accounts(search))
 
@@ -245,9 +247,7 @@ class CreateTenantView(CommonMethodView):
             if owner is None:
                 raise ApiError(404, "not_found", "Không tìm thấy tài khoản quản lý khách sạn.")
             if not owner.active or owner.global_role != "USER":
-                raise ApiError(
-                    422, "invalid_owner", "Chọn tài khoản khách hàng đang hoạt động."
-                )
+                raise ApiError(422, "invalid_owner", "Chọn tài khoản khách hàng đang hoạt động.")
             owner_membership = db.session.scalar(
                 active_owner_membership_query(owner.id)
                 .order_by(TenantUser.tenant_id)
@@ -323,10 +323,18 @@ class CustomerHistoryView(CommonMethodView):
 
 # SaaS support history contains commercial/account changes, never hotel activity.
 SAAS_AUDIT_EVENTS = {
-    "tenant.created", "tenant.updated", "subscription.updated",
-    "system_user.created", "system_user.updated", "plan.created", "plan.updated",
-    "plan.deleted", "feature.updated", "feature_override.upserted",
-    "feature_override.deleted", "channex.property.created",
+    "tenant.created",
+    "tenant.updated",
+    "subscription.updated",
+    "system_user.created",
+    "system_user.updated",
+    "plan.created",
+    "plan.updated",
+    "plan.deleted",
+    "feature.updated",
+    "feature_override.upserted",
+    "feature_override.deleted",
+    "channex.property.created",
 }
 
 
@@ -334,7 +342,9 @@ def require_owner_grantor():
     # System privileges must never be used to manufacture or restore PMS access,
     # even when the actor also received an owner membership.
     if g.user.global_role in GLOBAL_ROLES or g.role != "HOTEL_OWNER":
-        raise ApiError(403, "owner_grant_required", "Chỉ chủ khách sạn được cấp hoặc thu hồi quyền PMS.")
+        raise ApiError(
+            403, "owner_grant_required", "Chỉ chủ khách sạn được cấp hoặc thu hồi quyền PMS."
+        )
 
 
 def tenant_users_json(tenant_id):
@@ -383,7 +393,9 @@ class CreateTenantUserView(CommonMethodView):
             raise ApiError(422, "invalid_membership", "Trạng thái không hợp lệ.")
         if "userId" in data:
             if not isinstance(data["userId"], str) or set(data) - {"userId", "role", "active"}:
-                raise ApiError(422, "invalid_membership", "Chỉ chọn tài khoản, vai trò và trạng thái.")
+                raise ApiError(
+                    422, "invalid_membership", "Chỉ chọn tài khoản, vai trò và trạng thái."
+                )
             user = db.session.get(User, data["userId"])
             if user is None:
                 raise ApiError(404, "not_found", "Không tìm thấy tài khoản.")
@@ -391,21 +403,39 @@ class CreateTenantUserView(CommonMethodView):
             email = validate_email(data.get("email"))
             user = db.session.scalar(select(User).where(User.email == email))
         if user is not None:
+            if user.global_role in GLOBAL_ROLES:
+                raise ApiError(
+                    409,
+                    "email_exists",
+                    "Email đã được sử dụng. Vui lòng dùng email khác để thêm nhân viên.",
+                )
             if "password" in data or "name" in data:
-                raise ApiError(403, "profile_restricted", "Cấp quyền tài khoản đã có không được đổi hồ sơ hoặc mật khẩu.")
+                raise ApiError(
+                    403,
+                    "profile_restricted",
+                    "Cấp quyền tài khoản đã có không được đổi hồ sơ hoặc mật khẩu.",
+                )
             if "role" not in data:
                 raise ApiError(422, "invalid_role", "Chọn rõ vai trò được cấp tại khách sạn.")
-            if db.session.scalar(select(TenantUser).where(
-                TenantUser.tenant_id == tenant_id, TenantUser.user_id == user.id
-            )):
-                raise ApiError(409, "membership_exists", "Tài khoản đã có quyền; cập nhật hoặc thu hồi quyền hiện tại.")
+            if db.session.scalar(
+                select(TenantUser).where(
+                    TenantUser.tenant_id == tenant_id, TenantUser.user_id == user.id
+                )
+            ):
+                raise ApiError(
+                    409,
+                    "membership_exists",
+                    "Tài khoản đã có quyền; cập nhật hoặc thu hồi quyền hiện tại.",
+                )
         else:
             user = new_user(data)
         ensure_quota(tenant_id, "users", 1 if active else 0)
         db.session.add(TenantUser(tenant_id=tenant_id, user_id=user.id, role=role, active=active))
         audit("membership.created", "user", user.id, {"role": role})
         db.session.flush()
-        return jsonify(next(row for row in tenant_users_json(tenant_id) if row["id"] == user.id)), 201
+        return jsonify(
+            next(row for row in tenant_users_json(tenant_id) if row["id"] == user.id)
+        ), 201
 
 
 class UpdateTenantUserView(CommonMethodView):
@@ -426,7 +456,9 @@ class UpdateTenantUserView(CommonMethodView):
             raise ApiError(404, "not_found", "Không tìm thấy nhân viên.")
         data = payload()
         if not data or set(data) - {"role", "active", "name", "email", "password", "globalRole"}:
-            raise ApiError(422, "unsupported_field", "Thông tin cập nhật quyền khách sạn không hợp lệ.")
+            raise ApiError(
+                422, "unsupported_field", "Thông tin cập nhật quyền khách sạn không hợp lệ."
+            )
         role, active = data.get("role", membership.role), data.get("active", membership.active)
         if not isinstance(role, str) or role not in ROLES or not isinstance(active, bool):
             raise ApiError(422, "invalid_membership", "Vai trò hoặc trạng thái không hợp lệ.")
@@ -635,11 +667,12 @@ def plan_values(data, plan=None):
     if code == "FREE" and (price != 0 or annual != 0):
         raise ApiError(422, "invalid_price", "Gói Miễn Phí phải có giá bằng 0.")
     pricing_rules = pricing_rules_value(
-        data.get("pricingRules", plan_json(plan)["pricingRules"] if plan else default_pricing_rules())
+        data.get(
+            "pricingRules", plan_json(plan)["pricingRules"] if plan else default_pricing_rules()
+        )
     )
     if code == "FREE" and any(
-        Decimal(pricing_rules[field]) != 0
-        for field in ("extraRoomPrice", "extraRoomPriceYear")
+        Decimal(pricing_rules[field]) != 0 for field in ("extraRoomPrice", "extraRoomPriceYear")
     ):
         raise ApiError(422, "invalid_price", "Gói Miễn Phí không có phụ thu phòng.")
     currency = data.get("currency", plan.currency if plan else "VND")

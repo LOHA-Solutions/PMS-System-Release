@@ -367,8 +367,12 @@ class CreateInvoiceView(CommonMethodView):
             },
         )
         return finish_write(
-            row.tenant_id, key, fingerprint, invoice_response(row),
-            status=201, record_model=SaaSIdempotencyRecord,
+            row.tenant_id,
+            key,
+            fingerprint,
+            invoice_response(row),
+            status=201,
+            record_model=SaaSIdempotencyRecord,
         )
 
 
@@ -415,8 +419,12 @@ class AddPaymentView(CommonMethodView):
             },
         )
         return finish_write(
-            row.tenant_id, key, fingerprint, invoice_response(row),
-            status=201, record_model=SaaSIdempotencyRecord,
+            row.tenant_id,
+            key,
+            fingerprint,
+            invoice_response(row),
+            status=201,
+            record_model=SaaSIdempotencyRecord,
         )
 
 
@@ -499,8 +507,12 @@ class RefundPaymentView(CommonMethodView):
             },
         )
         return finish_write(
-            row.tenant_id, key, fingerprint, invoice_response(row),
-            status=201, record_model=SaaSIdempotencyRecord,
+            row.tenant_id,
+            key,
+            fingerprint,
+            invoice_response(row),
+            status=201,
+            record_model=SaaSIdempotencyRecord,
         )
 
 
@@ -558,8 +570,12 @@ class OperationalAccessView(CommonMethodView):
         )
         response = {"access": operational_access(tenant_id, include_inactive=True)}
         return finish_write(
-            tenant_id, key, fingerprint, response,
-            status=201, record_model=SaaSIdempotencyRecord,
+            tenant_id,
+            key,
+            fingerprint,
+            response,
+            status=201,
+            record_model=SaaSIdempotencyRecord,
         )
 
 

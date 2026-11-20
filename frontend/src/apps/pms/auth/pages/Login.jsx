@@ -1,61 +1,53 @@
-import { emailPattern } from '../../../../shared/lib/validation.js';
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { usePms } from '../../data/usePms';
-import { systemUser } from '../../data/api';
-import {
-  ArrowRight,
-  CircleAlert,
-  Eye,
-  EyeOff,
-  LoaderCircle,
-} from 'lucide-react';
+import { emailPattern } from '../../../../shared/lib/validation.js'
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { usePms } from '../../data/usePms'
+import { systemUser } from '../../data/api'
+import { ArrowRight, CircleAlert, Eye, EyeOff, LoaderCircle } from 'lucide-react'
 
 /**
  * COMPONENT: Login (Trang Đăng Nhập Hệ Thống)
  * Giao diện đồng bộ LOHA; giữ luồng đăng nhập và chuyển trang theo vai trò.
  */
 export default function Login() {
-  useI18n();
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const { login, loading, loadError } = usePms();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  useI18n()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const { login, loading, loadError } = usePms()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   // Hàm xử lý sự kiện submit Form Đăng nhập
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
+    e.preventDefault()
+    setBusy(true)
+    setError('')
     try {
-      const account = await login(email, password, remember);
-      setPassword('');
-      const requested = params.get('next');
-      const role = account.memberships?.find((m) => m.active !== false)?.role;
+      const account = await login(email, password, remember)
+      setPassword('')
+      const requested = params.get('next')
+      const role = account.memberships?.find((m) => m.active !== false)?.role
       const home = systemUser(account)
         ? '/manager/dashboard'
         : role === 'HOUSEKEEPING'
           ? '/id/housekeeping/status'
           : role === 'ACCOUNTANT'
             ? '/id/cashflow'
-            : '/id/dashboard';
+            : '/id/dashboard'
       const safe =
-        requested &&
-        /^\/(id|manager)(\/|$)/.test(requested) &&
-        !requested.startsWith('/id/login');
-      navigate(safe ? requested : home, { replace: true });
+        requested && /^\/(id|manager)(\/|$)/.test(requested) && !requested.startsWith('/id/login')
+      navigate(safe ? requested : home, { replace: true })
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
   return (
     <>
@@ -65,11 +57,7 @@ export default function Login() {
         <p>{tUi('auth.intro')}</p>
       </div>
 
-      <form
-        className="loha-auth-form"
-        onSubmit={handleLogin}
-        aria-busy={busy || loading}
-      >
+      <form className="loha-auth-form" onSubmit={handleLogin} aria-busy={busy || loading}>
         {(error || loadError) && (
           <div id="loha-login-error" className="loha-auth-error" role="alert">
             <CircleAlert size={18} aria-hidden="true" />
@@ -91,9 +79,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="ban@khachsan.vn"
-            aria-describedby={
-              error || loadError ? 'loha-login-error' : undefined
-            }
+            aria-describedby={error || loadError ? 'loha-login-error' : undefined}
           />
         </div>
         <div className="loha-auth-field">
@@ -109,18 +95,12 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={tUi('auth.passwordPlaceholder')}
-              aria-describedby={
-                error || loadError ? 'loha-login-error' : undefined
-              }
+              aria-describedby={error || loadError ? 'loha-login-error' : undefined}
             />
             <button
               className="loha-auth-password-toggle"
               type="button"
-              aria-label={
-                showPassword
-                  ? tUi('auth.hidePassword')
-                  : tUi('auth.showPassword')
-              }
+              aria-label={showPassword ? tUi('auth.hidePassword') : tUi('auth.showPassword')}
               aria-pressed={showPassword}
               aria-controls="loha-login-password"
               onClick={() => setShowPassword(!showPassword)}
@@ -146,17 +126,9 @@ export default function Login() {
           type="submit"
           disabled={busy || loading}
         >
-          {busy
-            ? tUi('auth.signingIn')
-            : loading
-              ? tUi('auth.checking')
-              : tUi('auth.signIn')}
+          {busy ? tUi('auth.signingIn') : loading ? tUi('auth.checking') : tUi('auth.signIn')}
           {busy || loading ? (
-            <LoaderCircle
-              className="loha-auth-spinner"
-              size={18}
-              aria-hidden="true"
-            />
+            <LoaderCircle className="loha-auth-spinner" size={18} aria-hidden="true" />
           ) : (
             <ArrowRight size={18} aria-hidden="true" />
           )}
@@ -167,5 +139,5 @@ export default function Login() {
         </p>
       </form>
     </>
-  );
+  )
 }

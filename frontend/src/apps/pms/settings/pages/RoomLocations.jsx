@@ -1,101 +1,85 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  ArrowUpRight,
-  BedDouble,
-  Check,
-  MapPin,
-  Pencil,
-  Save,
-  Search,
-  X,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms.js';
-import { t, useI18n } from '../../../../shared/i18n/useI18n.js';
-import './RoomLocations.css';
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight, BedDouble, Check, MapPin, Pencil, Save, Search, X } from 'lucide-react'
+import { usePms } from '../../data/usePms.js'
+import { t, useI18n } from '../../../../shared/i18n/useI18n.js'
+import './RoomLocations.css'
 
 export default function RoomLocations() {
-  useI18n();
-  const { rooms, roomTypes, saveMaster, access } = usePms();
-  const formId = useId();
-  const [query, setQuery] = useState('');
-  const [draft, setDraft] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const saving = useRef(false);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const triggerRef = useRef(null);
-  const restoreFocus = useRef(false);
-  const searchRef = useRef(null);
-  const firstFieldRef = useRef(null);
-  const canWrite = access('settings.write').allowed;
+  useI18n()
+  const { rooms, roomTypes, saveMaster, access } = usePms()
+  const formId = useId()
+  const [query, setQuery] = useState('')
+  const [draft, setDraft] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const saving = useRef(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const triggerRef = useRef(null)
+  const restoreFocus = useRef(false)
+  const searchRef = useRef(null)
+  const firstFieldRef = useRef(null)
+  const canWrite = access('settings.write').allowed
   const list = rooms.filter((room) =>
     [room.id, room.floor, room.area].some((value) =>
       String(value ?? '')
         .toLocaleLowerCase()
         .includes(query.trim().toLocaleLowerCase()),
     ),
-  );
-  const editedRoom = draft?.id;
+  )
+  const editedRoom = draft?.id
 
   useEffect(() => {
-    if (editedRoom) firstFieldRef.current?.focus();
-  }, [editedRoom]);
+    if (editedRoom) firstFieldRef.current?.focus()
+  }, [editedRoom])
 
   useEffect(() => {
     if (!draft && !busy && restoreFocus.current) {
-      restoreFocus.current = false;
-      (triggerRef.current?.isConnected
-        ? triggerRef.current
-        : searchRef.current
-      )?.focus();
+      restoreFocus.current = false
+      ;(triggerRef.current?.isConnected ? triggerRef.current : searchRef.current)?.focus()
     }
-  }, [draft, busy]);
+  }, [draft, busy])
 
   const edit = (room, event) => {
-    if (saving.current || !canWrite) return;
-    triggerRef.current = event.currentTarget;
-    restoreFocus.current = false;
-    setDraft({ id: room.id, floor: room.floor ?? '', area: room.area ?? '' });
-    setError('');
-    setMessage('');
-  };
+    if (saving.current || !canWrite) return
+    triggerRef.current = event.currentTarget
+    restoreFocus.current = false
+    setDraft({ id: room.id, floor: room.floor ?? '', area: room.area ?? '' })
+    setError('')
+    setMessage('')
+  }
   const cancel = () => {
-    if (saving.current) return;
-    restoreFocus.current = true;
-    setDraft(null);
-    setError('');
-  };
+    if (saving.current) return
+    restoreFocus.current = true
+    setDraft(null)
+    setError('')
+  }
   const save = async (event) => {
-    event.preventDefault();
-    if (!draft || saving.current || !canWrite) return;
-    saving.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (!draft || saving.current || !canWrite) return
+    saving.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
       await saveMaster('rooms', {
         id: draft.id,
         floor: draft.floor.trim() || null,
         area: draft.area.trim() || null,
-      });
-      restoreFocus.current = true;
-      setDraft(null);
-      setMessage(t('settings.roomLocationSaved'));
+      })
+      restoreFocus.current = true
+      setDraft(null)
+      setMessage(t('settings.roomLocationSaved'))
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      saving.current = false;
-      setBusy(false);
+      saving.current = false
+      setBusy(false)
     }
-  };
+  }
 
   return (
-    <section
-      className="room-locations"
-      aria-labelledby={`${formId}-title`}
-      aria-busy={busy}
-    >
+    <section className="room-locations" aria-labelledby={`${formId}-title`} aria-busy={busy}>
       <header className="room-locations-heading">
         <div>
           <h2 id={`${formId}-title`}>
@@ -104,10 +88,7 @@ export default function RoomLocations() {
           </h2>
           <p>{t('settings.roomLocationHint')}</p>
         </div>
-        <Link
-          className="room-locations-link"
-          to="/id/settings?section=rooms&tab=room_types"
-        >
+        <Link className="room-locations-link" to="/id/settings?section=rooms&tab=room_types">
           {t('settings.roomTypes')}
           <ArrowUpRight size={15} aria-hidden="true" />
         </Link>
@@ -131,11 +112,7 @@ export default function RoomLocations() {
       )}
 
       {draft && (
-        <form
-          className="room-locations-editor"
-          onSubmit={save}
-          data-workspace-draft
-        >
+        <form className="room-locations-editor" onSubmit={save} data-workspace-draft>
           <fieldset disabled={busy}>
             <div className="room-locations-editor-heading">
               <h3>
@@ -163,21 +140,12 @@ export default function RoomLocations() {
                     disabled={!canWrite}
                     aria-describedby={`${formId}-clear-hint`}
                     onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        [field]: event.target.value,
-                      }))
+                      setDraft((current) => ({ ...current, [field]: event.target.value }))
                     }
                   />
                   <datalist id={`${formId}-${field}`}>
-                    {[
-                      ...new Set(
-                        rooms.map((room) => room[field]).filter(Boolean),
-                      ),
-                    ]
-                      .sort((a, b) =>
-                        a.localeCompare(b, undefined, { numeric: true }),
-                      )
+                    {[...new Set(rooms.map((room) => room[field]).filter(Boolean))]
+                      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
                       .map((value) => (
                         <option key={value} value={value} />
                       ))}
@@ -186,15 +154,9 @@ export default function RoomLocations() {
               ))}
             </div>
             <div className="room-locations-editor-footer">
-              <p id={`${formId}-clear-hint`}>
-                {t('settings.roomLocationClearHint')}
-              </p>
+              <p id={`${formId}-clear-hint`}>{t('settings.roomLocationClearHint')}</p>
               <div className="room-locations-editor-actions">
-                <button
-                  type="button"
-                  className="room-locations-button"
-                  onClick={cancel}
-                >
+                <button type="button" className="room-locations-button" onClick={cancel}>
                   {t('common.cancel')}
                 </button>
                 <button
@@ -224,10 +186,7 @@ export default function RoomLocations() {
           />
         </label>
         <span className="room-locations-results">
-          {t('inventorySettings.results', {
-            shown: list.length,
-            total: rooms.length,
-          })}
+          {t('inventorySettings.results', { shown: list.length, total: rooms.length })}
         </span>
       </div>
       <div
@@ -250,9 +209,7 @@ export default function RoomLocations() {
                   key={key}
                   scope="col"
                   className={
-                    key === 'common.actions'
-                      ? 'room-locations-actions-heading'
-                      : undefined
+                    key === 'common.actions' ? 'room-locations-actions-heading' : undefined
                   }
                 >
                   {t(key)}
@@ -273,32 +230,25 @@ export default function RoomLocations() {
                     </span>
                     <div>
                       <strong data-i18n-ignore>{room.id}</strong>
-                      {room.active === false && (
-                        <small>{t('settings.roomLocationInactive')}</small>
-                      )}
+                      {room.active === false && <small>{t('settings.roomLocationInactive')}</small>}
                     </div>
                   </div>
                 </td>
                 <td data-i18n-ignore>
-                  {roomTypes.find((type) => type.id === room.typeId)?.name ||
-                    '—'}
+                  {roomTypes.find((type) => type.id === room.typeId)?.name || '—'}
                 </td>
                 <td>
                   {room.area ? (
                     <span data-i18n-ignore>{room.area}</span>
                   ) : (
-                    <span className="room-locations-unassigned">
-                      {t('rooms.unassignedArea')}
-                    </span>
+                    <span className="room-locations-unassigned">{t('rooms.unassignedArea')}</span>
                   )}
                 </td>
                 <td>
                   {room.floor ? (
                     <span data-i18n-ignore>{room.floor}</span>
                   ) : (
-                    <span className="room-locations-unassigned">
-                      {t('rooms.unassignedFloor')}
-                    </span>
+                    <span className="room-locations-unassigned">{t('rooms.unassignedFloor')}</span>
                   )}
                 </td>
                 <td>
@@ -308,9 +258,7 @@ export default function RoomLocations() {
                       disabled={busy || !canWrite}
                       className="room-locations-edit"
                       onClick={(event) => edit(room, event)}
-                      aria-label={t('settings.editRoomLocation', {
-                        id: room.id,
-                      })}
+                      aria-label={t('settings.editRoomLocation', { id: room.id })}
                     >
                       <Pencil size={15} aria-hidden="true" />
                       <span>{t('common.edit')}</span>
@@ -331,5 +279,5 @@ export default function RoomLocations() {
         </table>
       </div>
     </section>
-  );
+  )
 }

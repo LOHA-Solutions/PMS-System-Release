@@ -66,11 +66,7 @@
 .loha-language-switcher.is-open .loha-language-trigger {
   border-color: var(--manager-accent, var(--accent-primary, #0871b9));
   box-shadow: 0 0 0 3px
-    color-mix(
-      in srgb,
-      var(--manager-accent, var(--accent-primary, #0871b9)) 12%,
-      transparent
-    );
+    color-mix(in srgb, var(--manager-accent, var(--accent-primary, #0871b9)) 12%, transparent);
 }
 
 .loha-language-switcher.is-open .loha-language-chevron {

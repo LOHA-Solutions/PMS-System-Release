@@ -1,31 +1,27 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useId, useRef } from 'react';
-import { X } from 'lucide-react';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useId, useRef } from 'react'
+import { X } from 'lucide-react'
 
 export default function PlanDialog({ title, busy, error, onClose, children }) {
-  useI18n();
-  const ref = useRef(null);
-  const titleId = useId();
+  useI18n()
+  const ref = useRef(null)
+  const titleId = useId()
   useEffect(() => {
-    const dialog = ref.current;
-    dialog.showModal();
-    return () => dialog.close();
-  }, []);
+    const dialog = ref.current
+    dialog.showModal()
+    return () => dialog.close()
+  }, [])
   return (
     <dialog
       ref={ref}
       className="hk-plan-dialog"
       aria-labelledby={titleId}
       onCancel={(event) => {
-        event.preventDefault();
-        if (!busy) onClose();
+        event.preventDefault()
+        if (!busy) onClose()
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
+        if (event.target === event.currentTarget && !busy) onClose()
       }}
     >
       <div className="hk-dialog-surface">
@@ -49,5 +45,5 @@ export default function PlanDialog({ title, busy, error, onClose, children }) {
         {children}
       </div>
     </dialog>
-  );
+  )
 }

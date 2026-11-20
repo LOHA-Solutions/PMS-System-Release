@@ -1,35 +1,25 @@
-import { formatDateTime } from '../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../shared/i18n/useI18n.js';
-import {
-  X,
-  Building2,
-  ShieldCheck,
-  CheckCircle2,
-  LockKeyhole,
-} from 'lucide-react';
-import { usePms } from '../data/usePms';
+import { formatDateTime } from '../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { X, Building2, ShieldCheck, CheckCircle2, LockKeyhole } from 'lucide-react'
+import { usePms } from '../data/usePms'
 
 export default function UsageInfoModal({ isOpen, onClose }) {
-  useI18n();
-  const { tenant, quota, features, subscription } = usePms();
-  if (!isOpen) return null;
-  const suspended = tenant?.status?.toLowerCase() === 'suspended';
+  useI18n()
+  const { tenant, quota, features, subscription } = usePms()
+  if (!isOpen) return null
+  const suspended = tenant?.status?.toLowerCase() === 'suspended'
   const status = suspended
     ? 'Khách sạn tạm khóa'
     : !subscription
       ? 'Chưa gán gói'
       : subscription.effectiveActive
         ? 'Đang hoạt động'
-        : 'Chỉ xem dữ liệu';
+        : 'Chỉ xem dữ liệu'
   return (
     <div
       className="pms-usage-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) onClose()
       }}
     >
       <section className="pms-usage-card" aria-labelledby="pms-usage-title">
@@ -39,11 +29,7 @@ export default function UsageInfoModal({ isOpen, onClose }) {
             <h2 id="pms-usage-title">{tUi('header.usage')}</h2>
             <span>{tenant?.name}</span>
           </div>
-          <button
-            type="button"
-            aria-label={tUi('usage.close')}
-            onClick={onClose}
-          >
+          <button type="button" aria-label={tUi('usage.close')} onClick={onClose}>
             <X size={20} />
           </button>
         </div>
@@ -62,10 +48,7 @@ export default function UsageInfoModal({ isOpen, onClose }) {
               <dd>
                 {quota.rooms.used}{' '}
                 <span>
-                  /{' '}
-                  {quota.rooms.limit ??
-                    subscription?.roomCount ??
-                    tUi('usage.unregistered')}
+                  / {quota.rooms.limit ?? subscription?.roomCount ?? tUi('usage.unregistered')}
                 </span>
               </dd>
             </div>
@@ -74,10 +57,7 @@ export default function UsageInfoModal({ isOpen, onClose }) {
               <dd>
                 {quota.users.used}{' '}
                 <span>
-                  /{' '}
-                  {quota.users.limit === null
-                    ? tUi('usage.unlimited')
-                    : quota.users.limit}
+                  / {quota.users.limit === null ? tUi('usage.unlimited') : quota.users.limit}
                 </span>
               </dd>
             </div>
@@ -100,26 +80,16 @@ export default function UsageInfoModal({ isOpen, onClose }) {
             {features.map((feature) => (
               <li key={feature.code || feature.id}>
                 <span aria-hidden="true">
-                  {feature.allowed ? (
-                    <CheckCircle2 size={16} />
-                  ) : (
-                    <LockKeyhole size={16} />
-                  )}
+                  {feature.allowed ? <CheckCircle2 size={16} /> : <LockKeyhole size={16} />}
                 </span>
                 <span>
                   {labelUi(feature.name)}
-                  <small>
-                    {feature.allowed
-                      ? tUi('usage.enabled')
-                      : tUi('usage.disabled')}
-                  </small>
+                  <small>{feature.allowed ? tUi('usage.enabled') : tUi('usage.disabled')}</small>
                 </span>
               </li>
             ))}
           </ul>
-          {!features.length && (
-            <p className="pms-usage-empty">{tUi('usage.empty')}</p>
-          )}
+          {!features.length && <p className="pms-usage-empty">{tUi('usage.empty')}</p>}
         </div>
         <div className="pms-usage-footer">
           <button type="button" onClick={onClose}>
@@ -128,5 +98,5 @@ export default function UsageInfoModal({ isOpen, onClose }) {
         </div>
       </section>
     </div>
-  );
+  )
 }

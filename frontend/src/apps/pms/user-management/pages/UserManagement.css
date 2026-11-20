@@ -450,9 +450,7 @@
   padding: 0;
   border: 0;
 }
-.owner-users-form
-  fieldset
-  > label:not(.owner-users-existing):not(.owner-users-activation),
+.owner-users-form fieldset > label:not(.owner-users-existing):not(.owner-users-activation),
 .owner-users-password-fields > label {
   display: grid;
   gap: 8px;

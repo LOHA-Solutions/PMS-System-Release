@@ -1,14 +1,11 @@
-import { decimalInput } from '../../../shared/lib/number.js';
-import { formatDate } from '../../../shared/lib/date.js';
-import { dateRangeParams } from '../../../shared/lib/dateRangeQuery.js';
-import DateInput from '../../../shared/components/DateInput.jsx';
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../shared/i18n/useI18n.js';
-import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { decimalInput } from '../../../shared/lib/number.js'
+import { formatDate } from '../../../shared/lib/date.js'
+import { dateRangeParams } from '../../../shared/lib/dateRangeQuery.js'
+import DateInput from '../../../shared/components/DateInput.jsx'
+import { tr as labelUi, t as tUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useDraftGuard } from '../../../shared/drafts/DraftGuardProvider.jsx'
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,27 +16,58 @@ import {
   Save,
   Trash2,
   X,
-} from 'lucide-react';
-import { usePms } from '../data/usePms';
-import { today } from '../data/model';
-import LegacyOverlay from '../components/LegacyOverlay';
-import { useInventoryQuery } from './useInventoryQuery';
-import { INVENTORY_KINDS, quantityText } from './values';
-import '../components/DomainForms.css';
-import './Inventory.css';
+} from 'lucide-react'
+import { usePms } from '../data/usePms'
+import { today } from '../data/model'
+import LegacyOverlay from '../components/LegacyOverlay'
+import { useInventoryQuery } from './useInventoryQuery'
+import { INVENTORY_KINDS, quantityText } from './values'
+import '../components/DomainForms.css'
+import './Inventory.css'
 
-const activeRows = (rows) => (rows || []).filter((row) => row.active !== false);
+const activeRows = (rows) => (rows || []).filter((row) => row.active !== false)
 const freshLine = () => ({
   key: crypto.randomUUID(),
   itemId: '',
   quantity: '',
   unitCost: '',
   warehouseId: '',
-});
+})
+const formKey = (form, lines) =>
+  JSON.stringify([
+    form.date,
+    form.warehouseId,
+    form.toWarehouseId,
+    form.supplierId,
+    form.note,
+    lines.map((line) => [line.itemId, line.quantity, line.unitCost, line.warehouseId]),
+  ])
 const dialogTitle = (kind) =>
   kind === 'opening'
     ? 'Thiết lập tồn đầu kỳ'
-    : `Tạo ${INVENTORY_KINDS[kind].toLocaleLowerCase('vi')}`;
+    : `Tạo ${INVENTORY_KINDS[kind].toLocaleLowerCase('vi')}`
+const foldItem = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .trim()
+function lineError(line, kind, items) {
+  if (!items.some((item) => item.id === line.itemId))
+    return { field: 'itemId', message: 'Chọn mặt hàng đang hoạt động.' }
+  for (const [field, options] of [
+    ['quantity', { min: ['count', 'opening'].includes(kind) ? '0' : '0.0001' }],
+    ...(['opening', 'receipt'].includes(kind) ? [['unitCost', {}]] : []),
+  ]) {
+    try {
+      decimalInput(line[field], options)
+    } catch (error) {
+      return { field, message: error.message }
+    }
+  }
+  return null
+}
 
 export function InventoryLines({
   lines,
@@ -49,8 +77,29 @@ export function InventoryLines({
   kind,
   stock = [],
   maxLines = 200,
+  searchable = false,
+  collapsed,
+  onCollapse,
+  focusLine,
 }) {
-  const withCost = ['opening', 'receipt'].includes(kind);
+  const withCost = ['opening', 'receipt'].includes(kind)
+  const [queries, setQueries] = useState({})
+  const editor = useRef(null)
+  useEffect(() => {
+    if (!focusLine) return
+    const row = editor.current?.querySelector(`[data-line-key="${focusLine.key}"]`)
+    const selector = {
+      quantity: '[data-line-quantity]',
+      unitCost: '[data-line-cost]',
+      itemId: 'select[required]',
+      search: 'input[type="search"]',
+    }[focusLine.field]
+    ;(
+      row?.querySelector(selector) ||
+      row?.querySelector(':invalid') ||
+      row?.querySelector('select')
+    )?.focus()
+  }, [focusLine, collapsed])
   function update(key, field, value) {
     onChange(
       lines.map((line) =>
@@ -64,8 +113,7 @@ export function InventoryLines({
                     ...(withCost
                       ? {
                           unitCost: String(
-                            items.find((item) => item.id === value)
-                              ?.costPrice ?? '0',
+                            items.find((item) => item.id === value)?.costPrice ?? '0',
                           ),
                         }
                       : {}),
@@ -74,26 +122,91 @@ export function InventoryLines({
             }
           : line,
       ),
-    );
+    )
   }
   return (
-    <div className="inventory-lines">
+    <div className="inventory-lines" ref={editor}>
       {lines.map((line, index) => {
-        const item = items.find((row) => row.id === line.itemId);
-        const balance = stock.find((row) => row.itemId === line.itemId);
+        const item = items.find((row) => row.id === line.itemId)
+        const balance = stock.find((row) => row.itemId === line.itemId)
+        const needle = foldItem(queries[line.key])
+        const matches = searchable
+          ? items.filter(
+              (row) =>
+                !needle ||
+                foldItem(`${row.sku || ''} ${row.name} ${row.unit || ''}`).includes(needle),
+            )
+          : items
+        const options = searchable
+          ? [
+              ...(item ? [item] : []),
+              ...matches.filter((row) => row.id !== line.itemId).slice(0, 50),
+            ]
+          : items
+        if (collapsed?.has(line.key))
+          return (
+            <div key={line.key} className="inventory-line-summary" data-line-key={line.key}>
+              <span>
+                Dòng {index + 1}: {item?.sku} · {item?.name} · {item?.unit} · SL{' '}
+                {quantityText(line.quantity)}
+                {withCost ? ` · Giá vốn ${quantityText(line.unitCost)}` : ''}
+                {kind === 'opening'
+                  ? ` · ${warehouses.find((row) => row.id === line.warehouseId)?.name || 'Kho của phiếu'}`
+                  : ''}
+              </span>
+              <button type="button" onClick={() => onCollapse(line.key, false)}>
+                Sửa dòng {index + 1}
+              </button>
+              <button
+                type="button"
+                disabled={lines.length === 1}
+                onClick={() => onChange(lines.filter((row) => row.key !== line.key))}
+              >
+                Xóa dòng {index + 1}
+              </button>
+            </div>
+          )
         return (
           <div
             key={line.key}
+            data-line-key={line.key}
             className={`inventory-line ${!withCost ? 'inventory-quantity-line' : ''} ${kind === 'opening' ? 'inventory-opening-line' : ''}`}
           >
+            {searchable && (
+              <label>
+                Tìm mặt hàng dòng {index + 1}
+                <input
+                  type="search"
+                  maxLength={160}
+                  placeholder="SKU hoặc tên"
+                  value={queries[line.key] || ''}
+                  onChange={(event) =>
+                    setQueries((previous) => ({ ...previous, [line.key]: event.target.value }))
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return
+                    event.preventDefault()
+                    if (matches.length === 1) {
+                      if (matches[0].id !== line.itemId) update(line.key, 'itemId', matches[0].id)
+                      event.currentTarget
+                        .closest('[data-line-key]')
+                        .querySelector('[data-line-quantity]')
+                        ?.focus()
+                    }
+                  }}
+                />
+                <small>
+                  {matches.length} mặt hàng khớp
+                  {matches.length > 50 ? ' · Hiện tối đa 50 kết quả, nhập để thu hẹp' : ''}
+                </small>
+              </label>
+            )}
             {kind === 'opening' && (
               <label>
                 Kho dòng {index + 1}
                 <select
                   value={line.warehouseId}
-                  onChange={(event) =>
-                    update(line.key, 'warehouseId', event.target.value)
-                  }
+                  onChange={(event) => update(line.key, 'warehouseId', event.target.value)}
                 >
                   <option value="">{labelUi('Dùng kho của phiếu')}</option>
                   {warehouses.map((row) => (
@@ -109,12 +222,10 @@ export function InventoryLines({
               <select
                 required
                 value={line.itemId}
-                onChange={(event) =>
-                  update(line.key, 'itemId', event.target.value)
-                }
+                onChange={(event) => update(line.key, 'itemId', event.target.value)}
               >
                 <option value="">{labelUi('Chọn mặt hàng')}</option>
-                {items.map((row) => (
+                {options.map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.sku ? `${row.sku} · ` : ''}
                     {row.name}
@@ -124,11 +235,10 @@ export function InventoryLines({
               </select>
             </label>
             <label>
-              {kind === 'count'
-                ? labelUi('Số lượng thực tế')
-                : labelUi('Số lượng')}{' '}
-              dòng {index + 1}
+              {kind === 'count' ? labelUi('Số lượng thực tế') : labelUi('Số lượng')} dòng{' '}
+              {index + 1}
               <input
+                data-line-quantity=""
                 type="text"
                 inputMode="decimal"
                 pattern="[0-9]{1,15}([.][0-9]{1,4})?"
@@ -137,14 +247,11 @@ export function InventoryLines({
                 min={['count', 'opening'].includes(kind) ? '0' : '0.0001'}
                 step="0.0001"
                 value={line.quantity}
-                onChange={(event) =>
-                  update(line.key, 'quantity', event.target.value)
-                }
+                onChange={(event) => update(line.key, 'quantity', event.target.value)}
               />
               {kind === 'count' && (
                 <small>
-                  Tồn hiện tại: {quantityText(balance?.quantity)}{' '}
-                  {item?.unit || ''}
+                  Tồn hiện tại: {quantityText(balance?.quantity)} {item?.unit || ''}
                 </small>
               )}
             </label>
@@ -152,6 +259,7 @@ export function InventoryLines({
               <label>
                 Đơn giá vốn dòng {index + 1}
                 <input
+                  data-line-cost=""
                   type="text"
                   inputMode="decimal"
                   pattern="[0-9]{1,15}([.][0-9]{1,4})?"
@@ -161,9 +269,7 @@ export function InventoryLines({
                   step="0.0001"
                   value={line.unitCost}
                   placeholder={item?.costPrice || '0'}
-                  onChange={(event) =>
-                    update(line.key, 'unitCost', event.target.value)
-                  }
+                  onChange={(event) => update(line.key, 'unitCost', event.target.value)}
                 />
               </label>
             )}
@@ -172,14 +278,17 @@ export function InventoryLines({
               className="inventory-icon-button"
               aria-label={`Xóa dòng ${index + 1}`}
               disabled={lines.length === 1}
-              onClick={() =>
-                onChange(lines.filter((row) => row.key !== line.key))
-              }
+              onClick={() => onChange(lines.filter((row) => row.key !== line.key))}
             >
               <Trash2 size={16} aria-hidden="true" />
             </button>
+            {onCollapse && !lineError(line, kind, items) && (
+              <button type="button" onClick={() => onCollapse(line.key, true)}>
+                Thu gọn dòng {index + 1}
+              </button>
+            )}
           </div>
-        );
+        )
       })}
       <button
         type="button"
@@ -190,49 +299,101 @@ export function InventoryLines({
         <Plus size={16} aria-hidden="true" /> {labelUi('Thêm mặt hàng')}
       </button>
     </div>
-  );
+  )
 }
 
-function DocumentForm({ kind, masters, pms, close, saved }) {
-  useI18n();
+function DocumentForm({ kind, masters, pms, initialWarehouseId, close, saved }) {
+  useI18n()
   const warehouses = activeRows(masters.warehouses),
-    items = activeRows(masters.items);
-  const [form, setForm] = useState({
+    items = activeRows(masters.items)
+  const [form, setForm] = useState(() => ({
     date: today(pms.settings.timezone),
     warehouseId:
-      warehouses.find((row) => row.isDefault)?.id || warehouses[0]?.id || '',
+      warehouses.find((row) => row.id === initialWarehouseId)?.id ||
+      warehouses.find((row) => row.isDefault)?.id ||
+      warehouses[0]?.id ||
+      '',
     toWarehouseId: '',
     supplierId: '',
     note: '',
-  });
+  }))
   const [lines, setLines] = useState([freshLine()]),
-    [intent, setIntent] = useState(() => crypto.randomUUID());
+    [intent, setIntent] = useState(() => crypto.randomUUID())
+  const [collapsed, setCollapsed] = useState(new Set()),
+    [focusLine, setFocusLine] = useState(null)
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const inFlight = useRef(false);
+    [error, setError] = useState('')
+  const inFlight = useRef(false)
+  // Opening snapshot; per-line React keys are ignored so removing an added blank line is clean.
+  const [initial] = useState(() => formKey(form, lines))
+  // A typed but invalid date may never reach form.date; compare the raw inputs once edited.
+  const dateField = useRef(null),
+    dateRaw = useRef([]),
+    dateEdited = useRef(false)
+  const dateInputs = () => [...(dateField.current?.querySelectorAll('input') || [])]
+  const snapshotDate = () => {
+    if (!dateEdited.current) dateRaw.current = dateInputs().map((node) => node.value)
+  }
+  const editDate = () => {
+    dateEdited.current = true
+  }
+  const rawDateDirty = () =>
+    dateEdited.current &&
+    dateInputs().some(
+      (node, index) => node.validity?.badInput || node.value !== dateRaw.current[index],
+    )
+  useEffect(snapshotDate, [])
+  const dirty = () => formKey(form, lines) !== initial || rawDateDirty()
+  const { requestLeave } = useDraftGuard({
+    dirty,
+    pending: () => inFlight.current,
+    onDiscard: close,
+  })
   const stock = useInventoryQuery(
     kind === 'count' && form.warehouseId
-      ? '/inventory/stock?' +
-          new URLSearchParams({ warehouseId: form.warehouseId })
+      ? '/inventory/stock?' + new URLSearchParams({ warehouseId: form.warehouseId })
       : null,
-  );
+  )
   function change(field, value) {
-    setForm((previous) => ({ ...previous, [field]: value }));
-    setIntent(crypto.randomUUID());
+    setForm((previous) => ({ ...previous, [field]: value }))
+    setIntent(crypto.randomUUID())
   }
   function changeLines(value) {
-    setLines(value);
-    setIntent(crypto.randomUUID());
+    if (value.length > lines.length) {
+      setCollapsed(
+        new Set(lines.filter((line) => !lineError(line, kind, items)).map((line) => line.key)),
+      )
+      setFocusLine({ key: value.at(-1).key, field: 'search' })
+    }
+    setLines(value)
+    setIntent(crypto.randomUUID())
+  }
+  function collapseLine(key, collapse, field = 'search') {
+    setCollapsed((previous) => {
+      const next = new Set(previous)
+      if (collapse) next.add(key)
+      else next.delete(key)
+      return next
+    })
+    if (!collapse) setFocusLine({ key, field })
   }
   const allowClose = () => {
-    if (!inFlight.current) close();
-  };
+    if (!inFlight.current) requestLeave(close)
+  }
   async function submit(event) {
-    event.preventDefault();
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
+    event.preventDefault()
+    if (inFlight.current) return
+    const invalid = lines.findIndex((line) => lineError(line, kind, items))
+    if (invalid !== -1) {
+      const problem = lineError(lines[invalid], kind, items)
+      setError(`Dòng ${invalid + 1}: ${problem.message}`)
+      collapseLine(lines[invalid].key, false, problem.field)
+      return
+    }
+    if (!event.currentTarget.reportValidity()) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
     try {
       const body = {
         kind,
@@ -240,9 +401,7 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
         warehouseId: form.warehouseId,
         note: form.note,
         ...(kind === 'transfer' ? { toWarehouseId: form.toWarehouseId } : {}),
-        ...(kind === 'receipt' && form.supplierId
-          ? { supplierId: form.supplierId }
-          : {}),
+        ...(kind === 'receipt' && form.supplierId ? { supplierId: form.supplierId } : {}),
         lines: lines.map((line) => ({
           itemId: line.itemId,
           quantity: decimalInput(line.quantity, {
@@ -251,29 +410,25 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
           ...(['opening', 'receipt'].includes(kind)
             ? { unitCost: decimalInput(line.unitCost) }
             : {}),
-          ...(kind === 'opening' && line.warehouseId
-            ? { warehouseId: line.warehouseId }
-            : {}),
+          ...(kind === 'opening' && line.warehouseId ? { warehouseId: line.warehouseId } : {}),
           ...(kind === 'count'
             ? {
                 expectedVersion:
-                  stock.data?.rows.find((row) => row.itemId === line.itemId)
-                    ?.version ?? 0,
+                  stock.data?.rows.find((row) => row.itemId === line.itemId)?.version ?? 0,
               }
             : {}),
         })),
-      };
-      const result = await pms.createInventoryDocument(body, intent);
-      saved(result);
+      }
+      const result = await pms.createInventoryDocument(body, intent)
+      saved(result)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
-  const blocked =
-    busy || (kind === 'count' && (stock.loading || Boolean(stock.error)));
+  const blocked = busy || (kind === 'count' && (stock.loading || Boolean(stock.error)))
   return (
     <LegacyOverlay title={dialogTitle(kind)} onClose={allowClose}>
       <section className="inventory-dialog">
@@ -305,15 +460,11 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
           <fieldset disabled={busy}>
             <div className="domain-fields">
               <label>
-                {kind === 'transfer'
-                  ? labelUi('Kho chuyển')
-                  : labelUi('Kho của phiếu')}
+                {kind === 'transfer' ? labelUi('Kho chuyển') : labelUi('Kho của phiếu')}
                 <select
                   required
                   value={form.warehouseId}
-                  onChange={(event) =>
-                    change('warehouseId', event.target.value)
-                  }
+                  onChange={(event) => change('warehouseId', event.target.value)}
                 >
                   <option value="">{labelUi('Chọn kho')}</option>
                   {warehouses.map((row) => (
@@ -329,9 +480,7 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
                   <select
                     required
                     value={form.toWarehouseId}
-                    onChange={(event) =>
-                      change('toWarehouseId', event.target.value)
-                    }
+                    onChange={(event) => change('toWarehouseId', event.target.value)}
                   >
                     <option value="">{labelUi('Chọn kho nhận')}</option>
                     {warehouses
@@ -344,7 +493,7 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
                   </select>
                 </label>
               )}
-              <label>
+              <label ref={dateField} onFocus={snapshotDate} onInput={editDate} onChange={editDate}>
                 {labelUi('Ngày phiếu')}
                 <DateInput
                   required
@@ -358,13 +507,9 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
                   {tUi('inventory.supplier')}
                   <select
                     value={form.supplierId}
-                    onChange={(event) =>
-                      change('supplierId', event.target.value)
-                    }
+                    onChange={(event) => change('supplierId', event.target.value)}
                   >
-                    <option value="">
-                      {labelUi('Không chọn nhà cung cấp')}
-                    </option>
+                    <option value="">{labelUi('Không chọn nhà cung cấp')}</option>
                     {activeRows(masters.suppliers).map((row) => (
                       <option key={row.id} value={row.id}>
                         {row.name}
@@ -384,9 +529,7 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
               />
             </label>
             <h3>{labelUi('Mặt hàng trong phiếu')}</h3>
-            {stock.loading && (
-              <p role="status">{labelUi('Đang tải tồn kho để kiểm kê…')}</p>
-            )}
+            {stock.loading && <p role="status">{labelUi('Đang tải tồn kho để kiểm kê…')}</p>}
             {stock.error && (
               <div className="domain-error" role="alert">
                 <p>{stock.error}</p>
@@ -395,11 +538,7 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
                 </button>
               </div>
             )}
-            <fieldset
-              disabled={
-                kind === 'count' && (stock.loading || Boolean(stock.error))
-              }
-            >
+            <fieldset disabled={kind === 'count' && (stock.loading || Boolean(stock.error))}>
               <InventoryLines
                 lines={lines}
                 onChange={changeLines}
@@ -407,6 +546,10 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
                 warehouses={warehouses}
                 kind={kind}
                 stock={stock.data?.rows}
+                searchable
+                collapsed={collapsed}
+                onCollapse={collapseLine}
+                focusLine={focusLine}
               />
             </fieldset>
             {kind === 'count' && (
@@ -418,21 +561,28 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
             )}
             {!warehouses.length || !items.length ? (
               <p role="status">
-                {labelUi(
-                  'Cần tạo kho và mặt hàng đang hoạt động trong Cài đặt → Kho & Mua hàng.',
-                )}
+                {labelUi('Cần tạo kho và mặt hàng đang hoạt động trong Cài đặt → Kho & Mua hàng.')}
               </p>
             ) : null}
             <p>
-              Đơn vị tiền tệ: {pms.settings.currency}. Đơn giá và số lượng hỗ
-              trợ tối đa 4 chữ số thập phân.
+              Đơn vị tiền tệ: {pms.settings.currency}. Đơn giá và số lượng hỗ trợ tối đa 4 chữ số
+              thập phân.
             </p>
             {error && (
               <p className="domain-error" role="alert">
                 {error}
               </p>
             )}
-            <div className="domain-toolbar">
+            <div className="domain-toolbar inventory-form-footer">
+              <span>
+                {lines.length} dòng · Ngày {formatDate(form.date)} ·{' '}
+                {warehouses.find((row) => row.id === form.warehouseId)?.name || 'Chưa chọn kho'}
+                {kind === 'transfer'
+                  ? ' → ' +
+                    (warehouses.find((row) => row.id === form.toWarehouseId)?.name ||
+                      'Chưa chọn kho nhận')
+                  : ''}
+              </span>
               <button type="button" disabled={busy} onClick={allowClose}>
                 {tUi('common.cancel')}
               </button>
@@ -449,28 +599,26 @@ function DocumentForm({ kind, masters, pms, close, saved }) {
         </form>
       </section>
     </LegacyOverlay>
-  );
+  )
 }
 
 function PosStockReturn({ row, pms, saved, onBusy }) {
-  const movements = row.lines.filter((line) =>
-    String(line.quantity).startsWith('-'),
-  );
+  const movements = row.lines.filter((line) => String(line.quantity).startsWith('-'))
   const [quantities, setQuantities] = useState({}),
-    [reason, setReason] = useState('');
+    [reason, setReason] = useState('')
   const [intent, setIntent] = useState(() => crypto.randomUUID()),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
-  const inFlight = useRef(false);
+    [notice, setNotice] = useState('')
+  const inFlight = useRef(false)
   async function submit(event) {
-    event.preventDefault();
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    onBusy(true);
-    setError('');
-    setNotice('');
+    event.preventDefault()
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    onBusy(true)
+    setError('')
+    setNotice('')
     try {
       const lines = movements
         .filter((line) => quantities[line.id])
@@ -480,23 +628,21 @@ function PosStockReturn({ row, pms, saved, onBusy }) {
             min: '0.0001',
             max: String(line.quantity).slice(1),
           }),
-        }));
+        }))
       if (!lines.length)
-        throw new Error(
-          'Nhập số lượng hàng thực tế được trả lại ở ít nhất một dòng.',
-        );
-      await pms.returnPosStock(row.posInvoiceId, { reason, lines }, intent);
-      setQuantities({});
-      setReason('');
-      setIntent(crypto.randomUUID());
-      setNotice('Đã nhập lại hàng trả về kho.');
-      saved();
+        throw new Error('Nhập số lượng hàng thực tế được trả lại ở ít nhất một dòng.')
+      await pms.returnPosStock(row.posInvoiceId, { reason, lines }, intent)
+      setQuantities({})
+      setReason('')
+      setIntent(crypto.randomUUID())
+      setNotice('Đã nhập lại hàng trả về kho.')
+      saved()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
-      onBusy(false);
+      inFlight.current = false
+      setBusy(false)
+      onBusy(false)
     }
   }
   return (
@@ -522,11 +668,8 @@ function PosStockReturn({ row, pms, saved, onBusy }) {
                 max={String(line.quantity).slice(1)}
                 value={quantities[line.id] || ''}
                 onChange={(event) => {
-                  setQuantities((previous) => ({
-                    ...previous,
-                    [line.id]: event.target.value,
-                  }));
-                  setIntent(crypto.randomUUID());
+                  setQuantities((previous) => ({ ...previous, [line.id]: event.target.value }))
+                  setIntent(crypto.randomUUID())
                 }}
               />
             </label>
@@ -539,8 +682,8 @@ function PosStockReturn({ row, pms, saved, onBusy }) {
             maxLength={500}
             value={reason}
             onChange={(event) => {
-              setReason(event.target.value);
-              setIntent(crypto.randomUUID());
+              setReason(event.target.value)
+              setIntent(crypto.randomUUID())
             }}
           />
         </label>
@@ -556,50 +699,46 @@ function PosStockReturn({ row, pms, saved, onBusy }) {
         )}
         <button type="submit" className="primary inventory-icon-button">
           <RotateCcw size={16} aria-hidden="true" />{' '}
-          {busy
-            ? labelUi('Đang nhập hàng trả lại…')
-            : labelUi('Ghi nhận hàng trả lại')}
+          {busy ? labelUi('Đang nhập hàng trả lại…') : labelUi('Ghi nhận hàng trả lại')}
         </button>
       </fieldset>
     </form>
-  );
+  )
 }
 
 function DocumentDetail({ id, pms, close, changed }) {
-  useI18n();
-  const detail = useInventoryQuery(
-    '/inventory/documents/' + encodeURIComponent(id),
-  );
+  useI18n()
+  const detail = useInventoryQuery('/inventory/documents/' + encodeURIComponent(id))
   const [reason, setReason] = useState(''),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const [intent, setIntent] = useState(() => crypto.randomUUID());
-  const inFlight = useRef(false);
-  const row = detail.data;
-  const canWrite = pms.access('inventory.write').allowed;
+    [error, setError] = useState('')
+  const [intent, setIntent] = useState(() => crypto.randomUUID())
+  const inFlight = useRef(false)
+  const row = detail.data
+  const canWrite = pms.access('inventory.write').allowed
   async function reverse(event) {
-    event.preventDefault();
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
+    event.preventDefault()
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
     try {
-      await pms.reverseInventoryDocument(id, { reason }, intent);
-      changed();
-      detail.refresh();
-      setReason('');
+      await pms.reverseInventoryDocument(id, { reason }, intent)
+      changed()
+      detail.refresh()
+      setReason('')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   return (
     <LegacyOverlay
       title={labelUi('Chi tiết phiếu kho')}
       onClose={() => {
-        if (!inFlight.current) close();
+        if (!inFlight.current) close()
       }}
     >
       <section className="inventory-dialog">
@@ -614,9 +753,7 @@ function DocumentDetail({ id, pms, close, changed }) {
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        {detail.loading && (
-          <p role="status">{labelUi('Đang tải chi tiết phiếu…')}</p>
-        )}
+        {detail.loading && <p role="status">{labelUi('Đang tải chi tiết phiếu…')}</p>}
         {detail.error && (
           <div className="domain-error" role="alert">
             <p>{detail.error}</p>
@@ -662,8 +799,7 @@ function DocumentDetail({ id, pms, close, changed }) {
             )}
             {row.reversalOfId && (
               <p>
-                {labelUi('Phiếu đảo của:')}{' '}
-                <span className="inventory-id">{row.reversalOfId}</span>
+                {labelUi('Phiếu đảo của:')} <span className="inventory-id">{row.reversalOfId}</span>
               </p>
             )}
             {row.reversedById && (
@@ -683,9 +819,7 @@ function DocumentDetail({ id, pms, close, changed }) {
             )}
             <div className="inventory-scroll">
               <table>
-                <caption>
-                  {labelUi('Số lượng có dấu thể hiện tăng/giảm tại từng kho.')}
-                </caption>
+                <caption>{labelUi('Số lượng có dấu thể hiện tăng/giảm tại từng kho.')}</caption>
                 <thead>
                   <tr>
                     <th>Kho</th>
@@ -733,8 +867,8 @@ function DocumentDetail({ id, pms, close, changed }) {
                       maxLength={500}
                       value={reason}
                       onChange={(event) => {
-                        setReason(event.target.value);
-                        setIntent(crypto.randomUUID());
+                        setReason(event.target.value)
+                        setIntent(crypto.randomUUID())
                       }}
                     />
                   </label>
@@ -745,9 +879,7 @@ function DocumentDetail({ id, pms, close, changed }) {
                   )}
                   <button type="submit" className="inventory-icon-button">
                     <RotateCcw size={16} aria-hidden="true" />{' '}
-                    {busy
-                      ? labelUi('Đang đảo phiếu…')
-                      : labelUi('Ghi phiếu đảo')}
+                    {busy ? labelUi('Đang đảo phiếu…') : labelUi('Ghi phiếu đảo')}
                   </button>
                 </fieldset>
               </form>
@@ -757,14 +889,12 @@ function DocumentDetail({ id, pms, close, changed }) {
                 row={row}
                 pms={pms}
                 onBusy={(value) => {
-                  inFlight.current = value;
-                  setBusy(value);
+                  inFlight.current = value
+                  setBusy(value)
                 }}
                 saved={() => {
-                  changed(
-                    'Đã ghi nhận hàng trả lại từ POS và cập nhật tồn kho.',
-                  );
-                  detail.refresh();
+                  changed('Đã ghi nhận hàng trả lại từ POS và cập nhật tồn kho.')
+                  detail.refresh()
                 }}
               />
             )}
@@ -772,15 +902,18 @@ function DocumentDetail({ id, pms, close, changed }) {
         )}
       </section>
     </LegacyOverlay>
-  );
+  )
 }
 
+// contextWarehouseId (embedded only): optional warehouse seed from a host page; '' means all warehouses.
+// It never carries dates and never overrides a warehouse the user picked manually in this history.
 export default function InventoryDocuments({
   kind = 'receipt',
   embedded = false,
   onChanged,
+  contextWarehouseId,
 }) {
-  const pms = usePms();
+  const pms = usePms()
   return (
     <DocumentWorkspace
       key={`${pms.tenantId}:${pms.user?.id}:${kind}`}
@@ -788,44 +921,106 @@ export default function InventoryDocuments({
       pms={pms}
       embedded={embedded}
       onChanged={onChanged}
+      contextWarehouseId={contextWarehouseId}
     />
-  );
+  )
 }
 
-function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
-  useI18n();
-  const [filters, setFilters] = useState({
-    warehouseId: '',
+function DocumentWorkspace({ kind, pms, embedded, onChanged, contextWarehouseId }) {
+  useI18n()
+  const location = useLocation()
+  const contextual = embedded && contextWarehouseId != null
+  const requestedWarehouse = embedded
+    ? contextual
+      ? String(contextWarehouseId)
+      : ''
+    : new URLSearchParams(location.search).get('warehouseId') || ''
+  const warehouseContext = embedded ? '' : location.key
+  // Embedded pages keep their page while the seed is unchanged and reset it when a new seed applies;
+  // a manual warehouse keeps its own page across later seeds.
+  const pageContextFor = (manual) =>
+    embedded ? (manual ? 'manual' : 'context:' + requestedWarehouse) : warehouseContext
+  const [warehouseFilter, setWarehouseFilter] = useState(null)
+  const [filters, setFilters] = useState(() => ({
     start: '',
     end: today(pms.settings.timezone),
     page: 1,
-  });
+    context: pageContextFor(false),
+  }))
   const [version, setVersion] = useState(0),
-    [creating, setCreating] = useState(false),
+    [creating, setCreating] = useState(null),
     [selected, setSelected] = useState(null),
-    [notice, setNotice] = useState('');
-  const masters = useInventoryQuery('/inventory/masters', version);
+    [notice, setNotice] = useState('')
+  const masters = useInventoryQuery('/inventory/masters', version)
+  const allWarehouses = masters.data?.warehouses || []
+  const activeWarehouses = activeRows(masters.data?.warehouses)
+  const defaultWarehouse = activeWarehouses.find((row) => row.isDefault) || activeWarehouses[0]
+  // Embedded history may view any known warehouse (inactive ones keep their past documents); new forms still use active rows only.
+  const knownContext =
+    embedded &&
+    Boolean(requestedWarehouse) &&
+    allWarehouses.some((row) => row.id === requestedWarehouse)
+  const invalidWarehouse = Boolean(
+    requestedWarehouse &&
+    masters.data &&
+    (embedded ? !knownContext : !activeWarehouses.some((row) => row.id === requestedWarehouse)),
+  )
+  const manualWarehouse = warehouseFilter?.context === warehouseContext
+  const resolvedRequest = !requestedWarehouse
+    ? ''
+    : embedded
+      ? knownContext
+        ? requestedWarehouse
+        : ''
+      : activeWarehouses.find((row) => row.id === requestedWarehouse)?.id ||
+        defaultWarehouse?.id ||
+        ''
+  const warehouseId = manualWarehouse ? warehouseFilter.id : resolvedRequest
+  const pageContext = pageContextFor(manualWarehouse)
+  const page = filters.context === pageContext ? filters.page : 1
   const query = dateRangeParams({
-    ...filters,
+    start: filters.start,
+    end: filters.end,
+    warehouseId,
+    page,
     kind: kind === 'all' ? '' : kind,
     pageSize: 20,
-  });
-  const documents = useInventoryQuery('/inventory/documents?' + query, version);
-  const rows = documents.data?.documents || [];
-  const pagination = documents.data?.pagination;
-  const canWrite = kind !== 'all' && pms.access('inventory.write').allowed;
-  const Heading = embedded ? 'h2' : 'h1';
-  const openingLocked = kind === 'opening' && masters.data?.openingLocked;
+  })
+  // A requested warehouse is validated against the catalog first; never show a mislabeled all-warehouse list meanwhile.
+  const paused = Boolean(requestedWarehouse && !masters.data)
+  const documents = useInventoryQuery(paused ? null : '/inventory/documents?' + query, version)
+  const warehouseName = (id) =>
+    id
+      ? allWarehouses.find((row) => row.id === id)?.name || labelUi('kho không còn trong danh mục')
+      : labelUi('Tất cả kho')
+  const offerContext =
+    contextual && manualWarehouse && Boolean(masters.data) && warehouseFilter.id !== resolvedRequest
+  const rows = documents.data?.documents || []
+  const pagination = documents.data?.pagination
+  const canWrite = kind !== 'all' && pms.access('inventory.write').allowed
+  const Heading = embedded ? 'h2' : 'h1'
+  const openingLocked = kind === 'opening' && masters.data?.openingLocked
   function filter(field, value) {
-    setFilters((previous) => ({ ...previous, [field]: value, page: 1 }));
+    if (field === 'warehouseId') setWarehouseFilter({ context: warehouseContext, id: value })
+    setFilters((previous) => ({
+      ...previous,
+      ...(field === 'warehouseId' ? {} : { [field]: value }),
+      page: 1,
+      context: field === 'warehouseId' ? pageContextFor(true) : pageContext,
+    }))
   }
-  const refresh = () => setVersion((value) => value + 1);
+  // Explicit, one-step return to the host's current warehouse; dates, open form and detail stay untouched.
+  function applyContextWarehouse() {
+    setWarehouseFilter(null)
+    setFilters((previous) => ({ ...previous, page: 1, context: pageContextFor(false) }))
+  }
+  const refresh = () => setVersion((value) => value + 1)
   function saved(result) {
-    setCreating(false);
-    setSelected(result.id);
-    setNotice(`Đã ghi sổ ${INVENTORY_KINDS[kind].toLocaleLowerCase('vi')}.`);
-    refresh();
-    onChanged?.();
+    setCreating(null)
+    setSelected(result.id)
+    setNotice(`Đã ghi sổ ${INVENTORY_KINDS[kind].toLocaleLowerCase('vi')}.`)
+    refresh()
+    onChanged?.()
   }
   return (
     <div className="pms-domain-page pms-inventory">
@@ -834,31 +1029,18 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
           <Heading>{INVENTORY_KINDS[kind]}</Heading>
           <p>
             {kind === 'count'
-              ? labelUi(
-                  'Đối chiếu số lượng thực tế với tồn kho và ghi chênh lệch.',
-                )
+              ? labelUi('Đối chiếu số lượng thực tế với tồn kho và ghi chênh lệch.')
               : kind === 'opening'
-                ? labelUi(
-                    'Thiết lập số lượng và giá vốn ban đầu trước khi bắt đầu vận hành kho.',
-                  )
-                : labelUi(
-                    'Ghi sổ và tra cứu lịch sử hàng hóa trong khách sạn.',
-                  )}
+                ? labelUi('Thiết lập số lượng và giá vốn ban đầu trước khi bắt đầu vận hành kho.')
+                : labelUi('Ghi sổ và tra cứu lịch sử hàng hóa trong khách sạn.')}
           </p>
         </div>
         <div className="inventory-toolbar-actions">
-          <button
-            type="button"
-            className="inventory-icon-button"
-            onClick={refresh}
-          >
+          <button type="button" className="inventory-icon-button" onClick={refresh}>
             <RefreshCw size={16} aria-hidden="true" /> {tUi('common.reload')}
           </button>
           {!embedded && (
-            <Link
-              className="inventory-link-button inventory-icon-button"
-              to="/id/inventory/stock"
-            >
+            <Link className="inventory-link-button inventory-icon-button" to="/id/inventory/stock">
               <Boxes size={16} aria-hidden="true" />
               {labelUi('Xem tồn kho')}
             </Link>
@@ -867,27 +1049,21 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
             <button
               type="button"
               className="primary inventory-icon-button"
-              disabled={
-                masters.loading || Boolean(masters.error) || openingLocked
-              }
+              disabled={masters.loading || Boolean(masters.error) || openingLocked}
               onClick={() => {
-                setNotice('');
-                setCreating(true);
+                setNotice('')
+                setCreating({ masters: masters.data, warehouseId })
               }}
             >
               <Plus size={16} aria-hidden="true" />{' '}
-              {kind === 'opening'
-                ? labelUi('Thiết lập tồn đầu kỳ')
-                : labelUi('Tạo phiếu')}
+              {kind === 'opening' ? labelUi('Thiết lập tồn đầu kỳ') : labelUi('Tạo phiếu')}
             </button>
           )}
         </div>
       </header>
       {!pms.access('inventory.write').allowed && (
         <p role="status">
-          {labelUi(
-            'Bạn đang xem kho. Vai trò hoặc gói hiện tại chưa cho phép ghi sổ.',
-          )}
+          {labelUi('Bạn đang xem kho. Vai trò hoặc gói hiện tại chưa cho phép ghi sổ.')}
         </p>
       )}
       {openingLocked && (
@@ -902,6 +1078,33 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
           {notice}
         </p>
       )}
+      {invalidWarehouse &&
+        !manualWarehouse &&
+        (embedded ? (
+          <p role="status">
+            {labelUi(
+              'Kho đang xem trong báo cáo không còn trong danh mục kho. Lịch sử đang hiển thị tất cả kho.',
+            )}
+          </p>
+        ) : (
+          <p role="status">
+            {labelUi('Kho trong đường dẫn không tồn tại hoặc đã ngừng hoạt động.')}{' '}
+            {defaultWarehouse
+              ? `${labelUi('Đang dùng kho mặc định:')} ${defaultWarehouse.name}.`
+              : labelUi('Chưa có kho đang hoạt động để tạo phiếu.')}
+          </p>
+        ))}
+      {offerContext && (
+        <div className="inventory-context-notice" role="status">
+          <p>
+            {labelUi('Lịch sử đang lọc theo kho bạn đã chọn:')} {warehouseName(warehouseFilter.id)}.{' '}
+            {labelUi('Kho đang xem trong báo cáo:')} {warehouseName(requestedWarehouse)}.
+          </p>
+          <button type="button" onClick={applyContextWarehouse}>
+            {labelUi('Dùng kho đang xem')}
+          </button>
+        </div>
+      )}
       {masters.error && (
         <div className="domain-error" role="alert">
           <p>{masters.error}</p>
@@ -910,12 +1113,16 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
           </button>
         </div>
       )}
+      {paused && !masters.error && (
+        <p role="status">{labelUi('Đang tải danh mục kho để lọc đúng lịch sử phiếu…')}</p>
+      )}
       <section className="domain-panel">
         <div className="domain-fields">
           <label>
             {labelUi('Lọc kho')}
             <select
-              value={filters.warehouseId}
+              value={warehouseId}
+              disabled={paused}
               onChange={(event) => filter('warehouseId', event.target.value)}
             >
               <option value="">{labelUi('Tất cả kho')}</option>
@@ -928,10 +1135,7 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
           </label>
           <label>
             {tUi('common.fromDate')}
-            <DateInput
-              value={filters.start}
-              onChange={(value) => filter('start', value)}
-            />
+            <DateInput value={filters.start} onChange={(value) => filter('start', value)} />
           </label>
           <label>
             {labelUi('Đến ngày')}
@@ -942,9 +1146,7 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
             />
           </label>
         </div>
-        {documents.loading && (
-          <p role="status">{labelUi('Đang tải phiếu kho…')}</p>
-        )}
+        {documents.loading && <p role="status">{labelUi('Đang tải phiếu kho…')}</p>}
         {documents.error && (
           <div className="domain-error" role="alert">
             <p>{documents.error}</p>
@@ -953,7 +1155,7 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
             </button>
           </div>
         )}
-        {!documents.loading && !documents.error && (
+        {!paused && !documents.loading && !documents.error && (
           <>
             <div className="inventory-scroll">
               <table>
@@ -962,9 +1164,7 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
                     <th>{tUi('common.date')}</th>
                     {kind === 'all' && <th>{labelUi('Loại phiếu')}</th>}
                     <th>Kho</th>
-                    {['transfer', 'all'].includes(kind) && (
-                      <th>{labelUi('Kho nhận')}</th>
-                    )}
+                    {['transfer', 'all'].includes(kind) && <th>{labelUi('Kho nhận')}</th>}
                     <th>{tUi('inventory.supplier')}</th>
                     <th>{tUi('common.notes')}</th>
                     <th>{tUi('common.status')}</th>
@@ -975,13 +1175,9 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
                   {rows.map((row) => (
                     <tr key={row.id}>
                       <td>{formatDate(row.date)}</td>
-                      {kind === 'all' && (
-                        <td>{INVENTORY_KINDS[row.kind] || row.kind}</td>
-                      )}
+                      {kind === 'all' && <td>{INVENTORY_KINDS[row.kind] || row.kind}</td>}
                       <td>{row.warehouse}</td>
-                      {['transfer', 'all'].includes(kind) && (
-                        <td>{row.toWarehouse || '—'}</td>
-                      )}
+                      {['transfer', 'all'].includes(kind) && <td>{row.toWarehouse || '—'}</td>}
                       <td>{row.supplier || '—'}</td>
                       <td className="inventory-wrap">{row.note || '—'}</td>
                       <td>
@@ -1004,14 +1200,8 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
                   ))}
                   {!rows.length && (
                     <tr>
-                      <td
-                        colSpan={
-                          kind === 'all' ? 8 : kind === 'transfer' ? 7 : 6
-                        }
-                      >
-                        {labelUi(
-                          'Chưa có phiếu kho phù hợp với khoảng ngày và kho đã chọn.',
-                        )}
+                      <td colSpan={kind === 'all' ? 8 : kind === 'transfer' ? 7 : 6}>
+                        {labelUi('Chưa có phiếu kho phù hợp với khoảng ngày và kho đã chọn.')}
                       </td>
                     </tr>
                   )}
@@ -1020,19 +1210,19 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
             </div>
             <div className="domain-toolbar">
               <span>
-                {pagination?.totalItems ?? rows.length} phiếu · Trang{' '}
-                {filters.page}
+                {pagination?.totalItems ?? rows.length} phiếu · Trang {page}
               </span>
               <div>
                 <button
                   type="button"
                   className="inventory-icon-button"
                   aria-label={labelUi('Trang trước')}
-                  disabled={filters.page <= 1}
+                  disabled={page <= 1}
                   onClick={() =>
                     setFilters((previous) => ({
                       ...previous,
-                      page: previous.page - 1,
+                      page: page - 1,
+                      context: pageContext,
                     }))
                   }
                 >
@@ -1042,11 +1232,12 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
                   type="button"
                   className="inventory-icon-button"
                   aria-label={labelUi('Trang tiếp')}
-                  disabled={filters.page * 20 >= (pagination?.totalItems ?? 0)}
+                  disabled={page * 20 >= (pagination?.totalItems ?? 0)}
                   onClick={() =>
                     setFilters((previous) => ({
                       ...previous,
-                      page: previous.page + 1,
+                      page: page + 1,
+                      context: pageContext,
                     }))
                   }
                 >
@@ -1057,12 +1248,13 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
           </>
         )}
       </section>
-      {creating && masters.data && (
+      {creating && (
         <DocumentForm
           kind={kind}
-          masters={masters.data}
+          masters={creating.masters}
           pms={pms}
-          close={() => setCreating(false)}
+          initialWarehouseId={creating.warehouseId}
+          close={() => setCreating(null)}
           saved={saved}
         />
       )}
@@ -1073,12 +1265,12 @@ function DocumentWorkspace({ kind, pms, embedded, onChanged }) {
           pms={pms}
           close={() => setSelected(null)}
           changed={(message) => {
-            setNotice(message || 'Đã ghi phiếu đảo và cập nhật tồn kho.');
-            refresh();
-            onChanged?.();
+            setNotice(message || 'Đã ghi phiếu đảo và cập nhật tồn kho.')
+            refresh()
+            onChanged?.()
           }}
         />
       )}
     </div>
-  );
+  )
 }

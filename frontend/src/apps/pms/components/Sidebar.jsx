@@ -1,14 +1,15 @@
+import { t as tUi, tr as labelUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import { AccessLink as Link } from '../../../shared/components/AccessControl'
+import LohaBrand from '../../../shared/components/LohaBrand'
+import { usePms } from '../data/usePms'
+import { isReportPath, readReportPeriod } from '../reports/pages/reportPeriod.js'
 import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../shared/i18n/useI18n.js';
-import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { AccessLink as Link } from '../../../shared/components/AccessControl';
-import LohaBrand from '../../../shared/components/LohaBrand';
-import { usePms } from '../data/usePms';
-import { ROLE_NAMES } from '../data/access';
+  cashflowInvalid,
+  cashflowTarget,
+  isCashflowPath,
+} from '../finance/pages/cashflowFilters.js'
 import {
   LayoutDashboard,
   CalendarCheck,
@@ -25,9 +26,8 @@ import {
   BarChart3,
   PanelLeftClose,
   PanelLeftOpen,
-  Building2,
   X,
-} from 'lucide-react';
+} from 'lucide-react'
 const navItems = [
   { icon: LayoutDashboard, label: 'Tổng quan', path: '/id/dashboard' },
   { icon: CalendarCheck, label: 'Lịch đặt phòng', path: '/id/ari' },
@@ -93,28 +93,44 @@ const navItems = [
       },
     ],
   },
-];
+]
 
-export default function Sidebar({
-  isCollapsed = false,
-  setIsCollapsed,
-  onClose,
-}) {
-  useI18n();
-  const { pathname } = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState({});
-  const { hotels, tenant, selectTenant, role, routeAccess, settingsPath } =
-    usePms();
-  const isActive = (path) =>
-    pathname === path || pathname.startsWith(path + '/');
-  const collapsed = isCollapsed && !onClose;
+export default function Sidebar({ isCollapsed = false, setIsCollapsed, onClose }) {
+  useI18n()
+  const { pathname, search } = useLocation()
+  const [expandedMenus, setExpandedMenus] = useState({})
+  const pms = usePms()
+  const { routeAccess, settingsPath } = pms
+  const isActive = (path) => pathname === path || pathname.startsWith(path + '/')
+  const collapsed = isCollapsed && !onClose
+  function destination(path) {
+    if (isReportPath(pathname) && isReportPath(path)) {
+      const period = readReportPeriod(search, pms.settings?.timezone)
+      const params = new URLSearchParams(search)
+      for (const key of ['booking', 'tab', 'date']) params.delete(key)
+      params.set('start', period.start)
+      params.set('end', period.end)
+      if (!period.valid) params.set('period_invalid', '1')
+      return { to: path + '?' + params, disabled: !period.valid }
+    }
+    if (isCashflowPath(pathname) && isCashflowPath(path))
+      return {
+        to: cashflowTarget(path, search, pms),
+        disabled: cashflowInvalid(search, pms, pathname.endsWith('/bank') ? 'bank' : 'cash'),
+      }
+    return { to: path, disabled: false }
+  }
+  function follow(event, disabled) {
+    if (disabled) event.preventDefault()
+    else onClose?.()
+  }
 
   function toggleSubmenu(item) {
-    if (collapsed) setIsCollapsed(false);
+    if (collapsed) setIsCollapsed(false)
     setExpandedMenus((previous) => ({
       ...previous,
       [item.path]: collapsed || !(previous[item.path] ?? isActive(item.path)),
-    }));
+    }))
   }
 
   return (
@@ -135,57 +151,15 @@ export default function Sidebar({
           </button>
         )}
       </div>
-      <div className="pms-hotel-selector">
-        <Building2 size={19} aria-hidden="true" />
-        {collapsed ? (
-          <button
-            type="button"
-            aria-label={tUi('nav.selectHotel')}
-            title={tenant?.name}
-            onClick={() => setIsCollapsed(false)}
-          >
-            <Building2 size={19} />
-          </button>
-        ) : (
-          <div>
-            <label htmlFor={onClose ? 'pms-mobile-hotel' : 'pms-desktop-hotel'}>
-              {tUi('nav.selectedHotel')}
-            </label>
-            <select
-              id={onClose ? 'pms-mobile-hotel' : 'pms-desktop-hotel'}
-              value={tenant?.id || ''}
-              onChange={(event) => {
-                selectTenant(event.target.value);
-                onClose?.();
-              }}
-              disabled={!hotels.length}
-            >
-              {!hotels.length && <option value="">{tUi('nav.noHotel')}</option>}
-              {hotels.map((hotel) => (
-                <option key={hotel.id} value={hotel.id}>
-                  {hotel.name}
-                </option>
-              ))}
-            </select>
-            <small>
-              {labelUi(ROLE_NAMES[role]) || tUi('nav.hotelAccount')}
-            </small>
-          </div>
-        )}
-      </div>
       <nav className="pms-sidebar-nav" aria-label={tUi('nav.pmsOperations')}>
-        {!collapsed && (
-          <p className="pms-nav-caption">{tUi('nav.hotelOperations')}</p>
-        )}
+        {!collapsed && <p className="pms-nav-caption">{tUi('nav.hotelOperations')}</p>}
         {navItems.map((item) => {
-          const active =
-            isActive(item.path) ||
-            item.subItems?.some((sub) => pathname === sub.path);
-          const expanded = expandedMenus[item.path] ?? active;
+          const active = isActive(item.path) || item.subItems?.some((sub) => pathname === sub.path)
+          const expanded = expandedMenus[item.path] ?? active
           const hasAccess =
             routeAccess(item.path).allowed ||
-            item.subItems?.some((sub) => routeAccess(sub.path).allowed);
-          const Icon = item.icon;
+            item.subItems?.some((sub) => routeAccess(sub.path).allowed)
+          const Icon = item.icon
           return (
             <div key={item.path} className="pms-nav-group">
               {item.subItems ? (
@@ -205,16 +179,9 @@ export default function Sidebar({
                   <Icon size={19} aria-hidden="true" />
                   <span>{labelUi(item.label)}</span>
                   {!collapsed &&
-                    (expanded ? (
-                      <ChevronDown size={15} />
-                    ) : (
-                      <ChevronRight size={15} />
-                    ))}
+                    (expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />)}
                   {!hasAccess && (
-                    <span
-                      className="pms-nav-lock"
-                      aria-label={tUi('nav.locked')}
-                    >
+                    <span className="pms-nav-lock" aria-label={tUi('nav.locked')}>
                       🔒
                     </span>
                   )}
@@ -237,21 +204,30 @@ export default function Sidebar({
                   className="pms-submenu"
                   id={`pms-submenu-${onClose ? 'mobile-' : ''}${item.path.split('/').at(-1)}`}
                 >
-                  {item.subItems.map((sub) => (
-                    <Link
-                      key={sub.path}
-                      to={sub.path}
-                      className={`pms-submenu-link${pathname === sub.path ? ' is-active' : ''}`}
-                      aria-current={pathname === sub.path ? 'page' : undefined}
-                      onClick={onClose}
-                    >
-                      {sub.labelKey ? tUi(sub.labelKey) : labelUi(sub.label)}
-                    </Link>
-                  ))}
+                  {item.subItems.map((sub) => {
+                    const next = destination(sub.path)
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={next.to}
+                        className={`pms-submenu-link${pathname === sub.path ? ' is-active' : ''}`}
+                        aria-current={pathname === sub.path ? 'page' : undefined}
+                        aria-disabled={next.disabled || undefined}
+                        title={
+                          next.disabled
+                            ? labelUi('Hoàn tất khoảng ngày hợp lệ trước khi chuyển màn.')
+                            : undefined
+                        }
+                        onClick={(event) => follow(event, next.disabled)}
+                      >
+                        {sub.labelKey ? tUi(sub.labelKey) : labelUi(sub.label)}
+                      </Link>
+                    )
+                  })}
                 </div>
               )}
             </div>
-          );
+          )
         })}
       </nav>
       <div className="pms-sidebar-footer">
@@ -273,15 +249,11 @@ export default function Sidebar({
             title={collapsed ? tUi('nav.expand') : undefined}
             onClick={() => setIsCollapsed(!collapsed)}
           >
-            {collapsed ? (
-              <PanelLeftOpen size={19} />
-            ) : (
-              <PanelLeftClose size={19} />
-            )}
+            {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
             <span>{tUi('nav.collapseMenu')}</span>
           </button>
         )}
       </div>
     </aside>
-  );
+  )
 }

@@ -1,48 +1,25 @@
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useCallback, useState } from 'react';
-import { Check, Plus, RefreshCw } from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import {
-  defaultChannexAccount,
-  environmentLabel,
-} from '../../../manager/channex/presentation';
-import { useChannexQuery } from '../../../manager/channex/useChannexQuery';
-import CreatePropertyEditor from '../../../manager/channex/components/CreatePropertyEditor';
-import {
-  canCreateChannexProperty,
-  propertyChoices,
-} from '../../../manager/channex/propertyForm';
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useCallback, useState } from 'react'
+import { Check, Plus, RefreshCw } from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { defaultChannexAccount, environmentLabel } from '../../../manager/channex/presentation'
+import { useChannexQuery } from '../../../manager/channex/useChannexQuery'
+import CreatePropertyEditor from '../../../manager/channex/components/CreatePropertyEditor'
+import { canCreateChannexProperty, propertyChoices } from '../../../manager/channex/propertyForm'
 
-export default function ChannexSourcePicker({
-  pms,
-  disabled,
-  storageAvailable,
-  onConnect,
-}) {
-  const { getChannexAccounts } = usePms();
-  const query = useChannexQuery(getChannexAccounts, 'accounts');
-  const [selected, setSelected] = useState('');
+export default function ChannexSourcePicker({ pms, disabled, storageAvailable, onConnect }) {
+  const { getChannexAccounts } = usePms()
+  const query = useChannexQuery(getChannexAccounts, 'accounts')
+  const [selected, setSelected] = useState('')
   const accounts = (query.data?.accounts || []).filter(
-    (account) =>
-      !account.id.startsWith('hotel:') ||
-      account.id === 'hotel:' + pms.tenantId,
-  );
-  const accountId = selected || defaultChannexAccount(accounts);
-  const account = accounts.find(
-    (source) => source.id === accountId && source.configured,
-  );
+    (account) => !account.id.startsWith('hotel:') || account.id === 'hotel:' + pms.tenantId,
+  )
+  const accountId = selected || defaultChannexAccount(accounts)
+  const account = accounts.find((source) => source.id === accountId && source.configured)
   return (
     <div className="ota-source-picker">
       <h3>{labelUi('Chọn từ tài khoản Channex có sẵn')}</h3>
-      <p>
-        {labelUi(
-          'Chọn theo tên; hệ thống tự kiểm tra và liên kết với khách sạn PMS đang mở.',
-        )}
-      </p>
+      <p>{labelUi('Chọn theo tên; hệ thống tự kiểm tra và liên kết với khách sạn PMS đang mở.')}</p>
       {query.loading ? (
         <p role="status">{labelUi('Đang tải tài khoản…')}</p>
       ) : query.error ? (
@@ -65,11 +42,7 @@ export default function ChannexSourcePicker({
                 {labelUi('Chọn tài khoản')}
               </option>
               {accounts.map((source) => (
-                <option
-                  key={source.id}
-                  value={source.id}
-                  disabled={!source.configured}
-                >
+                <option key={source.id} value={source.id} disabled={!source.configured}>
                   {source.label} · {environmentLabel(source.environment)}
                   {source.configured ? '' : ' ' + labelUi('· Chưa cấu hình')}
                 </option>
@@ -101,34 +74,30 @@ export default function ChannexSourcePicker({
         </>
       )}
     </div>
-  );
+  )
 }
 
 function PropertyChoice({ account, pms, disabled, onConnect }) {
-  useI18n();
-  const { getChannexProperties, tenants } = usePms();
+  useI18n()
+  const { getChannexProperties, tenants } = usePms()
   const [page, setPage] = useState(1),
-    [propertyId, setPropertyId] = useState('');
+    [propertyId, setPropertyId] = useState('')
   const [creating, setCreating] = useState(false),
-    [created, setCreated] = useState(null);
+    [created, setCreated] = useState(null)
   const request = useCallback(
     () => getChannexProperties(account.id, page),
     [getChannexProperties, account.id, page],
-  );
-  const query = useChannexQuery(request, 'properties');
-  const properties = propertyChoices(query.data?.properties || [], created);
-  const property = properties.find((row) => row.id === propertyId);
-  const canCreate = canCreateChannexProperty(pms.user, account);
-  const hotel = {
-    ...tenants?.find((row) => row.id === pms.tenantId),
-    ...pms.tenant,
-  };
-  const linkedElsewhere = (row) =>
-    row.linkedHotel && row.linkedHotel.tenantId !== pms.tenantId;
+  )
+  const query = useChannexQuery(request, 'properties')
+  const properties = propertyChoices(query.data?.properties || [], created)
+  const property = properties.find((row) => row.id === propertyId)
+  const canCreate = canCreateChannexProperty(pms.user, account)
+  const hotel = { ...tenants?.find((row) => row.id === pms.tenantId), ...pms.tenant }
+  const linkedElsewhere = (row) => row.linkedHotel && row.linkedHotel.tenantId !== pms.tenantId
   function connect(event) {
-    event.preventDefault();
-    if (disabled || !property || linkedElsewhere(property)) return;
-    onConnect({ accountId: account.id, propertyId, active: true });
+    event.preventDefault()
+    if (disabled || !property || linkedElsewhere(property)) return
+    onConnect({ accountId: account.id, propertyId, active: true })
   }
   return (
     <>
@@ -148,30 +117,18 @@ function PropertyChoice({ account, pms, disabled, onConnect }) {
                   : labelUi('Chọn khách sạn tương ứng')}
               </option>
               {properties.map((row) => (
-                <option
-                  key={row.id}
-                  value={row.id}
-                  disabled={Boolean(linkedElsewhere(row))}
-                >
+                <option key={row.id} value={row.id} disabled={Boolean(linkedElsewhere(row))}>
                   {row.name}
                   {row.city ? ` · ${row.city}` : ''}
-                  {linkedElsewhere(row)
-                    ? ` · Đã liên kết ${row.linkedHotel.name}`
-                    : ''}
+                  {linkedElsewhere(row) ? ` · Đã liên kết ${row.linkedHotel.name}` : ''}
                 </option>
               ))}
             </select>
           </label>
           {canCreate && (
             <div className="ota-property-create">
-              <span>
-                {labelUi('Chưa có khách sạn tương ứng trên Channex?')}
-              </span>
-              <button
-                type="button"
-                className="ota-button"
-                onClick={() => setCreating(true)}
-              >
+              <span>{labelUi('Chưa có khách sạn tương ứng trên Channex?')}</span>
+              <button type="button" className="ota-button" onClick={() => setCreating(true)}>
                 <Plus size={15} aria-hidden="true" />
                 {labelUi('Tạo khách sạn trên Channex')}
               </button>
@@ -196,8 +153,7 @@ function PropertyChoice({ account, pms, disabled, onConnect }) {
           {property && (
             <p>
               {labelUi('Sẽ liên kết')} <strong>{property.name}</strong> (
-              {environmentLabel(account.environment)}) với{' '}
-              <strong>{pms.tenant?.name}</strong>.
+              {environmentLabel(account.environment)}) với <strong>{pms.tenant?.name}</strong>.
               {property.currency !== (pms.settings.currency || 'VND') &&
                 ' ' +
                   labelUi(
@@ -220,8 +176,8 @@ function PropertyChoice({ account, pms, disabled, onConnect }) {
               className="ota-button"
               disabled={query.loading || page <= 1}
               onClick={() => {
-                setPage((value) => value - 1);
-                setPropertyId('');
+                setPage((value) => value - 1)
+                setPropertyId('')
               }}
             >
               {labelUi('Trang trước')}
@@ -229,13 +185,10 @@ function PropertyChoice({ account, pms, disabled, onConnect }) {
             <button
               type="button"
               className="ota-button"
-              disabled={
-                query.loading ||
-                page >= (query.data?.pagination?.totalPages || 1)
-              }
+              disabled={query.loading || page >= (query.data?.pagination?.totalPages || 1)}
               onClick={() => {
-                setPage((value) => value + 1);
-                setPropertyId('');
+                setPage((value) => value + 1)
+                setPropertyId('')
               }}
             >
               {labelUi('Trang sau')}
@@ -243,9 +196,7 @@ function PropertyChoice({ account, pms, disabled, onConnect }) {
             <button
               type="submit"
               className="ota-button ota-button--primary"
-              disabled={
-                query.loading || !property || Boolean(linkedElsewhere(property))
-              }
+              disabled={query.loading || !property || Boolean(linkedElsewhere(property))}
             >
               <Check size={16} aria-hidden="true" />
               {labelUi('Liên kết & bật đồng bộ')}
@@ -260,16 +211,16 @@ function PropertyChoice({ account, pms, disabled, onConnect }) {
           settings={pms.settings}
           onClose={() => setCreating(false)}
           onCreated={(row) => {
-            setCreated(row);
-            setPropertyId(row.id);
-            setCreating(false);
+            setCreated(row)
+            setPropertyId(row.id)
+            setCreating(false)
           }}
           onReload={() => {
-            setCreating(false);
-            query.refresh();
+            setCreating(false)
+            query.refresh()
           }}
         />
       )}
     </>
-  );
+  )
 }

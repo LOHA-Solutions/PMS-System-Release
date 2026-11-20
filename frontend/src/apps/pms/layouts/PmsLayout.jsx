@@ -1,22 +1,48 @@
-import { formatDateTime } from '../../../shared/lib/date.js';
-import { t as tUi, useI18n } from '../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
-import { usePms } from '../data/usePms';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
-import RequestActivity from '../../../shared/components/RequestActivity';
-import { watchWorkspace } from '../data/workspaceSync';
-import './PmsLayout.css';
-import '../components/PmsControls.css';
+import { formatDateTime } from '../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { getIntlLocale } from '../../../shared/i18n/store.js'
+import { useEffect, useRef, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
+import { usePms } from '../data/usePms'
+import Sidebar from '../components/Sidebar'
+import Header from '../components/Header'
+import RequestActivity from '../../../shared/components/RequestActivity'
+import { watchWorkspace, workspaceAge } from '../data/workspaceSync'
+import './PmsLayout.css'
+import '../components/PmsControls.css'
+
+export function WorkspaceUpdatedAt({ stamp, timezone }) {
+  useI18n()
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000)
+    return () => clearInterval(timer)
+  }, [])
+  const age = workspaceAge(stamp, now)
+  if (age.state === 'unknown') return <span>{tUi('system.manualRefresh')}</span>
+  return (
+    <span>
+      <time dateTime={stamp}>
+        {tUi('system.lastUpdated', { time: formatDateTime(stamp, timezone) })}
+      </time>
+      {' · '}
+      {age.state === 'future'
+        ? labelUi('Thời điểm cập nhật nằm ở tương lai; kiểm tra đồng hồ thiết bị.')
+        : new Intl.RelativeTimeFormat(getIntlLocale(), { numeric: 'auto' }).format(
+            age.value,
+            age.unit,
+          )}
+    </span>
+  )
+}
 
 export default function PmsLayout() {
-  useI18n();
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  useI18n()
+  const [mobileMenu, setMobileMenu] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const [refreshing, setRefreshing] = useState(false),
-    [blockedRefresh, setBlockedRefresh] = useState(null);
+    [blockedRefresh, setBlockedRefresh] = useState(null)
   const {
     subscription,
     storageWarning,
@@ -32,59 +58,48 @@ export default function PmsLayout() {
     writeReceipt,
     lastSyncedAt,
     refreshWorkspace,
-  } = usePms();
-  const { pathname } = useLocation();
-  const menuRef = useRef(null);
+  } = usePms()
+  const { pathname } = useLocation()
+  const menuRef = useRef(null)
   const syncControl = useRef(null),
-    syncState = useRef(null);
-  const refreshKey = JSON.stringify([
-    tenantId,
-    authGeneration,
-    pathname,
-    workspaceRevision,
-  ]);
+    syncState = useRef(null)
+  const refreshKey = JSON.stringify([tenantId, authGeneration, pathname, workspaceRevision])
   useEffect(() => {
-    syncState.current = { workspaceLoading, pendingRequests, accessDialog };
-  }, [workspaceLoading, pendingRequests, accessDialog]);
+    syncState.current = { workspaceLoading, pendingRequests, accessDialog }
+  }, [workspaceLoading, pendingRequests, accessDialog])
   useEffect(() => {
-    if (!tenantId) return;
-    const control = watchWorkspace(
-      (canApply) => refreshWorkspace({ quiet: true, canApply }),
-      {
-        isBlocked: () =>
-          syncState.current.workspaceLoading ||
-          syncState.current.pendingRequests.writes > 0 ||
-          Boolean(syncState.current.accessDialog),
-      },
-    );
-    syncControl.current = control;
+    if (!tenantId) return
+    const control = watchWorkspace((canApply) => refreshWorkspace({ quiet: true, canApply }), {
+      isBlocked: () =>
+        syncState.current.workspaceLoading ||
+        syncState.current.pendingRequests.writes > 0 ||
+        Boolean(syncState.current.accessDialog),
+    })
+    syncControl.current = control
     return () => {
-      control.stop();
-      syncControl.current = null;
-    };
-  }, [tenantId, authGeneration, pathname, refreshWorkspace]);
+      control.stop()
+      syncControl.current = null
+    }
+  }, [tenantId, authGeneration, pathname, refreshWorkspace])
   useEffect(() => {
-    syncControl.current?.resetDrafts();
-  }, [workspaceRevision]);
+    syncControl.current?.resetDrafts()
+  }, [workspaceRevision])
   async function reloadWorkspace() {
-    if (refreshing) return;
-    setRefreshing(true);
-    setBlockedRefresh(null);
+    if (refreshing) return
+    setRefreshing(true)
+    setBlockedRefresh(null)
     try {
-      if ((await syncControl.current?.refresh()) === false)
-        setBlockedRefresh(refreshKey);
+      if ((await syncControl.current?.refresh()) === false) setBlockedRefresh(refreshKey)
     } finally {
-      setRefreshing(false);
+      setRefreshing(false)
     }
   }
   useEffect(() => {
-    if (mobileMenu && !accessDialog) menuRef.current?.showModal();
-    else menuRef.current?.close();
-  }, [mobileMenu, accessDialog]);
+    if (mobileMenu && !accessDialog) menuRef.current?.showModal()
+    else menuRef.current?.close()
+  }, [mobileMenu, accessDialog])
   return (
-    <div
-      className={`app-theme pms-shell${isCollapsed ? ' pms-shell-collapsed' : ''}`}
-    >
+    <div className={`app-theme pms-shell${isCollapsed ? ' pms-shell-collapsed' : ''}`}>
       <a className="pms-skip-link" href="#pms-main-content">
         {tUi('nav.skip')}
       </a>
@@ -97,7 +112,7 @@ export default function PmsLayout() {
         ref={menuRef}
         aria-label={tUi('nav.hotelMenu')}
         onClick={(event) => {
-          if (event.target === event.currentTarget) setMobileMenu(false);
+          if (event.target === event.currentTarget) setMobileMenu(false)
         }}
         onCancel={() => setMobileMenu(false)}
         onClose={() => setMobileMenu(false)}
@@ -112,10 +127,7 @@ export default function PmsLayout() {
             {subscription?.operationalAccess?.active && (
               <p className="pms-shell-notice" role="status">
                 {tUi('billing.operationalAccess', {
-                  until: formatDateTime(
-                    subscription.operationalAccess.until,
-                    settings.timezone,
-                  ),
+                  until: formatDateTime(subscription.operationalAccess.until, settings.timezone),
                 })}{' '}
                 {tUi('billing.operationalAccessHint')}
               </p>
@@ -126,21 +138,14 @@ export default function PmsLayout() {
               </p>
             )}
             <div className="pms-workspace-refresh">
-              <span>
-                {lastSyncedAt
-                  ? tUi('system.lastUpdated', {
-                      time: formatDateTime(lastSyncedAt, settings.timezone),
-                    })
-                  : tUi('system.manualRefresh')}
-              </span>
+              <WorkspaceUpdatedAt
+                key={JSON.stringify([tenantId, authGeneration, lastSyncedAt])}
+                stamp={lastSyncedAt}
+                timezone={settings.timezone}
+              />
               <button
                 type="button"
-                disabled={
-                  !tenantId ||
-                  refreshing ||
-                  workspaceLoading ||
-                  pendingRequests.writes > 0
-                }
+                disabled={!tenantId || refreshing || workspaceLoading || pendingRequests.writes > 0}
                 onClick={reloadWorkspace}
               >
                 <RefreshCw size={16} aria-hidden="true" />
@@ -152,13 +157,10 @@ export default function PmsLayout() {
                 {tUi('system.refreshBlocked')}
               </p>
             )}
-            {writeReceipt?.tenantId === tenantId &&
-            !writeReceipt.synchronized ? (
+            {writeReceipt?.tenantId === tenantId && !writeReceipt.synchronized ? (
               <p className="pms-shell-notice" role="status">
                 {tUi(
-                  writeReceipt.id
-                    ? 'system.writeSavedPendingWithId'
-                    : 'system.writeSavedPending',
+                  writeReceipt.id ? 'system.writeSavedPendingWithId' : 'system.writeSavedPending',
                   { id: writeReceipt.id },
                 )}
               </p>
@@ -174,12 +176,10 @@ export default function PmsLayout() {
                 {tUi('system.suspended')}
               </p>
             )}
-            <Outlet
-              key={JSON.stringify([tenantId, authGeneration, pathname])}
-            />
+            <Outlet key={JSON.stringify([tenantId, authGeneration, pathname])} />
           </div>
         </main>
       </div>
     </div>
-  );
+  )
 }

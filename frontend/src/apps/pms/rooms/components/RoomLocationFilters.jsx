@@ -1,5 +1,5 @@
-import { t } from '../../../../shared/i18n/useI18n.js';
-import { roomLocationOptions } from '../roomLocations.js';
+import { t } from '../../../../shared/i18n/useI18n.js'
+import { roomLocationOptions } from '../roomLocations.js'
 
 export default function RoomLocationFilters({
   rooms,
@@ -11,10 +11,7 @@ export default function RoomLocationFilters({
 }) {
   return (
     <>
-      <label
-        className="loha-rooms-visually-hidden"
-        htmlFor={`${idPrefix}-area`}
-      >
+      <label className="loha-rooms-visually-hidden" htmlFor={`${idPrefix}-area`}>
         {t('rooms.area')}
       </label>
       <select
@@ -24,19 +21,12 @@ export default function RoomLocationFilters({
       >
         <option value="">{t('rooms.allAreas')}</option>
         {roomLocationOptions(rooms, 'area').map((option) => (
-          <option
-            key={option.filterValue}
-            value={option.filterValue}
-            data-i18n-ignore
-          >
+          <option key={option.filterValue} value={option.filterValue} data-i18n-ignore>
             {option.value ?? t('rooms.unassignedArea')}
           </option>
         ))}
       </select>
-      <label
-        className="loha-rooms-visually-hidden"
-        htmlFor={`${idPrefix}-floor`}
-      >
+      <label className="loha-rooms-visually-hidden" htmlFor={`${idPrefix}-floor`}>
         {t('rooms.floor')}
       </label>
       <select
@@ -46,11 +36,7 @@ export default function RoomLocationFilters({
       >
         <option value="">{t('rooms.allFloors')}</option>
         {roomLocationOptions(rooms, 'floor').map((option) => (
-          <option
-            key={option.filterValue}
-            value={option.filterValue}
-            data-i18n-ignore
-          >
+          <option key={option.filterValue} value={option.filterValue} data-i18n-ignore>
             {option.value === null
               ? t('rooms.unassignedFloor')
               : t('rooms.floorName', { floor: option.value })}
@@ -58,5 +44,5 @@ export default function RoomLocationFilters({
         ))}
       </select>
     </>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-const DEFAULT_TIMEZONE = 'Asia/Ho_Chi_Minh';
+const DEFAULT_TIMEZONE = 'Asia/Ho_Chi_Minh'
 
 // Keep worldwide choices available on browsers without supportedValuesOf.
 const FALLBACK_TIMEZONES = [
@@ -87,15 +87,13 @@ const FALLBACK_TIMEZONES = [
   'Pacific/Port_Moresby',
   'Pacific/Tahiti',
   'Pacific/Tongatapu',
-];
+]
 
 export function hotelTimezoneOptions(current = DEFAULT_TIMEZONE) {
-  const zones = Intl.supportedValuesOf?.('timeZone') || FALLBACK_TIMEZONES;
-  const now = new Date();
+  const zones = Intl.supportedValuesOf?.('timeZone') || FALLBACK_TIMEZONES
+  const now = new Date()
   // UTC and stored aliases are not necessarily returned by supportedValuesOf.
-  return [
-    ...new Set(['UTC', DEFAULT_TIMEZONE, ...zones, current].filter(Boolean)),
-  ]
+  return [...new Set(['UTC', DEFAULT_TIMEZONE, ...zones, current].filter(Boolean))]
     .map((value) => {
       try {
         const offset = new Intl.DateTimeFormat('en', {
@@ -104,20 +102,13 @@ export function hotelTimezoneOptions(current = DEFAULT_TIMEZONE) {
         })
           .formatToParts(now)
           .find((part) => part.type === 'timeZoneName')
-          .value.replace('GMT', 'UTC');
-        const [, sign, hours, minutes] = /^UTC(?:([+-])(\d{2}):(\d{2}))?$/.exec(
-          offset,
-        );
-        const order = sign
-          ? (Number(hours) * 60 + Number(minutes)) * (sign === '-' ? -1 : 1)
-          : 0;
-        return { value, label: `(${offset}) ${value}`, order };
+          .value.replace('GMT', 'UTC')
+        const [, sign, hours, minutes] = /^UTC(?:([+-])(\d{2}):(\d{2}))?$/.exec(offset)
+        const order = sign ? (Number(hours) * 60 + Number(minutes)) * (sign === '-' ? -1 : 1) : 0
+        return { value, label: `(${offset}) ${value}`, order }
       } catch {
-        return { value, label: value, order: 0 };
+        return { value, label: value, order: 0 }
       }
     })
-    .sort(
-      (left, right) =>
-        left.order - right.order || left.value.localeCompare(right.value),
-    );
+    .sort((left, right) => left.order - right.order || left.value.localeCompare(right.value))
 }

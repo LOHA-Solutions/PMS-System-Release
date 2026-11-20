@@ -1,53 +1,55 @@
-import { useRef, useState } from 'react';
-import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider.jsx';
-import FormDialog from '../../components/FormDialog';
-import { useChannels } from '../useChannels';
-import { channelCompletionAccess } from '../integration';
-import { decimalInput } from '../../../../shared/lib/number.js';
-import { formatDate } from '../../../../shared/lib/date.js';
-import './OTAExceptions.css';
+import { useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { workflowLink } from '../../reconciliation/workflowNavigation.js'
+import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider.jsx'
+import FormDialog from '../../components/FormDialog'
+import { useChannels } from '../useChannels'
+import { channelCompletionAccess } from '../integration'
+import { decimalInput } from '../../../../shared/lib/number.js'
+import { formatDate } from '../../../../shared/lib/date.js'
+import './OTAExceptions.css'
 
-export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
+export function BookingReviewResolver({ pms, review, onClose, onResolved, closeLabel }) {
+  const location = useLocation()
   const [form, setForm] = useState({
     reservationId:
-      pms.bookings?.find(
-        (row) => row.pricingSnapshot?.channel?.bookingId === review.bookingId,
-      )?.id || '',
+      pms.bookings?.find((row) => row.pricingSnapshot?.channel?.bookingId === review.bookingId)
+        ?.id || '',
     providerTotal: review.details?.amount || '',
     expectedTotal: '',
     reason: '',
     confirm: false,
     intent: crypto.randomUUID(),
     dirty: false,
-  });
+  })
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const inFlight = useRef(false);
+    [error, setError] = useState('')
+  const inFlight = useRef(false)
   const guard = useDraftGuard({
     dirty: form.dirty,
-    pending: busy,
-    onDiscard: onClose,
-  });
-  const booking = pms.bookings?.find((row) => row.id === form.reservationId);
+    pending: () => inFlight.current,
+    onDiscard: () => setForm((previous) => ({ ...previous, dirty: false, confirm: false })),
+  })
+  const booking = pms.bookings?.find((row) => row.id === form.reservationId)
   function change(name, value) {
     setForm((previous) => ({
       ...previous,
       [name]: value,
       dirty: true,
       intent: crypto.randomUUID(),
-    }));
+    }))
   }
   function close() {
-    if (!inFlight.current) guard.requestLeave(onClose);
+    if (!inFlight.current) guard.requestLeave(onClose)
   }
   async function submit(event) {
-    event.preventDefault();
-    if (inFlight.current || !booking || !form.confirm) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
+    event.preventDefault()
+    if (inFlight.current || !booking || !form.confirm) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
     try {
-      if (!form.reason.trim()) throw new Error('Vui lòng nhập lý do.');
+      if (!form.reason.trim()) throw new Error('Vui lòng nhập lý do.')
       const input = {
         reservationId: booking.id,
         expectedVersion: booking.version,
@@ -55,20 +57,19 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
         expectedTotal: decimalInput(form.expectedTotal),
         reason: form.reason.trim(),
         confirm: true,
-      };
-      if (pms.resolveChannelReview)
-        await pms.resolveChannelReview(review.id, input, form.intent);
+      }
+      if (pms.resolveChannelReview) await pms.resolveChannelReview(review.id, input, form.intent)
       else
         await pms.requestTenant(
           `/channels/booking-reviews/${encodeURIComponent(review.id)}/resolve`,
           { method: 'POST', body: input, intent: form.intent },
-        );
-      onResolved();
+        )
+      onResolved()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   return (
@@ -80,15 +81,13 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
     >
       <form className="ota-exception-form" onSubmit={submit}>
         <p>
-          Hoàn tất sửa ngày, phòng, thuế/phí và tiền trên booking PMS trước khi
-          liên kết. Thao tác này lưu quyết định đối soát và xếp xác nhận nhận dữ
-          liệu; không tự thu tiền hoặc sửa booking.
+          Hoàn tất sửa ngày, phòng, thuế/phí và tiền trên booking PMS trước khi liên kết. Thao tác
+          này lưu quyết định đối soát và xếp xác nhận nhận dữ liệu; không tự thu tiền hoặc sửa
+          booking.
         </p>
         <p>
-          Mã OTA:{' '}
-          <strong>{review.details?.bookingCode || review.bookingId}</strong> ·{' '}
-          {formatDate(review.details?.arrivalDate)} →{' '}
-          {formatDate(review.details?.departureDate)} ·{' '}
+          Mã OTA: <strong>{review.details?.bookingCode || review.bookingId}</strong> ·{' '}
+          {formatDate(review.details?.arrivalDate)} → {formatDate(review.details?.departureDate)} ·{' '}
           {review.details?.currency}
         </p>
         <FinancialDetails details={review.details} />
@@ -99,8 +98,8 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
               required
               value={form.reservationId}
               onChange={(event) => {
-                change('reservationId', event.target.value);
-                change('expectedTotal', '');
+                change('reservationId', event.target.value)
+                change('expectedTotal', '')
               }}
             >
               <option value="">Chọn booking đã nhập/điều chỉnh</option>
@@ -108,9 +107,8 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
                 .filter((row) => row.currency === review.details?.currency)
                 .map((row) => (
                   <option value={row.id} key={row.id}>
-                    {row.guest} · {row.rooms?.join(', ')} ·{' '}
-                    {formatDate(row.checkIn)} → {formatDate(row.checkOut)} ·{' '}
-                    {row.total} {row.currency}
+                    {row.guest} · {row.rooms?.join(', ')} · {formatDate(row.checkIn)} →{' '}
+                    {formatDate(row.checkOut)} · {row.total} {row.currency}
                   </option>
                 ))}
             </select>
@@ -121,7 +119,20 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
               <strong>
                 {booking.total} {booking.currency}
               </strong>
-              . Phần chênh lệch với OTA phải được giải thích dưới đây.
+              . Phần chênh lệch với OTA phải được giải thích dưới đây.{' '}
+              {!busy && (
+                <Link
+                  {...workflowLink(
+                    '/id/reservations?' +
+                      new URLSearchParams({ booking: booking.id, tab: 'payments' }),
+                    booking.id,
+                    pms,
+                    location,
+                  )}
+                >
+                  Mở booking PMS để kiểm tra
+                </Link>
+              )}
             </p>
           )}
           <div className="ota-exception-grid">
@@ -133,9 +144,7 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
                 maxLength={20}
                 pattern="[0-9]{1,15}([.][0-9]{1,4})?"
                 value={form.providerTotal}
-                onChange={(event) =>
-                  change('providerTotal', event.target.value)
-                }
+                onChange={(event) => change('providerTotal', event.target.value)}
               />
             </label>
             <label>
@@ -146,9 +155,7 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
                 maxLength={20}
                 pattern="[0-9]{1,15}([.][0-9]{1,4})?"
                 value={form.expectedTotal}
-                onChange={(event) =>
-                  change('expectedTotal', event.target.value)
-                }
+                onChange={(event) => change('expectedTotal', event.target.value)}
               />
             </label>
           </div>
@@ -170,19 +177,14 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
               onChange={(event) => change('confirm', event.target.checked)}
             />
             <span>
-              Tôi đã kiểm tra ngày/phòng, thuế/dịch vụ, khoản OTA thu hộ, hoa
-              hồng và tổng tiền; booking PMS phản ánh đúng kết quả đối soát.
+              Tôi đã kiểm tra ngày/phòng, thuế/dịch vụ, khoản OTA thu hộ, hoa hồng và tổng tiền;
+              booking PMS phản ánh đúng kết quả đối soát.
             </span>
           </label>
         </fieldset>
         <div className="ota-exception-actions">
-          <button
-            type="button"
-            className="ota-button"
-            disabled={busy}
-            onClick={close}
-          >
-            Đóng
+          <button type="button" className="ota-button" disabled={busy} onClick={close}>
+            {closeLabel || 'Đóng'}
           </button>
           <button
             type="submit"
@@ -194,32 +196,23 @@ export function BookingReviewResolver({ pms, review, onClose, onResolved }) {
         </div>
       </form>
     </FormDialog>
-  );
+  )
 }
 
 function FinancialDetails({ details = {} }) {
   const lines = [
     ...(details.services || []).map((line) => ({ ...line, group: 'Dịch vụ' })),
     ...(details.taxes || []).map((line) => ({ ...line, group: 'Thuế/phí' })),
-    ...(details.collectedTaxes || []).map((line) => ({
-      ...line,
-      group: 'OTA thu hộ',
-    })),
+    ...(details.collectedTaxes || []).map((line) => ({ ...line, group: 'OTA thu hộ' })),
     ...(details.rooms || []).flatMap((room, index) => [
-      ...(room.services || []).map((line) => ({
-        ...line,
-        group: `Phòng ${index + 1} · dịch vụ`,
-      })),
-      ...(room.taxes || []).map((line) => ({
-        ...line,
-        group: `Phòng ${index + 1} · thuế/phí`,
-      })),
+      ...(room.services || []).map((line) => ({ ...line, group: `Phòng ${index + 1} · dịch vụ` })),
+      ...(room.taxes || []).map((line) => ({ ...line, group: `Phòng ${index + 1} · thuế/phí` })),
       ...(room.collectedTaxes || []).map((line) => ({
         ...line,
         group: `Phòng ${index + 1} · OTA thu hộ`,
       })),
     ]),
-  ];
+  ]
   return (
     <div className="ota-exception-financial">
       <p>
@@ -247,35 +240,32 @@ function FinancialDetails({ details = {} }) {
         </ul>
       )}
     </div>
-  );
+  )
 }
 
 export function ChannelIncidents({ pms, refreshKey = 0 }) {
   const [status, setStatus] = useState('open'),
     [page, setPage] = useState(1),
-    [selected, setSelected] = useState(null);
+    [selected, setSelected] = useState(null)
   const query = useChannels(
     pms.requestTenant,
     pms.tenantId,
     `/channels/incidents?status=${status}&page=${page}&pageSize=25`,
     true,
     refreshKey,
-  );
-  const access = pms.access('channels.write', 'OTA_SYNC', true);
-  const canResolve = channelCompletionAccess(pms, access);
+  )
+  const access = pms.access('channels.write', 'OTA_SYNC', true)
+  const canResolve = channelCompletionAccess(pms, access)
   const items = query.data?.items || [],
-    pagination = query.data?.pagination;
+    pagination = query.data?.pagination
   return (
-    <section
-      className="ota-panel ota-incidents"
-      aria-labelledby="ota-incidents-title"
-    >
+    <section className="ota-panel ota-incidents" aria-labelledby="ota-incidents-title">
       <div className="ota-section-header">
         <div>
           <h2 id="ota-incidents-title">Sự cố và cảnh báo từ kênh bán</h2>
           <p>
-            Thông báo từ OTA có thể đến sau khi Channex đã nhận giá. Kiểm tra
-            trên kênh trước khi xác nhận đã xử lý.
+            Thông báo từ OTA có thể đến sau khi Channex đã nhận giá. Kiểm tra trên kênh trước khi
+            xác nhận đã xử lý.
           </p>
         </div>
         <button
@@ -293,8 +283,8 @@ export function ChannelIncidents({ pms, refreshKey = 0 }) {
           <select
             value={status}
             onChange={(event) => {
-              setStatus(event.target.value);
-              setPage(1);
+              setStatus(event.target.value)
+              setPage(1)
             }}
           >
             <option value="open">Cần xử lý</option>
@@ -331,18 +321,13 @@ export function ChannelIncidents({ pms, refreshKey = 0 }) {
                 )}
                 <small>
                   Người xử lý:{' '}
-                  {query.data.assignees?.find(
-                    (person) => person.id === row.assigneeId,
-                  )?.name || 'Chưa giao'}
+                  {query.data.assignees?.find((person) => person.id === row.assigneeId)?.name ||
+                    'Chưa giao'}
                 </small>
                 {row.resolvedAt && <p>Đã xử lý: {row.resolutionNote}</p>}
               </div>
               {canResolve && (
-                <button
-                  type="button"
-                  className="ota-button"
-                  onClick={() => setSelected(row)}
-                >
+                <button type="button" className="ota-button" onClick={() => setSelected(row)}>
                   {row.resolvedAt ? 'Xem / mở lại' : 'Giao việc / xử lý'}
                 </button>
               )}
@@ -353,8 +338,8 @@ export function ChannelIncidents({ pms, refreshKey = 0 }) {
       {pagination && (
         <div className="ota-review-pagination">
           <span>
-            Trang {pagination.page} / {Math.max(1, pagination.totalPages)} ·{' '}
-            {pagination.totalItems} sự cố
+            Trang {pagination.page} / {Math.max(1, pagination.totalPages)} · {pagination.totalItems}{' '}
+            sự cố
           </span>
           <button
             type="button"
@@ -382,13 +367,13 @@ export function ChannelIncidents({ pms, refreshKey = 0 }) {
           assignees={query.data?.assignees || []}
           onClose={() => setSelected(null)}
           onSaved={() => {
-            setSelected(null);
-            query.refresh();
+            setSelected(null)
+            query.refresh()
           }}
         />
       )}
     </section>
-  );
+  )
 }
 
 function IncidentForm({ pms, incident, assignees, onClose, onSaved }) {
@@ -399,32 +384,28 @@ function IncidentForm({ pms, incident, assignees, onClose, onSaved }) {
     verified: false,
     intent: crypto.randomUUID(),
     dirty: false,
-  });
+  })
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
-  const inFlight = useRef(false);
-  const guard = useDraftGuard({
-    dirty: form.dirty,
-    pending: busy,
-    onDiscard: onClose,
-  });
+    [error, setError] = useState('')
+  const inFlight = useRef(false)
+  const guard = useDraftGuard({ dirty: form.dirty, pending: busy, onDiscard: onClose })
   function change(name, value) {
     setForm((previous) => ({
       ...previous,
       [name]: value,
       dirty: true,
       intent: crypto.randomUUID(),
-    }));
+    }))
   }
   function close() {
-    if (!inFlight.current) guard.requestLeave(onClose);
+    if (!inFlight.current) guard.requestLeave(onClose)
   }
   async function submit(event) {
-    event.preventDefault();
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
+    event.preventDefault()
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
     const input = {
       action: form.action,
       reason: form.reason,
@@ -433,30 +414,26 @@ function IncidentForm({ pms, incident, assignees, onClose, onSaved }) {
         : form.action === 'resolve'
           ? { verified: form.verified }
           : {}),
-    };
+    }
     try {
       if (pms.channelIncidentAction)
-        await pms.channelIncidentAction(incident.id, input, form.intent);
+        await pms.channelIncidentAction(incident.id, input, form.intent)
       else
-        await pms.requestTenant(
-          `/channels/incidents/${encodeURIComponent(incident.id)}/actions`,
-          { method: 'POST', body: input, intent: form.intent },
-        );
-      onSaved();
+        await pms.requestTenant(`/channels/incidents/${encodeURIComponent(incident.id)}/actions`, {
+          method: 'POST',
+          body: input,
+          intent: form.intent,
+        })
+      onSaved()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   return (
-    <FormDialog
-      title="Xử lý sự cố kênh bán"
-      busy={busy}
-      error={error}
-      onClose={close}
-    >
+    <FormDialog title="Xử lý sự cố kênh bán" busy={busy} error={error} onClose={close}>
       <form className="ota-exception-form" onSubmit={submit}>
         <p>
           {incident.channelName} · {incident.errorType}
@@ -464,10 +441,7 @@ function IncidentForm({ pms, incident, assignees, onClose, onSaved }) {
         <fieldset disabled={busy}>
           <label>
             Thao tác
-            <select
-              value={form.action}
-              onChange={(event) => change('action', event.target.value)}
-            >
+            <select value={form.action} onChange={(event) => change('action', event.target.value)}>
               <option value="resolve">Xác nhận đã xử lý</option>
               <option value="assign">Giao người xử lý</option>
               <option value="reopen">Mở lại sự cố</option>
@@ -508,30 +482,21 @@ function IncidentForm({ pms, incident, assignees, onClose, onSaved }) {
                 onChange={(event) => change('verified', event.target.checked)}
               />
               <span>
-                Tôi đã kiểm tra giá, phòng trống hoặc kết quả liên quan trên
-                kênh; sự cố đã được khắc phục.
+                Tôi đã kiểm tra giá, phòng trống hoặc kết quả liên quan trên kênh; sự cố đã được
+                khắc phục.
               </span>
             </label>
           )}
         </fieldset>
         <div className="ota-exception-actions">
-          <button
-            type="button"
-            className="ota-button"
-            disabled={busy}
-            onClick={close}
-          >
+          <button type="button" className="ota-button" disabled={busy} onClick={close}>
             Đóng
           </button>
-          <button
-            type="submit"
-            className="ota-button ota-button--primary"
-            disabled={busy}
-          >
+          <button type="submit" className="ota-button ota-button--primary" disabled={busy}>
             {busy ? 'Đang lưu…' : 'Lưu kết quả'}
           </button>
         </div>
       </form>
     </FormDialog>
-  );
+  )
 }

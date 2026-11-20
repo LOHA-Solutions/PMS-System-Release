@@ -1,12 +1,8 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useState } from 'react';
-import { CheckCircle2, Play, Save, Send } from 'lucide-react';
-import { timestamp } from '../../data/presentation';
-import { isClosed, shortDate, taskKind, taskStatuses } from '../planCalendar';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useState } from 'react'
+import { CheckCircle2, Play, Save, Send } from 'lucide-react'
+import { timestamp } from '../../data/presentation'
+import { isClosed, shortDate, taskKind, taskStatuses } from '../planCalendar'
 
 export default function TaskDetail({
   task,
@@ -22,22 +18,19 @@ export default function TaskDetail({
   timeZone,
   onClose,
 }) {
-  useI18n();
-  const [staffId, setStaffId] = useState(task.staffId || '');
-  const [shiftId, setShiftId] = useState(task.shiftId || '');
-  const [note, setNote] = useState(task.note || '');
-  const worker = staff.find((row) => row.id === task.staffId);
+  useI18n()
+  const [staffId, setStaffId] = useState(task.staffId || '')
+  const [shiftId, setShiftId] = useState(task.shiftId || '')
+  const [note, setNote] = useState(task.note || '')
+  const worker = staff.find((row) => row.id === task.staffId)
   const availableShifts = shifts.filter(
     (row) => row.active && row.staffId === staffId && row.date === task.date,
-  );
+  )
   const changeStatus = (status) =>
     act(
       () => updateTask(task.id, { status, note, revision: task.revision }),
-      tUi('hk.statusSuccess', {
-        room: task.room,
-        status: labelUi(taskStatuses[status]),
-      }),
-    );
+      tUi('hk.statusSuccess', { room: task.room, status: labelUi(taskStatuses[status]) }),
+    )
   return (
     <div className="hk-task-detail" data-workspace-draft>
       <div className="hk-detail-meta">
@@ -49,8 +42,7 @@ export default function TaskDetail({
         </span>
       </div>
       <p>
-        {tUi('hk.staffPrefix')}{' '}
-        <strong>{worker?.name || tUi('hk.unassigned')}</strong>
+        {tUi('hk.staffPrefix')} <strong>{worker?.name || tUi('hk.unassigned')}</strong>
       </p>
       {task.startedAt && (
         <p>
@@ -65,7 +57,7 @@ export default function TaskDetail({
       {!isClosed(task) && canManage && (
         <form
           onSubmit={(event) => {
-            event.preventDefault();
+            event.preventDefault()
             act(
               () =>
                 assignTask(task.id, {
@@ -73,10 +65,8 @@ export default function TaskDetail({
                   shiftId: shiftId || null,
                   revision: task.revision,
                 }),
-              tUi(staffId ? 'hk.assignedSuccess' : 'hk.unassignedSuccess', {
-                room: task.room,
-              }),
-            );
+              tUi(staffId ? 'hk.assignedSuccess' : 'hk.unassignedSuccess', { room: task.room }),
+            )
           }}
         >
           <fieldset disabled={busy}>
@@ -86,8 +76,8 @@ export default function TaskDetail({
                 <select
                   value={staffId}
                   onChange={(event) => {
-                    setStaffId(event.target.value);
-                    setShiftId('');
+                    setStaffId(event.target.value)
+                    setShiftId('')
                   }}
                 >
                   <option value="">{tUi('hk.unassigned')}</option>
@@ -98,10 +88,9 @@ export default function TaskDetail({
                         {row.name}
                       </option>
                     ))}
-                  {staffId &&
-                    !staff.some((row) => row.active && row.id === staffId) && (
-                      <option value={staffId}>{tUi('hk.inactiveStaff')}</option>
-                    )}
+                  {staffId && !staff.some((row) => row.active && row.id === staffId) && (
+                    <option value={staffId}>{tUi('hk.inactiveStaff')}</option>
+                  )}
                 </select>
               </label>
               <label>
@@ -214,5 +203,5 @@ export default function TaskDetail({
         </button>
       </div>
     </div>
-  );
+  )
 }

@@ -107,6 +107,97 @@
 }
 .booking-create-footer-actions {
   flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.booking-quote-summary {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  min-width: 0;
+  font-size: 13px;
+  color: #495057;
+}
+.booking-quote-rooms {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.booking-quote-room {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.booking-quote-room.is-unsafe {
+  border-color: #e8b4b9;
+  background: #fff7f8;
+}
+.booking-quote-room-name {
+  font-weight: 600;
+  color: #212529;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.booking-quote-subtotal {
+  margin-left: auto;
+  min-width: 0;
+  color: #212529;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+.booking-quote-variation {
+  flex-basis: 100%;
+  color: #925617;
+  overflow-wrap: anywhere;
+}
+.booking-quote-warning {
+  flex-basis: 100%;
+  margin: 0;
+  color: #a3343d;
+  overflow-wrap: anywhere;
+}
+.booking-quote-note {
+  margin: 0;
+  font-size: 12px;
+  color: #6c757d;
+}
+.booking-quote-details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #0c7cd5;
+  font-weight: 600;
+}
+.booking-quote-details > summary:focus-visible {
+  outline: 2px solid var(--accent-primary, #086ab4);
+  outline-offset: 3px;
+}
+.booking-quote-nightly {
+  max-height: 40dvh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 0 0 24px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.booking-quote-night {
+  padding: 2px 0;
+}
+.booking-create-footer > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-all;
 }
 .booking-create-error {
   flex-shrink: 0;
@@ -141,7 +232,8 @@
     padding: 12px 12px max(12px, env(safe-area-inset-bottom, 0px));
   }
   .booking-create-footer-actions > button {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     justify-content: center;
   }
 }

@@ -1,26 +1,22 @@
-import { formatDateTime } from '../../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { User, Save, Shield, LogOut, Receipt } from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { profileName, passwordChangeInput } from './profileForm';
-import OwnerBilling from './OwnerBilling.jsx';
-import './Profile.css';
+import { formatDateTime } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { User, Save, Shield, LogOut, Receipt } from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { profileName, passwordChangeInput } from './profileForm'
+import OwnerBilling from './OwnerBilling.jsx'
+import './Profile.css'
 
-const emptyPasswords = { currentPassword: '', newPassword: '', confirm: '' };
+const emptyPasswords = { currentPassword: '', newPassword: '', confirm: '' }
 
 export default function Profile() {
-  const { authGeneration, user, tenantId } = usePms();
-  return <ProfileWorkspace key={`${authGeneration}:${user?.id}:${tenantId}`} />;
+  const { authGeneration, user, tenantId } = usePms()
+  return <ProfileWorkspace key={`${authGeneration}:${user?.id}:${tenantId}`} />
 }
 
 function ProfileWorkspace() {
-  useI18n();
+  useI18n()
   const {
     user,
     tenant,
@@ -30,102 +26,102 @@ function ProfileWorkspace() {
     saveOwnProfile,
     getOwnSessions,
     revokeOtherSessions,
-  } = usePms();
-  const canViewBilling = access('billing.view', undefined, false).allowed;
-  const [searchParams, setSearchParams] = useSearchParams();
+  } = usePms()
+  const canViewBilling = access('billing.view', undefined, false).allowed
+  const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = ['security', 'orders'].includes(searchParams.get('tab'))
     ? searchParams.get('tab')
-    : 'info';
+    : 'info'
   const [isEditing, setIsEditing] = useState(false),
-    [name, setName] = useState(user?.name || '');
+    [name, setName] = useState(user?.name || '')
   const [passwords, setPasswords] = useState(emptyPasswords),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false)
   const [error, setError] = useState(''),
-    [message, setMessage] = useState('');
+    [message, setMessage] = useState('')
   const [sessions, setSessions] = useState(null),
     [sessionError, setSessionError] = useState(''),
-    [revision, setRevision] = useState(0);
+    [revision, setRevision] = useState(0)
   const working = useRef(false),
-    mounted = useRef(true);
+    mounted = useRef(true)
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
     return () => {
-      mounted.current = false;
-    };
-  }, []);
+      mounted.current = false
+    }
+  }, [])
   useEffect(() => {
-    if (activeTab !== 'security') return;
-    let current = true;
+    if (activeTab !== 'security') return
+    let current = true
     getOwnSessions()
       .then((data) => {
         if (current) {
-          setSessions(data.sessions || []);
-          setSessionError('');
+          setSessions(data.sessions || [])
+          setSessionError('')
         }
       })
       .catch((failure) => {
         if (current) {
-          setSessions([]);
-          setSessionError(failure.message);
+          setSessions([])
+          setSessionError(failure.message)
         }
-      });
+      })
     return () => {
-      current = false;
-    };
-  }, [activeTab, getOwnSessions, revision]);
+      current = false
+    }
+  }, [activeTab, getOwnSessions, revision])
 
   async function run(action, success) {
-    if (working.current) return;
-    working.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    if (working.current) return
+    working.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      await action();
-      if (mounted.current) setMessage(success);
+      await action()
+      if (mounted.current) setMessage(success)
     } catch (failure) {
-      if (mounted.current) setError(failure.message);
+      if (mounted.current) setError(failure.message)
     } finally {
-      working.current = false;
-      if (mounted.current) setBusy(false);
+      working.current = false
+      if (mounted.current) setBusy(false)
     }
   }
 
   function selectTab(tab) {
-    setSearchParams(tab === 'info' ? {} : { tab });
-    setError('');
-    setMessage('');
+    setSearchParams(tab === 'info' ? {} : { tab })
+    setError('')
+    setMessage('')
   }
 
   function editProfile(editing) {
-    setName(user?.name || '');
-    setIsEditing(editing);
-    setError('');
-    setMessage('');
+    setName(user?.name || '')
+    setIsEditing(editing)
+    setError('')
+    setMessage('')
   }
 
   function saveProfile(event) {
-    event.preventDefault();
-    if (!isEditing) return;
+    event.preventDefault()
+    if (!isEditing) return
     run(async () => {
-      const result = await saveOwnProfile(profileName(name));
+      const result = await saveOwnProfile(profileName(name))
       if (mounted.current) {
-        setName(result.user.name);
-        setIsEditing(false);
+        setName(result.user.name)
+        setIsEditing(false)
       }
-    }, 'Đã lưu thông tin cá nhân.');
+    }, 'Đã lưu thông tin cá nhân.')
   }
 
   function savePassword(event) {
-    event.preventDefault();
+    event.preventDefault()
     run(async () => {
-      await changePassword(passwordChangeInput(passwords));
+      await changePassword(passwordChangeInput(passwords))
       if (mounted.current) {
-        setPasswords(emptyPasswords);
-        setSessions(null);
-        setRevision((value) => value + 1);
+        setPasswords(emptyPasswords)
+        setSessions(null)
+        setRevision((value) => value + 1)
       }
-    }, 'Đã đổi mật khẩu và đăng xuất các phiên khác.');
+    }, 'Đã đổi mật khẩu và đăng xuất các phiên khác.')
   }
 
   return (
@@ -225,11 +221,7 @@ function ProfileWorkspace() {
               </p>
               <div className="pms-profile-actions">
                 {isEditing && (
-                  <button
-                    type="submit"
-                    className="pms-profile-button is-primary"
-                    disabled={busy}
-                  >
+                  <button type="submit" className="pms-profile-button is-primary" disabled={busy}>
                     <Save size={18} aria-hidden="true" />
                     {busy ? tUi('common.saving') : tUi('common.saveChanges')}
                   </button>
@@ -248,11 +240,7 @@ function ProfileWorkspace() {
           )}
           {activeTab === 'security' && (
             <>
-              <form
-                onSubmit={savePassword}
-                aria-busy={busy}
-                data-workspace-draft
-              >
+              <form onSubmit={savePassword} aria-busy={busy} data-workspace-draft>
                 <div className="pms-profile-section-heading">
                   <div>
                     <h2>{tUi('profile.password')}</h2>
@@ -270,10 +258,7 @@ function ProfileWorkspace() {
                       value={passwords.currentPassword}
                       disabled={busy}
                       onChange={(event) =>
-                        setPasswords((value) => ({
-                          ...value,
-                          currentPassword: event.target.value,
-                        }))
+                        setPasswords((value) => ({ ...value, currentPassword: event.target.value }))
                       }
                     />
                   </label>
@@ -289,10 +274,7 @@ function ProfileWorkspace() {
                       value={passwords.newPassword}
                       disabled={busy}
                       onChange={(event) =>
-                        setPasswords((value) => ({
-                          ...value,
-                          newPassword: event.target.value,
-                        }))
+                        setPasswords((value) => ({ ...value, newPassword: event.target.value }))
                       }
                     />
                   </label>
@@ -307,10 +289,7 @@ function ProfileWorkspace() {
                       value={passwords.confirm}
                       disabled={busy}
                       onChange={(event) =>
-                        setPasswords((value) => ({
-                          ...value,
-                          confirm: event.target.value,
-                        }))
+                        setPasswords((value) => ({ ...value, confirm: event.target.value }))
                       }
                     />
                   </label>
@@ -319,22 +298,13 @@ function ProfileWorkspace() {
                   {tUi('profile.passwordHint')}
                 </p>
                 <div className="pms-profile-actions">
-                  <button
-                    type="submit"
-                    className="pms-profile-button is-primary"
-                    disabled={busy}
-                  >
+                  <button type="submit" className="pms-profile-button is-primary" disabled={busy}>
                     <Shield size={18} aria-hidden="true" />
-                    {busy
-                      ? tUi('common.updating')
-                      : tUi('profile.updatePassword')}
+                    {busy ? tUi('common.updating') : tUi('profile.updatePassword')}
                   </button>
                 </div>
               </form>
-              <section
-                className="pms-profile-actions"
-                aria-label={tUi('profile.sessions')}
-              >
+              <section className="pms-profile-actions" aria-label={tUi('profile.sessions')}>
                 <div className="pms-profile-section-heading">
                   <div>
                     <h2>{tUi('profile.session')}</h2>
@@ -361,11 +331,7 @@ function ProfileWorkspace() {
                     {sessions.map((session, index) => (
                       <li
                         key={session.createdAt + ':' + index}
-                        style={{
-                          padding: 16,
-                          background: 'var(--bg-main)',
-                          borderRadius: 8,
-                        }}
+                        style={{ padding: 16, background: 'var(--bg-main)', borderRadius: 8 }}
                       >
                         <strong>
                           {session.current
@@ -373,10 +339,8 @@ function ProfileWorkspace() {
                             : tUi('profile.otherSession')}
                         </strong>
                         <p>
-                          {tUi('profile.signedIn')}{' '}
-                          {formatDateTime(session.createdAt)}{' '}
-                          {tUi('profile.expires')}{' '}
-                          {formatDateTime(session.expiresAt)}
+                          {tUi('profile.signedIn')} {formatDateTime(session.createdAt)}{' '}
+                          {tUi('profile.expires')} {formatDateTime(session.expiresAt)}
                         </p>
                       </li>
                     ))}
@@ -387,8 +351,8 @@ function ProfileWorkspace() {
                   className="pms-profile-button"
                   disabled={busy || !sessions}
                   onClick={() => {
-                    setSessions(null);
-                    setRevision((value) => value + 1);
+                    setSessions(null)
+                    setRevision((value) => value + 1)
                   }}
                 >
                   {tUi('profile.reloadSessions')}
@@ -396,15 +360,13 @@ function ProfileWorkspace() {
                 <button
                   type="button"
                   className="pms-profile-button is-danger"
-                  disabled={
-                    busy || !sessions?.some((session) => !session.current)
-                  }
+                  disabled={busy || !sessions?.some((session) => !session.current)}
                   onClick={() =>
                     run(async () => {
-                      await revokeOtherSessions();
+                      await revokeOtherSessions()
                       if (mounted.current) {
-                        setSessions(null);
-                        setRevision((value) => value + 1);
+                        setSessions(null)
+                        setRevision((value) => value + 1)
                       }
                     }, 'Đã đăng xuất các phiên khác. Phiên hiện tại vẫn hoạt động.')
                   }
@@ -426,5 +388,5 @@ function ProfileWorkspace() {
         </div>
       </section>
     </div>
-  );
+  )
 }

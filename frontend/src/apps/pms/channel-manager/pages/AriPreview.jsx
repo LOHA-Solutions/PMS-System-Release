@@ -1,22 +1,15 @@
-import { useState } from 'react';
-import { Eye, Info } from 'lucide-react';
-import { tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { money } from '../../data/model';
-import { syncRangeError } from '../integration';
-import { useChannels } from '../useChannels';
-import { dateRangeParams } from '../../../../shared/lib/dateRangeQuery.js';
+import { useState } from 'react'
+import { Eye, Info } from 'lucide-react'
+import { tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { money } from '../../data/model'
+import { syncRangeError } from '../integration'
+import { useChannels } from '../useChannels'
+import { dateRangeParams } from '../../../../shared/lib/dateRangeQuery.js'
 
-export default function AriPreview({
-  pms,
-  range,
-  connection,
-  mappings,
-  disabled,
-  refreshKey,
-}) {
-  useI18n();
-  const [requested, setRequested] = useState('');
-  const path = '/channels/ari-preview?' + dateRangeParams(range);
+export default function AriPreview({ pms, range, connection, mappings, disabled, refreshKey }) {
+  useI18n()
+  const [requested, setRequested] = useState('')
+  const path = '/channels/ari-preview?' + dateRangeParams(range)
   const reason =
     syncRangeError(range.start, range.end) ||
     (!connection?.active || !connection?.credentialsConfigured
@@ -25,16 +18,14 @@ export default function AriPreview({
     (!connection?.inventoryReconciledAt
       ? 'Đối chiếu booking và tồn phòng trước khi xem giá gửi.'
       : '') ||
-    (!mappings.some((row) => row.active)
-      ? 'Ghép loại phòng trước khi xem giá gửi.'
-      : '');
+    (!mappings.some((row) => row.active) ? 'Ghép loại phòng trước khi xem giá gửi.' : '')
   const preview = useChannels(
     pms.requestTenant,
     `${pms.tenantId}:${connection?.environment}:${connection?.propertyId}`,
     path,
     requested === path && !reason,
     refreshKey,
-  );
+  )
   return (
     <div className="ota-ari-preview">
       <button
@@ -43,14 +34,12 @@ export default function AriPreview({
         disabled={disabled || Boolean(reason) || preview.loading}
         aria-describedby="ota-preview-hint"
         onClick={() => {
-          setRequested(path);
-          preview.refresh();
+          setRequested(path)
+          preview.refresh()
         }}
       >
         <Eye size={16} aria-hidden="true" />
-        {labelUi(
-          preview.loading ? 'Đang tải giá gửi…' : 'Xem trước giá gửi OTA',
-        )}
+        {labelUi(preview.loading ? 'Đang tải giá gửi…' : 'Xem trước giá gửi OTA')}
       </button>
       <p id="ota-preview-hint" className="ota-action-hint">
         {labelUi(
@@ -77,9 +66,7 @@ export default function AriPreview({
             {labelUi(preview.data.warning)}
           </p>
           <p className="ota-action-hint">
-            {labelUi(
-              'Dữ liệu tại thời điểm tải; tác vụ gửi sẽ kiểm tra lại giá và tồn phòng.',
-            )}
+            {labelUi('Dữ liệu tại thời điểm tải; tác vụ gửi sẽ kiểm tra lại giá và tồn phòng.')}
           </p>
           <p className="ota-review-scroll-hint">
             {labelUi('Vuốt ngang để xem đủ giá và gói giá.')}
@@ -114,29 +101,19 @@ export default function AriPreview({
                     <td>{row.date}</td>
                     <td>{row.roomTypeName}</td>
                     <td>
-                      {row.rate == null
-                        ? labelUi('Không gửi giá')
-                        : money(row.rate, row.currency)}
+                      {row.rate == null ? labelUi('Không gửi giá') : money(row.rate, row.currency)}
                     </td>
-                    <td>
-                      {labelUi(
-                        row.priceSource === 'daily'
-                          ? 'Giá theo ngày'
-                          : 'Giá cơ bản',
-                      )}
-                    </td>
+                    <td>{labelUi(row.priceSource === 'daily' ? 'Giá theo ngày' : 'Giá cơ bản')}</td>
                     <td>{row.availability}</td>
                     <td>{labelUi(row.stopSell ? 'Đóng bán' : 'Mở bán')}</td>
                     <td>
                       <details>
                         <summary>{labelUi('Phòng và gói giá')}</summary>
                         <p>
-                          {labelUi('Phòng')}:{' '}
-                          <code>{row.channexRoomTypeId}</code>
+                          {labelUi('Phòng')}: <code>{row.channexRoomTypeId}</code>
                         </p>
                         <p>
-                          {labelUi('Gói giá')}:{' '}
-                          <code>{row.channexRatePlanId}</code>
+                          {labelUi('Gói giá')}: <code>{row.channexRatePlanId}</code>
                         </p>
                       </details>
                     </td>
@@ -148,5 +125,5 @@ export default function AriPreview({
         </>
       )}
     </div>
-  );
+  )
 }

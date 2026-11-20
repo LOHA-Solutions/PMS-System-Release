@@ -11,9 +11,7 @@
   scrollbar-gutter: stable;
 }
 .pms-matrix-page .rates-matrix {
-  width: calc(
-    var(--rates-label-width) + var(--rates-day-count) * var(--rates-day-width)
-  );
+  width: calc(var(--rates-label-width) + var(--rates-day-count) * var(--rates-day-width));
   min-width: 100%;
   table-layout: fixed;
   border-collapse: separate;

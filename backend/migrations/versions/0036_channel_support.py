@@ -8,8 +8,12 @@ branch_labels = None
 depends_on = None
 
 CHANNEL_TABLES = (
-    "channel_booking_reviews", "channel_bookings", "channel_connections", "channel_jobs",
-    "channel_mappings", "channel_revisions",
+    "channel_booking_reviews",
+    "channel_bookings",
+    "channel_connections",
+    "channel_jobs",
+    "channel_mappings",
+    "channel_revisions",
 )
 CATALOG_TABLES = ("room_types", "physical_rooms")
 SUPPORT = """(tenant_id=nullif(current_setting('app.tenant_id',true),'')
@@ -21,8 +25,9 @@ SUPPORT = """(tenant_id=nullif(current_setting('app.tenant_id',true),'')
 
 def upgrade():
     for table in CHANNEL_TABLES:
-        op.execute(f'CREATE POLICY channel_support ON "{table}" '
-                   f'USING ({SUPPORT}) WITH CHECK ({SUPPORT})')
+        op.execute(
+            f'CREATE POLICY channel_support ON "{table}" USING ({SUPPORT}) WITH CHECK ({SUPPORT})'
+        )
     for table in CATALOG_TABLES:
         op.execute(f'CREATE POLICY channel_support ON "{table}" FOR SELECT USING ({SUPPORT})')
     audit = f"({SUPPORT} AND (event LIKE 'channel.%' OR event LIKE 'channex.%'))"

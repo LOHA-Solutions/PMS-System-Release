@@ -1,9 +1,5 @@
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useCallback, useState } from 'react';
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useCallback, useState } from 'react'
 import {
   Check,
   ChevronRight,
@@ -15,12 +11,12 @@ import {
   RefreshCw,
   Settings2,
   Trash2,
-} from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import { useChannexQuery } from '../useChannexQuery';
-import { DataState, EmptyState, Pagination, RemoteId } from './RemoteData';
-import ChannelEditor from './ChannelEditor';
-import ChannelLifecycle from './ChannelLifecycle';
+} from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import { useChannexQuery } from '../useChannexQuery'
+import { DataState, EmptyState, Pagination, RemoteId } from './RemoteData'
+import ChannelEditor from './ChannelEditor'
+import ChannelLifecycle from './ChannelLifecycle'
 
 export default function ChannelsView({
   account,
@@ -29,33 +25,33 @@ export default function ChannelsView({
   canWrite = true,
   onChanged,
 }) {
-  useI18n();
-  const pms = usePms();
-  const { getChannexRemoteChannels } = operations || pms;
+  useI18n()
+  const pms = usePms()
+  const { getChannexRemoteChannels } = operations || pms
   const [page, setPage] = useState(1),
     [dialog, setDialog] = useState(null),
-    [message, setMessage] = useState('');
+    [message, setMessage] = useState('')
   const request = useCallback(
     () => getChannexRemoteChannels(account.id, property.id, page),
     [getChannexRemoteChannels, account.id, property.id, page],
-  );
-  const query = useChannexQuery(request, 'channels');
-  const rows = query.data?.channels || [];
+  )
+  const query = useChannexQuery(request, 'channels')
+  const rows = query.data?.channels || []
   function open(kind, channel) {
-    if (!canWrite && (kind !== 'edit' || !channel)) return;
-    setMessage('');
-    setDialog({ kind, channel });
+    if (!canWrite && (kind !== 'edit' || !channel)) return
+    setMessage('')
+    setDialog({ kind, channel })
   }
   function saved(text) {
-    setDialog(null);
-    setMessage(text);
-    query.refresh();
-    onChanged?.(text);
+    setDialog(null)
+    setMessage(text)
+    query.refresh()
+    onChanged?.(text)
   }
   function reload() {
-    setDialog(null);
-    query.refresh();
-    onChanged?.();
+    setDialog(null)
+    query.refresh()
+    onChanged?.()
   }
   return (
     <section
@@ -67,9 +63,7 @@ export default function ChannelsView({
         <div>
           <h3>{labelUi('Kết nối OTA')}</h3>
           <p>
-            {labelUi(
-              'Liên kết Booking.com, Airbnb và các kênh được tài khoản Channex hỗ trợ.',
-            )}
+            {labelUi('Liên kết Booking.com, Airbnb và các kênh được tài khoản Channex hỗ trợ.')}
           </p>
         </div>
         <div className="channex-actions">
@@ -103,9 +97,7 @@ export default function ChannelsView({
       <DataState query={query} label="kênh OTA">
         {!rows.length ? (
           <EmptyState title={labelUi('Chưa kết nối kênh OTA')}>
-            {labelUi(
-              'Thêm kênh, kiểm tra thông tin và ghép gói giá trước khi kích hoạt.',
-            )}
+            {labelUi('Thêm kênh, kiểm tra thông tin và ghép gói giá trước khi kích hoạt.')}
           </EmptyState>
         ) : (
           <ul className="channex-channel-list">
@@ -126,9 +118,7 @@ export default function ChannelsView({
                   <span
                     className={`channex-status channex-status--${channel.active ? 'active' : 'neutral'}`}
                   >
-                    {channel.active
-                      ? labelUi('Đang đồng bộ')
-                      : labelUi('Chưa kích hoạt')}
+                    {channel.active ? labelUi('Đang đồng bộ') : labelUi('Chưa kích hoạt')}
                   </span>
                 </div>
                 <div className="channex-channel-card-meta">
@@ -168,17 +158,10 @@ export default function ChannelsView({
                       <button
                         type="button"
                         className="manager-button"
-                        onClick={() =>
-                          open(
-                            channel.active ? 'deactivate' : 'activate',
-                            channel,
-                          )
-                        }
+                        onClick={() => open(channel.active ? 'deactivate' : 'activate', channel)}
                       >
                         <Power size={15} aria-hidden="true" />
-                        {channel.active
-                          ? labelUi('Tắt đồng bộ')
-                          : labelUi('Kiểm tra & kích hoạt')}
+                        {channel.active ? labelUi('Tắt đồng bộ') : labelUi('Kiểm tra & kích hoạt')}
                       </button>
                       {!channel.active && (
                         <button
@@ -230,5 +213,5 @@ export default function ChannelsView({
         />
       )}
     </section>
-  );
+  )
 }

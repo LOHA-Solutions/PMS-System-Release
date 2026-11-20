@@ -72,7 +72,9 @@ def digest(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def set_context(user_id="", tenant_id="", is_system=False, *, is_service=False, channel_support=False):
+def set_context(
+    user_id="", tenant_id="", is_system=False, *, is_service=False, channel_support=False
+):
     """Set transaction-local scope; SaaS administration never implies PMS access.
 
     is_service is reserved for trusted background/maintenance work, never derived

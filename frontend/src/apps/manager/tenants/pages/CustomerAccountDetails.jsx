@@ -1,9 +1,9 @@
-import { Building2, UserRound, X } from 'lucide-react';
-import LegacyOverlay from '../../../pms/components/LegacyOverlay.jsx';
-import { ROLE_NAMES } from '../../../pms/data/access.js';
-import { formatDateTime } from '../../../../shared/lib/date.js';
-import { useI18n } from '../../../../shared/i18n/useI18n.js';
-import './CustomerAccountDetails.css';
+import { Building2, UserRound, X } from 'lucide-react'
+import LegacyOverlay from '../../../pms/components/LegacyOverlay.jsx'
+import { ROLE_NAMES } from '../../../pms/data/access.js'
+import { formatDateTime } from '../../../../shared/lib/date.js'
+import { useI18n } from '../../../../shared/i18n/useI18n.js'
+import './CustomerAccountDetails.css'
 
 const overlayStyle = {
   position: 'fixed',
@@ -14,20 +14,20 @@ const overlayStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   background: 'rgba(9,24,40,.6)',
-};
+}
 
 export default function CustomerAccountDetails({ account, onClose }) {
-  const { t, tr } = useI18n();
-  const memberships = account.memberships || [];
-  const active = account.active === true;
-  const status = active ? t('common.active') : t('common.inactive');
+  const { t, tr } = useI18n()
+  const memberships = account.memberships || []
+  const active = account.active === true
+  const status = active ? t('common.active') : t('common.inactive')
   const fields = [
     [t('manager.customers.fullName'), account.name || '—'],
     [t('manager.customers.email'), account.email || '—'],
     [t('manager.customers.accountId'), account.id],
     [t('manager.customers.status'), status],
     [t('manager.customers.createdAt'), formatDateTime(account.createdAt)],
-  ];
+  ]
 
   return (
     <div className="customer-account-details-host" data-i18n-ignore>
@@ -51,19 +51,14 @@ export default function CustomerAccountDetails({ account, onClose }) {
           </header>
           <div className="customer-account-detail-body">
             <div className="customer-account-detail-identity">
-              <span
-                className="customer-account-detail-avatar"
-                aria-hidden="true"
-              >
+              <span className="customer-account-detail-avatar" aria-hidden="true">
                 <UserRound size={25} />
               </span>
               <div>
                 <h3>{account.name || '—'}</h3>
                 <p>{account.email || '—'}</p>
               </div>
-              <span
-                className={`customer-account-detail-status${active ? ' is-active' : ''}`}
-              >
+              <span className={`customer-account-detail-status${active ? ' is-active' : ''}`}>
                 <span aria-hidden="true" />
                 {status}
               </span>
@@ -90,22 +85,14 @@ export default function CustomerAccountDetails({ account, onClose }) {
                   {memberships.map((membership) => (
                     <li key={membership.tenantId}>
                       <div>
-                        <strong>
-                          {membership.tenantName || membership.tenantId}
-                        </strong>
+                        <strong>{membership.tenantName || membership.tenantId}</strong>
                         <span className="customer-account-detail-role">
                           {tr(ROLE_NAMES[membership.role] || membership.role)}
                         </span>
                       </div>
                       <div className="customer-account-detail-membership-state">
                         <small>{t('manager.customers.membershipStatus')}</small>
-                        <span
-                          className={
-                            membership.active === true
-                              ? 'is-active'
-                              : 'is-revoked'
-                          }
-                        >
+                        <span className={membership.active === true ? 'is-active' : 'is-revoked'}>
                           {membership.active === true
                             ? t('common.active')
                             : t('manager.customers.revoked')}
@@ -130,5 +117,5 @@ export default function CustomerAccountDetails({ account, onClose }) {
         </div>
       </LegacyOverlay>
     </div>
-  );
+  )
 }

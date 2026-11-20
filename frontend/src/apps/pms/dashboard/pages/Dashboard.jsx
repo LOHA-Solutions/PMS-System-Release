@@ -1,13 +1,9 @@
-import { formatDate } from '../../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { usePms } from '../../data/usePms';
-import { today, money } from '../../data/model';
+import { formatDate } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { usePms } from '../../data/usePms'
+import { today, money } from '../../data/model'
 import {
   Users,
   LogIn,
@@ -18,37 +14,56 @@ import {
   AlertCircle,
   ArrowUpRight,
   CalendarDays,
-} from 'lucide-react';
-import './Dashboard.css';
+  Search,
+  X,
+} from 'lucide-react'
+import './Dashboard.css'
+
+// Case- and accent-insensitive matching so "nguyen" finds "Nguyễn".
+const fold = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+const searchText = (booking) =>
+  fold(
+    [booking.id, booking.guest, booking.phone, ...(booking.rooms || [])]
+      .filter((value) => value != null && value !== '')
+      .join(' '),
+  )
+// Reservations task URL contract: task + explicit hotel day.
+const taskLink = (task, date) => `/id/reservations?task=${task}&date=${date}`
 
 export default function Dashboard() {
-  useI18n();
-  const { settings, getDashboardReport, workspaceRevision } = usePms();
-  const date = today(settings.timezone);
-  const [data, setData] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState('');
-  const [revision, setRevision] = React.useState(0);
+  useI18n()
+  const { settings, getDashboardReport, workspaceRevision } = usePms()
+  const date = today(settings.timezone)
+  const [data, setData] = React.useState(null)
+  const [loading, setLoading] = React.useState(true)
+  const [error, setError] = React.useState('')
+  const [revision, setRevision] = React.useState(0)
+  const [query, setQuery] = React.useState('')
 
   React.useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    setError('');
-    setData(null);
+    let mounted = true
+    setLoading(true)
+    setError('')
+    setData(null)
     getDashboardReport(date)
       .then((res) => {
-        if (mounted) setData(res);
+        if (mounted) setData(res)
       })
       .catch((err) => {
-        if (mounted) setError(err.message);
+        if (mounted) setError(err.message)
       })
       .finally(() => {
-        if (mounted) setLoading(false);
-      });
+        if (mounted) setLoading(false)
+      })
     return () => {
-      mounted = false;
-    };
-  }, [date, getDashboardReport, revision, workspaceRevision]);
+      mounted = false
+    }
+  }, [date, getDashboardReport, revision, workspaceRevision])
 
   const {
     arriving = '—',
@@ -58,9 +73,13 @@ export default function Dashboard() {
     chart = [],
     arrivalBookings = [],
     departureBookings = [],
-  } = data || {};
-  const alerts = data?.alerts;
-  const hasFinance = Boolean(data?.financial);
+  } = data || {}
+  const alerts = data?.alerts
+  const hasFinance = Boolean(data?.financial)
+  const needle = fold(query.trim())
+  const matches = (booking) => !needle || searchText(booking).includes(needle)
+  const shownArrivals = arrivalBookings.filter(matches)
+  const shownDepartures = departureBookings.filter(matches)
 
   return (
     <div className="pms-dashboard">
@@ -127,8 +146,7 @@ export default function Dashboard() {
           tUi('dashboard.loading')
         ) : data ? (
           <>
-            <CheckCircle2 size={14} aria-hidden="true" />{' '}
-            {tUi('dashboard.synced')}
+            <CheckCircle2 size={14} aria-hidden="true" /> {tUi('dashboard.synced')}
           </>
         ) : (
           tUi('dashboard.failed')
@@ -137,12 +155,101 @@ export default function Dashboard() {
 
       {data && (
         <>
+          <section className="pms-dashboard-queues" aria-labelledby="dashboard-queues-title">
+            <div className="pms-dashboard-queue-toolbar">
+              <h2 id="dashboard-queues-title">{labelUi('Khách đến và khách đi hôm nay')}</h2>
+              <div className="pms-dashboard-search">
+                <Search size={16} aria-hidden="true" />
+                <input
+                  type="search"
+                  aria-label={labelUi('Tìm khách đến và khách đi hôm nay')}
+                  placeholder={labelUi('Tên khách, mã đặt phòng, số phòng…')}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    aria-label={labelUi('Xóa tìm kiếm')}
+                    onClick={() => setQuery('')}
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              {needle && (
+                <p className="pms-dashboard-search-result" role="status">
+                  {labelUi('Khớp')} <strong>{shownArrivals.length}</strong>/{arrivalBookings.length}{' '}
+                  {labelUi('khách đến')}
+                  {' · '}
+                  <strong>{shownDepartures.length}</strong>/{departureBookings.length}{' '}
+                  {labelUi('khách đi')}
+                </p>
+              )}
+            </div>
+            <div className="pms-dashboard-bookings">
+              <ListContainer
+                id="arrivals"
+                title={tUi('dashboard.arrivals')}
+                shown={shownArrivals.length}
+                total={arrivalBookings.length}
+                filtered={Boolean(needle)}
+                icon={<LogIn size={18} />}
+                to={taskLink('arrivals', date)}
+              >
+                {shownArrivals.map((b, index) => (
+                  <ListItem
+                    key={b.id + ':' + index}
+                    booking={b}
+                    time={settings.checkInTime}
+                    status={
+                      b.balance !== undefined
+                        ? tUi('dashboard.balancePrefix') + money(b.balance, b.currency)
+                        : 'Chờ nhận phòng'
+                    }
+                    action="Xem đặt phòng"
+                  />
+                ))}
+                <QueueEmpty
+                  total={arrivalBookings.length}
+                  shown={shownArrivals.length}
+                  query={query}
+                />
+              </ListContainer>
+              <ListContainer
+                id="departures"
+                title={tUi('dashboard.departures')}
+                shown={shownDepartures.length}
+                total={departureBookings.length}
+                filtered={Boolean(needle)}
+                icon={<LogOut size={18} />}
+                to={taskLink('departures', date)}
+              >
+                {shownDepartures.map((b, index) => (
+                  <ListItem
+                    key={b.id + ':' + index}
+                    booking={b}
+                    time={settings.checkOutTime}
+                    status={
+                      b.balance !== undefined
+                        ? tUi('dashboard.balancePrefix') + money(b.balance, b.currency)
+                        : 'Chờ trả phòng'
+                    }
+                    action="Xem thanh toán"
+                    tab="payments"
+                  />
+                ))}
+                <QueueEmpty
+                  total={departureBookings.length}
+                  shown={shownDepartures.length}
+                  query={query}
+                />
+              </ListContainer>
+            </div>
+          </section>
+
           <div className="pms-dashboard-overview">
-            <ChartPanel
-              chart={chart}
-              hasFinance={hasFinance}
-              currency={data.currency}
-            />
+            <ChartPanel chart={chart} hasFinance={hasFinance} currency={data.currency} />
             <section
               className="pms-dashboard-panel pms-dashboard-tasks"
               aria-labelledby="dashboard-tasks-title"
@@ -158,9 +265,7 @@ export default function Dashboard() {
                 {alerts?.dirtyRooms.length > 0 && (
                   <TaskItem
                     icon={<AlertCircle size={18} />}
-                    title={tUi('dashboard.dirtyCount', {
-                      count: alerts.dirtyRooms.length,
-                    })}
+                    title={tUi('dashboard.dirtyCount', { count: alerts.dirtyRooms.length })}
                     desc={
                       tUi('dashboard.roomPrefix') +
                       alerts.dirtyRooms.map((r) => r.number).join(', ')
@@ -188,21 +293,17 @@ export default function Dashboard() {
                     title={tUi('dashboard.overdueCount', {
                       count: alerts.overdueDepartures.length,
                     })}
-                    desc={alerts.overdueDepartures
-                      .map((b) => b.guest)
-                      .join(', ')}
+                    desc={alerts.overdueDepartures.map((b) => b.guest).join(', ')}
                     tone="warning"
-                    to="/id/reservations"
+                    to={taskLink('overdue', date)}
                   />
                 )}
                 {alerts?.pendingArrivals.length > 0 && (
                   <TaskItem
                     icon={<Users size={18} />}
-                    title={tUi('dashboard.arrivalCount', {
-                      count: alerts.pendingArrivals.length,
-                    })}
+                    title={tUi('dashboard.arrivalCount', { count: alerts.pendingArrivals.length })}
                     desc={alerts.pendingArrivals.map((b) => b.guest).join(', ')}
-                    to="/id/reservations"
+                    to={taskLink('arrivals', date)}
                   />
                 )}
                 {!Object.values(alerts || {}).some((rows) => rows.length) && (
@@ -214,75 +315,16 @@ export default function Dashboard() {
               </div>
             </section>
           </div>
-
-          <div className="pms-dashboard-bookings">
-            <ListContainer
-              title={tUi('dashboard.arrivals')}
-              count={arrivalBookings.length}
-              icon={<LogIn size={18} />}
-            >
-              {arrivalBookings.map((b) => (
-                <ListItem
-                  key={b.id}
-                  name={b.guest}
-                  bookingId={b.id}
-                  room={tUi('dashboard.roomPrefix') + b.rooms.join(', ')}
-                  time={settings.checkInTime}
-                  status={
-                    b.balance !== undefined
-                      ? tUi('dashboard.balancePrefix') +
-                        money(b.balance, b.currency)
-                      : 'Chờ nhận phòng'
-                  }
-                  action="Xem đặt phòng"
-                />
-              ))}
-              {!arrivalBookings.length && (
-                <p className="pms-dashboard-list-empty">
-                  {tUi('dashboard.emptyBookings')}
-                </p>
-              )}
-            </ListContainer>
-            <ListContainer
-              title={tUi('dashboard.departures')}
-              count={departureBookings.length}
-              icon={<LogOut size={18} />}
-            >
-              {departureBookings.map((b) => (
-                <ListItem
-                  key={b.id}
-                  name={b.guest}
-                  bookingId={b.id}
-                  room={tUi('dashboard.roomPrefix') + b.rooms.join(', ')}
-                  time={settings.checkOutTime}
-                  status={
-                    b.balance !== undefined
-                      ? tUi('dashboard.balancePrefix') +
-                        money(b.balance, b.currency)
-                      : 'Chờ trả phòng'
-                  }
-                  action="Xem thanh toán"
-                />
-              ))}
-              {!departureBookings.length && (
-                <p className="pms-dashboard-list-empty">
-                  {tUi('dashboard.emptyBookings')}
-                </p>
-              )}
-            </ListContainer>
-          </div>
         </>
       )}
     </div>
-  );
+  )
 }
 
 const MetricCard = ({ title, value, unit, detail, icon, highlight }) => {
-  useI18n();
+  useI18n()
   return (
-    <div
-      className={`pms-dashboard-metric${highlight ? ' pms-dashboard-metric-highlight' : ''}`}
-    >
+    <div className={`pms-dashboard-metric${highlight ? ' pms-dashboard-metric-highlight' : ''}`}>
       <dt className="pms-dashboard-metric-top">
         <span>{labelUi(title)}</span>
         <span className="pms-dashboard-metric-icon" aria-hidden="true">
@@ -295,15 +337,12 @@ const MetricCard = ({ title, value, unit, detail, icon, highlight }) => {
       </dd>
       <dd className="pms-dashboard-metric-detail">{labelUi(detail)}</dd>
     </div>
-  );
-};
+  )
+}
 
 function ChartPanel({ chart, hasFinance, currency }) {
-  useI18n();
-  const maximumRevenue = Math.max(
-    1,
-    ...chart.map((row) => Number(row.realizedRevenue || 0)),
-  );
+  useI18n()
+  const maximumRevenue = Math.max(1, ...chart.map((row) => Number(row.realizedRevenue || 0)))
   return (
     <section
       className="pms-dashboard-panel pms-dashboard-chart-panel"
@@ -312,9 +351,7 @@ function ChartPanel({ chart, hasFinance, currency }) {
       <div className="pms-dashboard-panel-heading">
         <div>
           <h2 id="dashboard-chart-title">
-            {hasFinance
-              ? tUi('dashboard.revenueOccupancy')
-              : tUi('dashboard.occupancy')}
+            {hasFinance ? tUi('dashboard.revenueOccupancy') : tUi('dashboard.occupancy')}
           </h2>
           <p>
             {tUi('dashboard.lastSeven')}
@@ -369,15 +406,11 @@ function ChartPanel({ chart, hasFinance, currency }) {
         </div>
         <div className="pms-dashboard-chart-dates" aria-hidden="true">
           {chart.map((row) => (
-            <span key={row.date}>
-              {row.date.slice(5).split('-').reverse().join('/')}
-            </span>
+            <span key={row.date}>{row.date.slice(5).split('-').reverse().join('/')}</span>
           ))}
         </div>
         <p className="pms-dashboard-chart-note">
-          {hasFinance
-            ? labelUi('Doanh thu ghi nhận từ hóa đơn đã chốt.') + ' '
-            : ''}
+          {hasFinance ? labelUi('Doanh thu ghi nhận từ hóa đơn đã chốt.') + ' ' : ''}
           {tUi('dashboard.occupancyHint')}
         </p>
         <details className="pms-dashboard-chart-details">
@@ -395,24 +428,18 @@ function ChartPanel({ chart, hasFinance, currency }) {
                   <th scope="col">{tUi('common.date')}</th>
                   <th scope="col">{tUi('dashboard.occupiedRooms')}</th>
                   <th scope="col">{tUi('dashboard.occupancyShort')}</th>
-                  {hasFinance && (
-                    <th scope="col">{tUi('dashboard.revenue')}</th>
-                  )}
+                  {hasFinance && <th scope="col">{tUi('dashboard.revenue')}</th>}
                 </tr>
               </thead>
               <tbody>
                 {chart.map((row) => (
                   <tr key={row.date}>
-                    <th scope="row">
-                      {row.date.split('-').reverse().join('/')}
-                    </th>
+                    <th scope="row">{row.date.split('-').reverse().join('/')}</th>
                     <td>
                       {row.occupied}/{row.capacity}
                     </td>
                     <td>{Number(row.occupancy).toFixed(1)}%</td>
-                    {hasFinance && (
-                      <td>{money(row.realizedRevenue, currency)}</td>
-                    )}
+                    {hasFinance && <td>{money(row.realizedRevenue, currency)}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -421,57 +448,77 @@ function ChartPanel({ chart, hasFinance, currency }) {
         </details>
       </div>
     </section>
-  );
+  )
 }
 
 const TaskItem = ({ icon, title, desc, tone = 'info', to }) => {
-  useI18n();
+  useI18n()
   return (
     <Link className="pms-dashboard-task" to={to}>
-      <span
-        className={`pms-dashboard-task-icon pms-dashboard-task-${tone}`}
-        aria-hidden="true"
-      >
+      <span className={`pms-dashboard-task-icon pms-dashboard-task-${tone}`} aria-hidden="true">
         {icon}
       </span>
       <span className="pms-dashboard-task-copy">
         <strong>{labelUi(title)}</strong>
         <span>{desc}</span>
       </span>
-      <ArrowUpRight
-        size={14}
-        className="pms-dashboard-task-arrow"
-        aria-hidden="true"
-      />
+      <ArrowUpRight size={14} className="pms-dashboard-task-arrow" aria-hidden="true" />
     </Link>
-  );
-};
+  )
+}
 
-const ListContainer = ({ title, count, icon, children }) => {
-  useI18n();
+const QueueEmpty = ({ total, shown, query }) => {
+  useI18n()
+  if (shown) return null
+  return (
+    <p className="pms-dashboard-list-empty">
+      {total
+        ? `${labelUi('Không có khách khớp')} “${query.trim()}”.`
+        : tUi('dashboard.emptyBookings')}
+    </p>
+  )
+}
+
+const ListContainer = ({ id, title, shown, total, filtered, icon, to, children }) => {
+  useI18n()
   return (
     <section
       className="pms-dashboard-panel pms-dashboard-booking-panel"
       aria-label={labelUi(title)}
+      data-queue={id}
     >
       <div className="pms-dashboard-panel-heading">
         <div className="pms-dashboard-list-title">
           <span aria-hidden="true">{icon}</span>
           <h2>{labelUi(title)}</h2>
-          <span className="pms-dashboard-count">{count}</span>
+          <span
+            className="pms-dashboard-count"
+            aria-label={
+              filtered ? `${shown} / ${total} ${labelUi('khớp tìm kiếm')}` : String(total)
+            }
+          >
+            {filtered ? `${shown}/${total}` : total}
+          </span>
         </div>
-        <Link className="pms-dashboard-text-link" to="/id/reservations">
-          {tUi('dashboard.viewAll')}{' '}
-          <ArrowUpRight size={14} aria-hidden="true" />
+        <Link className="pms-dashboard-text-link" to={to}>
+          {tUi('dashboard.viewAll')} <ArrowUpRight size={14} aria-hidden="true" />
         </Link>
       </div>
-      <div className="pms-dashboard-booking-list">{children}</div>
+      <div
+        className="pms-dashboard-booking-list"
+        role="region"
+        aria-label={`${labelUi(title)}: ${labelUi('danh sách có thể cuộn')}`}
+        tabIndex={0}
+      >
+        {children}
+      </div>
     </section>
-  );
-};
+  )
+}
 
-const ListItem = ({ name, bookingId, room, time, status, action }) => {
-  useI18n();
+const ListItem = ({ booking, time, status, action, tab }) => {
+  useI18n()
+  const { id: bookingId, guest: name = '', rooms = [], checkIn, checkOut, phone } = booking
   return (
     <div className="pms-dashboard-booking">
       <div className="pms-dashboard-guest">
@@ -480,7 +527,18 @@ const ListItem = ({ name, bookingId, room, time, status, action }) => {
         </span>
         <div>
           <strong>{name}</strong>
-          <span className="pms-dashboard-room">{room}</span>
+          <span className="pms-dashboard-room">
+            {tUi('dashboard.roomPrefix') + rooms.join(', ')}
+          </span>
+          {checkIn && checkOut && (
+            <span className="pms-dashboard-room pms-dashboard-stay">
+              {formatDate(checkIn)}
+              <span aria-hidden="true"> → </span>
+              <span className="pms-dashboard-sr"> {labelUi('đến')} </span>
+              {formatDate(checkOut)}
+            </span>
+          )}
+          {phone && <span className="pms-dashboard-room">{phone}</span>}
           <span className="pms-dashboard-booking-id">#{bookingId}</span>
         </div>
       </div>
@@ -492,10 +550,13 @@ const ListItem = ({ name, bookingId, room, time, status, action }) => {
           </span>
           <p>{status}</p>
         </div>
-        <Link to="/id/reservations" aria-label={`${action}: ${name}`}>
+        <Link
+          to={`/id/reservations?booking=${encodeURIComponent(bookingId)}${tab ? `&tab=${tab}` : ''}`}
+          aria-label={`${action}: ${name}`}
+        >
           {labelUi(action)}
         </Link>
       </div>
     </div>
-  );
-};
+  )
+}

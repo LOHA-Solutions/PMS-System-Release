@@ -291,11 +291,7 @@
   .admin-features-overrides td > div {
     max-width: none !important;
   }
-  .admin-features-overrides
-    td:first-child
-    > div
-    > div:last-child
-    > div:last-child {
+  .admin-features-overrides td:first-child > div > div:last-child > div:last-child {
     flex-wrap: wrap;
   }
   .admin-features-overrides td[data-label]::before {

@@ -1,16 +1,6 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import {
   Sliders,
   Search,
@@ -23,26 +13,18 @@ import {
   Clock,
   ShieldCheck,
   AlertCircle,
-} from 'lucide-react';
+} from 'lucide-react'
 
-import { usePms } from '../../../pms/data/usePms';
-import { getThemeTokens } from '../../theme';
-import {
-  displayDate,
-  featureOverridePayload,
-  overrideExpiry,
-} from './featureOverride';
-import { isFeatureVisible } from '../../../../shared/config/featureVisibility.js';
-import './AdminFeatures.css';
+import { usePms } from '../../../pms/data/usePms'
+import { getThemeTokens } from '../../theme'
+import { displayDate, featureOverridePayload, overrideExpiry } from './featureOverride'
+import { isFeatureVisible } from '../../../../shared/config/featureVisibility.js'
+import './AdminFeatures.css'
 
 export default function AdminFeatures() {
-  const { apiText } = useI18n();
-  const {
-    searchQuery: globalSearch,
-    isDarkMode,
-    theme,
-  } = useOutletContext() || {};
-  const t = theme || getThemeTokens(isDarkMode);
+  const { apiText } = useI18n()
+  const { searchQuery: globalSearch, isDarkMode, theme } = useOutletContext() || {}
+  const t = theme || getThemeTokens(isDarkMode)
 
   const {
     tenants,
@@ -51,21 +33,21 @@ export default function AdminFeatures() {
     setGlobalFeature,
     saveFeatureOverride,
     removeFeatureOverride,
-  } = usePms();
-  const userKey = `${user?.id || ''}:${user?.globalRole || ''}`;
-  const currentUserKey = useRef(userKey);
+  } = usePms()
+  const userKey = `${user?.id || ''}:${user?.globalRole || ''}`
+  const currentUserKey = useRef(userKey)
   useLayoutEffect(() => {
-    currentUserKey.current = userKey;
-  }, [userKey]);
-  const requestVersion = useRef(0);
-  const mutationPending = useRef(false);
-  const drawerRef = useRef(null);
-  const modalRef = useRef(null);
+    currentUserKey.current = userKey
+  }, [userKey])
+  const requestVersion = useRef(0)
+  const mutationPending = useRef(false)
+  const drawerRef = useRef(null)
+  const modalRef = useRef(null)
   const [catalog, setCatalog] = useState({
     userKey: null,
     features: [],
     tenantFeatureOverrides: {},
-  });
+  })
   const features =
     catalog.userKey === userKey
       ? catalog.features
@@ -76,29 +58,26 @@ export default function AdminFeatures() {
             description: apiText(feature.description),
             category: apiText(feature.category),
           }))
-      : [];
-  const tenantFeatureOverrides =
-    catalog.userKey === userKey ? catalog.tenantFeatureOverrides : {};
-  const canManageOverrides = ['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(
-    user?.globalRole,
-  );
-  const canToggleGlobal = user?.globalRole === 'SUPER_ADMIN';
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const actionsDisabled = busy || loading || Boolean(error);
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [toastMessage, setToastMessage] = useState(null);
+      : []
+  const tenantFeatureOverrides = catalog.userKey === userKey ? catalog.tenantFeatureOverrides : {}
+  const canManageOverrides = ['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(user?.globalRole)
+  const canToggleGlobal = user?.globalRole === 'SUPER_ADMIN'
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const actionsDisabled = busy || loading || Boolean(error)
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('ALL')
+  const [toastMessage, setToastMessage] = useState(null)
 
   // Tenant Overrides Drawer & State
-  const tenantOverrides = {};
+  const tenantOverrides = {}
   for (const [tenantId, entries] of Object.entries(tenantFeatureOverrides)) {
-    const tenant = tenants.find((t) => t.id === tenantId);
-    if (!tenant) continue;
+    const tenant = tenants.find((t) => t.id === tenantId)
+    if (!tenant) continue
     for (const [code, entry] of Object.entries(entries)) {
-      if (!isFeatureVisible(code)) continue;
-      (tenantOverrides[code] ||= []).push({
+      if (!isFeatureVisible(code)) continue
+      ;(tenantOverrides[code] ||= []).push({
         ...entry,
         ...overrideExpiry(entry.expiresAt),
         id: `${tenantId}-${code}`,
@@ -106,11 +85,7 @@ export default function AdminFeatures() {
         tenantName: tenant.name,
         subdomain: tenant.subdomain || '—',
         basePlan: tenant.plan || '—',
-        overrideType: entry.isTrial
-          ? 'TRIAL'
-          : entry.enabled
-            ? 'FORCE_ENABLE'
-            : 'FORCE_DISABLE',
+        overrideType: entry.isTrial ? 'TRIAL' : entry.enabled ? 'FORCE_ENABLE' : 'FORCE_DISABLE',
         overrideLabel: entry.isTrial
           ? 'Dùng thử tính năng'
           : entry.enabled
@@ -119,235 +94,217 @@ export default function AdminFeatures() {
         notes: entry.notes || '',
         grantedBy: entry.grantedBy || '—',
         grantedAt: displayDate(entry.grantedAt),
-      });
+      })
     }
   }
-  const [activeDrawerCode, setActiveDrawerCode] = useState(null);
-  const activeDrawerFeature = features.find(
-    (feature) => feature.code === activeDrawerCode,
-  );
-  const [drawerSearch, setDrawerSearch] = useState('');
+  const [activeDrawerCode, setActiveDrawerCode] = useState(null)
+  const activeDrawerFeature = features.find((feature) => feature.code === activeDrawerCode)
+  const [drawerSearch, setDrawerSearch] = useState('')
 
   // Sub-modal for adding a new override
-  const [isAddOverrideModalOpen, setIsAddOverrideModalOpen] = useState(false);
+  const [isAddOverrideModalOpen, setIsAddOverrideModalOpen] = useState(false)
   const [newOverride, setNewOverride] = useState({
     tenantId: '',
     overrideType: 'FORCE_ENABLE',
     notes: '',
-  });
+  })
 
   const isCurrent = useCallback(
-    (version) =>
-      requestVersion.current === version && currentUserKey.current === userKey,
+    (version) => requestVersion.current === version && currentUserKey.current === userKey,
     [userKey],
-  );
+  )
   const loadFeatures = useCallback(
     async (version) => {
-      const data = await getManagerFeatures();
-      if (isCurrent(version)) setCatalog({ ...data, userKey });
+      const data = await getManagerFeatures()
+      if (isCurrent(version)) setCatalog({ ...data, userKey })
     },
     [getManagerFeatures, isCurrent, userKey],
-  );
+  )
 
   const refreshFeatures = useCallback(async () => {
-    const version = requestVersion.current;
-    setLoading(true);
-    setError('');
+    const version = requestVersion.current
+    setLoading(true)
+    setError('')
     try {
-      await loadFeatures(version);
+      await loadFeatures(version)
     } catch (failure) {
-      if (isCurrent(version))
-        setError(failure.message || 'Không tải được cấu hình tính năng.');
+      if (isCurrent(version)) setError(failure.message || 'Không tải được cấu hình tính năng.')
     } finally {
-      if (isCurrent(version)) setLoading(false);
+      if (isCurrent(version)) setLoading(false)
     }
-  }, [loadFeatures, isCurrent]);
+  }, [loadFeatures, isCurrent])
 
   useEffect(() => {
-    const version = ++requestVersion.current;
-    mutationPending.current = false;
-    setBusy(false);
-    setActiveDrawerCode(null);
-    setIsAddOverrideModalOpen(false);
-    setToastMessage(null);
-    setCategoryFilter('ALL');
-    if (canManageOverrides) refreshFeatures();
+    const version = ++requestVersion.current
+    mutationPending.current = false
+    setBusy(false)
+    setActiveDrawerCode(null)
+    setIsAddOverrideModalOpen(false)
+    setToastMessage(null)
+    setCategoryFilter('ALL')
+    if (canManageOverrides) refreshFeatures()
     else {
-      setLoading(false);
-      setError('Bạn không có quyền quản trị tính năng.');
+      setLoading(false)
+      setError('Bạn không có quyền quản trị tính năng.')
     }
     return () => {
-      requestVersion.current = version + 1;
-    };
-  }, [userKey, refreshFeatures, canManageOverrides]);
+      requestVersion.current = version + 1
+    }
+  }, [userKey, refreshFeatures, canManageOverrides])
 
   useEffect(() => {
-    if (!activeDrawerCode) return;
-    const panel = isAddOverrideModalOpen ? modalRef.current : drawerRef.current;
-    if (!panel) return;
-    const previousFocus = document.activeElement;
+    if (!activeDrawerCode) return
+    const panel = isAddOverrideModalOpen ? modalRef.current : drawerRef.current
+    if (!panel) return
+    const previousFocus = document.activeElement
     const focusable = () => [
       ...panel.querySelectorAll(
         'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       ),
-    ];
-    (focusable()[0] || panel).focus();
+    ]
+    ;(focusable()[0] || panel).focus()
     const handleKey = (event) => {
       if (event.key === 'Escape' && !mutationPending.current) {
-        event.preventDefault();
-        if (isAddOverrideModalOpen) setIsAddOverrideModalOpen(false);
-        else setActiveDrawerCode(null);
+        event.preventDefault()
+        if (isAddOverrideModalOpen) setIsAddOverrideModalOpen(false)
+        else setActiveDrawerCode(null)
       }
-      if (event.key !== 'Tab') return;
-      const elements = focusable();
+      if (event.key !== 'Tab') return
+      const elements = focusable()
       const first = elements[0],
-        last = elements.at(-1);
+        last = elements.at(-1)
       if (!first) {
-        event.preventDefault();
-        panel.focus();
+        event.preventDefault()
+        panel.focus()
       } else if (
         event.shiftKey &&
-        (document.activeElement === first ||
-          !panel.contains(document.activeElement))
+        (document.activeElement === first || !panel.contains(document.activeElement))
       ) {
-        event.preventDefault();
-        last.focus();
+        event.preventDefault()
+        last.focus()
       } else if (
         !event.shiftKey &&
-        (document.activeElement === last ||
-          !panel.contains(document.activeElement))
+        (document.activeElement === last || !panel.contains(document.activeElement))
       ) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('keydown', handleKey);
-      previousFocus?.focus();
-    };
-  }, [activeDrawerCode, isAddOverrideModalOpen]);
-
-  useEffect(() => {
-    if (!toastMessage) return;
-    const timer = setTimeout(() => setToastMessage(null), 3500);
-    return () => clearTimeout(timer);
-  }, [toastMessage]);
-
-  const runMutation = async (save, message, onSaved) => {
-    if (mutationPending.current || loading || error || !canManageOverrides)
-      return;
-    const version = requestVersion.current;
-    mutationPending.current = true;
-    setBusy(true);
-    setError('');
-    try {
-      await save();
-      if (!isCurrent(version)) return;
-      onSaved?.();
-      setToastMessage(message);
-      try {
-        await loadFeatures(version);
-      } catch (failure) {
-        if (isCurrent(version))
-          setError(
-            `Đã lưu thay đổi nhưng chưa tải lại được dữ liệu: ${failure.message}`,
-          );
-      }
-    } catch (failure) {
-      if (isCurrent(version))
-        setError(failure.message || 'Không lưu được cấu hình tính năng.');
-    } finally {
-      if (isCurrent(version)) {
-        mutationPending.current = false;
-        setBusy(false);
+        event.preventDefault()
+        first.focus()
       }
     }
-  };
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+      previousFocus?.focus()
+    }
+  }, [activeDrawerCode, isAddOverrideModalOpen])
+
+  useEffect(() => {
+    if (!toastMessage) return
+    const timer = setTimeout(() => setToastMessage(null), 3500)
+    return () => clearTimeout(timer)
+  }, [toastMessage])
+
+  const runMutation = async (save, message, onSaved) => {
+    if (mutationPending.current || loading || error || !canManageOverrides) return
+    const version = requestVersion.current
+    mutationPending.current = true
+    setBusy(true)
+    setError('')
+    try {
+      await save()
+      if (!isCurrent(version)) return
+      onSaved?.()
+      setToastMessage(message)
+      try {
+        await loadFeatures(version)
+      } catch (failure) {
+        if (isCurrent(version))
+          setError(`Đã lưu thay đổi nhưng chưa tải lại được dữ liệu: ${failure.message}`)
+      }
+    } catch (failure) {
+      if (isCurrent(version)) setError(failure.message || 'Không lưu được cấu hình tính năng.')
+    } finally {
+      if (isCurrent(version)) {
+        mutationPending.current = false
+        setBusy(false)
+      }
+    }
+  }
 
   const handleToggleFeature = (feature) => {
-    if (!canToggleGlobal) return;
+    if (!canToggleGlobal) return
     runMutation(
       () => setGlobalFeature(feature.code, !feature.enabledGlobal),
       `Tính năng [${feature.name}] đã được ${feature.enabledGlobal ? 'TẮT' : 'BẬT'} trên toàn hệ thống.`,
-    );
-  };
+    )
+  }
 
   const handleOpenDrawer = (feature) => {
-    setActiveDrawerCode(feature.code);
-    setDrawerSearch('');
-    setIsAddOverrideModalOpen(false);
-  };
+    setActiveDrawerCode(feature.code)
+    setDrawerSearch('')
+    setIsAddOverrideModalOpen(false)
+  }
 
   const handleCloseDrawer = () => {
-    if (mutationPending.current) return;
-    setActiveDrawerCode(null);
-    setIsAddOverrideModalOpen(false);
-  };
+    if (mutationPending.current) return
+    setActiveDrawerCode(null)
+    setIsAddOverrideModalOpen(false)
+  }
 
   const handleOpenAddOverrideModal = () => {
     // Find first available tenant not already overridden
-    const currentList = tenantOverrides[activeDrawerFeature.code] || [];
-    const availableTenant = tenants.find(
-      (tn) => !currentList.some((o) => o.tenantId === tn.id),
-    );
+    const currentList = tenantOverrides[activeDrawerFeature.code] || []
+    const availableTenant = tenants.find((tn) => !currentList.some((o) => o.tenantId === tn.id))
 
     setNewOverride({
       tenantId: availableTenant ? availableTenant.id : tenants[0]?.id || '',
       overrideType: 'FORCE_ENABLE',
       notes: '',
-    });
-    setIsAddOverrideModalOpen(true);
-  };
+    })
+    setIsAddOverrideModalOpen(true)
+  }
 
   const handleSaveNewOverride = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (!newOverride.tenantId) {
-      setError('Vui lòng chọn khách sạn áp dụng ngoại lệ.');
-      return;
+      setError('Vui lòng chọn khách sạn áp dụng ngoại lệ.')
+      return
     }
 
-    const tenantObj = tenants.find((t) => t.id === newOverride.tenantId);
-    if (!tenantObj || !activeDrawerFeature) return;
+    const tenantObj = tenants.find((t) => t.id === newOverride.tenantId)
+    if (!tenantObj || !activeDrawerFeature) return
 
-    const featureCode = activeDrawerFeature.code;
+    const featureCode = activeDrawerFeature.code
     runMutation(
-      () =>
-        saveFeatureOverride(
-          tenantObj.id,
-          featureCode,
-          featureOverridePayload(newOverride),
-        ),
+      () => saveFeatureOverride(tenantObj.id, featureCode, featureOverridePayload(newOverride)),
       `Đã lưu quyền ngoại lệ cho ${tenantObj.name}.`,
       () => setIsAddOverrideModalOpen(false),
-    );
-  };
+    )
+  }
 
   const handleRemoveOverride = (tenantId, tenantName) => {
-    if (!activeDrawerFeature) return;
-    const featureCode = activeDrawerFeature.code;
+    if (!activeDrawerFeature) return
+    const featureCode = activeDrawerFeature.code
     runMutation(
       () => removeFeatureOverride(tenantId, featureCode),
       `Đã gỡ bỏ ngoại lệ của ${tenantName}, hoàn về quyền theo gói.`,
-    );
-  };
+    )
+  }
 
-  const effectiveSearch = (search || globalSearch || '').toLowerCase();
-  const categories = ['ALL', ...new Set(features.map((f) => f.category))];
+  const effectiveSearch = (search || globalSearch || '').toLowerCase()
+  const categories = ['ALL', ...new Set(features.map((f) => f.category))]
 
   const filteredFeatures = features.filter((f) => {
     const matchesSearch =
       f.name.toLowerCase().includes(effectiveSearch) ||
       f.code.toLowerCase().includes(effectiveSearch) ||
       f.description.toLowerCase().includes(effectiveSearch) ||
-      f.category.toLowerCase().includes(effectiveSearch);
+      f.category.toLowerCase().includes(effectiveSearch)
 
-    const matchesCat =
-      categoryFilter === 'ALL' || f.category === categoryFilter;
-    return matchesSearch && matchesCat;
-  });
+    const matchesCat = categoryFilter === 'ALL' || f.category === categoryFilter
+    return matchesSearch && matchesCat
+  })
 
-  const totalActiveGlobal = features.filter((f) => f.enabledGlobal).length;
+  const totalActiveGlobal = features.filter((f) => f.enabledGlobal).length
 
   // Drawer overrides list filtered by search
   const currentDrawerOverrides = activeDrawerFeature
@@ -357,12 +314,12 @@ export default function AdminFeatures() {
           item.subdomain.toLowerCase().includes(drawerSearch.toLowerCase()) ||
           item.notes.toLowerCase().includes(drawerSearch.toLowerCase()),
       )
-    : [];
+    : []
 
   const totalAllOverrides = Object.values(tenantOverrides).reduce(
     (acc, list) => acc + list.length,
     0,
-  );
+  )
   const statusBanner =
     loading || busy || error ? (
       <div
@@ -404,7 +361,7 @@ export default function AdminFeatures() {
           </button>
         )}
       </div>
-    ) : null;
+    ) : null
 
   return (
     <div className="manager-page admin-features-page">
@@ -445,10 +402,7 @@ export default function AdminFeatures() {
         </div>
       )}
 
-      <section
-        className="admin-features-summary"
-        aria-label={labelUi('Tổng quan tính năng')}
-      >
+      <section className="admin-features-summary" aria-label={labelUi('Tổng quan tính năng')}>
         <div className="manager-panel admin-features-metric">
           <span>{labelUi('Tổng số tính năng')}</span>
           <strong>{loading ? '—' : features.length}</strong>
@@ -493,15 +447,12 @@ export default function AdminFeatures() {
           ------------------------------------------------------------- */}
       <div className="admin-features-grid">
         {!loading && !error && filteredFeatures.length === 0 && (
-          <div
-            role="status"
-            style={{ padding: '24px', color: t.textSecondary }}
-          >
+          <div role="status" style={{ padding: '24px', color: t.textSecondary }}>
             {labelUi('Không có tính năng phù hợp.')}
           </div>
         )}
         {filteredFeatures.map((f) => {
-          const overrideCount = (tenantOverrides[f.code] || []).length;
+          const overrideCount = (tenantOverrides[f.code] || []).length
 
           return (
             <div key={f.id} className="manager-panel admin-features-card">
@@ -583,10 +534,7 @@ export default function AdminFeatures() {
                         : t.isDark
                           ? '#2E3440'
                           : '#CBD5E1',
-                      cursor:
-                        !canToggleGlobal || actionsDisabled
-                          ? 'not-allowed'
-                          : 'pointer',
+                      cursor: !canToggleGlobal || actionsDisabled ? 'not-allowed' : 'pointer',
                       opacity: !canToggleGlobal || actionsDisabled ? 0.65 : 1,
                       position: 'relative',
                       transition: 'background-color 0.2s ease',
@@ -623,23 +571,14 @@ export default function AdminFeatures() {
 
               <div className="admin-features-card-footer">
                 <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px 16px',
-                    fontSize: '12px',
-                  }}
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', fontSize: '12px' }}
                 >
                   <span style={{ color: t.textSecondary }}>
                     {labelUi('Gói:')} <strong>{f.minPlan}</strong>
                   </span>
                   <span style={{ color: t.textSecondary }}>
                     Ngoại lệ:{' '}
-                    <strong
-                      style={{
-                        color: overrideCount > 0 ? t.primary : t.textSecondary,
-                      }}
-                    >
+                    <strong style={{ color: overrideCount > 0 ? t.primary : t.textSecondary }}>
                       {overrideCount} {tUi('common.hotelLower')}
                     </strong>
                   </span>
@@ -649,14 +588,14 @@ export default function AdminFeatures() {
                   disabled={busy}
                   onClick={() => handleOpenDrawer(f)}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.03)';
-                    e.currentTarget.style.borderColor = t.primary;
-                    e.currentTarget.style.color = t.primary;
+                    e.currentTarget.style.transform = 'scale(1.03)'
+                    e.currentTarget.style.borderColor = t.primary
+                    e.currentTarget.style.color = t.primary
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.borderColor = t.border;
-                    e.currentTarget.style.color = t.textPrimary;
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.borderColor = t.border
+                    e.currentTarget.style.color = t.textPrimary
                   }}
                   style={{
                     padding: '7px 14px',
@@ -684,7 +623,7 @@ export default function AdminFeatures() {
                 </button>
               </div>
             </div>
-          );
+          )
         })}
       </div>
 
@@ -748,9 +687,7 @@ export default function AdminFeatures() {
                 backgroundColor: t.isDark ? '#191D24' : '#F8FAFC',
               }}
             >
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: '14px' }}
-              >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div
                   style={{
                     width: '46px',
@@ -767,13 +704,7 @@ export default function AdminFeatures() {
                   <Sliders size={24} />
                 </div>
                 <div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span
                       style={{
                         fontSize: '11px',
@@ -810,9 +741,7 @@ export default function AdminFeatures() {
                 </div>
               </div>
 
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
-              >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button
                   aria-label={labelUi('Đóng bảng ngoại lệ')}
                   disabled={busy}
@@ -831,12 +760,12 @@ export default function AdminFeatures() {
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#EF4444';
-                    e.currentTarget.style.color = '#EF4444';
+                    e.currentTarget.style.borderColor = '#EF4444'
+                    e.currentTarget.style.color = '#EF4444'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = t.border;
-                    e.currentTarget.style.color = t.textSecondary;
+                    e.currentTarget.style.borderColor = t.border
+                    e.currentTarget.style.color = t.textSecondary
                   }}
                 >
                   <X size={18} />
@@ -874,14 +803,7 @@ export default function AdminFeatures() {
                   </div>
                 )}
               </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  flexShrink: 0,
-                }}
-              >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                 <span style={{ fontSize: '11.5px', color: t.textSecondary }}>
                   {labelUi('Cờ Global:')}
                 </span>
@@ -894,9 +816,7 @@ export default function AdminFeatures() {
                     backgroundColor: activeDrawerFeature.enabledGlobal
                       ? 'rgba(16, 185, 129, 0.15)'
                       : 'rgba(107, 114, 128, 0.15)',
-                    color: activeDrawerFeature.enabledGlobal
-                      ? '#10B981'
-                      : '#6B7280',
+                    color: activeDrawerFeature.enabledGlobal ? '#10B981' : '#6B7280',
                   }}
                 >
                   {activeDrawerFeature.enabledGlobal
@@ -952,9 +872,7 @@ export default function AdminFeatures() {
               </div>
 
               <button
-                disabled={
-                  actionsDisabled || !canManageOverrides || tenants.length === 0
-                }
+                disabled={actionsDisabled || !canManageOverrides || tenants.length === 0}
                 onClick={handleOpenAddOverrideModal}
                 style={{
                   display: 'flex',
@@ -972,14 +890,12 @@ export default function AdminFeatures() {
                   transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow =
-                    '0 6px 18px rgba(79, 70, 229, 0.35)';
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(79, 70, 229, 0.35)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow =
-                    '0 4px 14px rgba(79, 70, 229, 0.25)';
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = '0 4px 14px rgba(79, 70, 229, 0.25)'
                 }}
               >
                 <Plus size={16} />
@@ -990,12 +906,7 @@ export default function AdminFeatures() {
             {/* Overrides Table / List Area */}
             <div
               className="admin-features-drawer-body"
-              style={{
-                flex: 1,
-                minHeight: 0,
-                overflowY: 'auto',
-                padding: '20px 28px',
-              }}
+              style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 28px' }}
             >
               {statusBanner}
               {currentDrawerOverrides.length === 0 ? (
@@ -1047,16 +958,11 @@ export default function AdminFeatures() {
                       lineHeight: '1.4',
                     }}
                   >
-                    Tất cả các cơ sở hiện đang tuân thủ quyền hạn mặc định theo
-                    gói thuê bao. Nhấn nút bên dưới để cấp quyền vượt cấp hoặc
-                    dùng thử riêng.
+                    Tất cả các cơ sở hiện đang tuân thủ quyền hạn mặc định theo gói thuê bao. Nhấn
+                    nút bên dưới để cấp quyền vượt cấp hoặc dùng thử riêng.
                   </p>
                   <button
-                    disabled={
-                      actionsDisabled ||
-                      !canManageOverrides ||
-                      tenants.length === 0
-                    }
+                    disabled={actionsDisabled || !canManageOverrides || tenants.length === 0}
                     onClick={handleOpenAddOverrideModal}
                     style={{
                       padding: '8px 16px',
@@ -1072,8 +978,7 @@ export default function AdminFeatures() {
                       gap: '6px',
                     }}
                   >
-                    <Plus size={14} />{' '}
-                    {labelUi('Thêm khách sạn áp dụng ngoại lệ')}
+                    <Plus size={14} /> {labelUi('Thêm khách sạn áp dụng ngoại lệ')}
                   </button>
                 </div>
               ) : (
@@ -1171,25 +1076,12 @@ export default function AdminFeatures() {
                               : 'rgba(0,0,0,0.01)')
                           }
                           onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              'transparent')
+                            (e.currentTarget.style.backgroundColor = 'transparent')
                           }
                         >
                           {/* Khách sạn */}
-                          <td
-                            role="cell"
-                            style={{
-                              padding: '14px 16px',
-                              verticalAlign: 'middle',
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                              }}
-                            >
+                          <td role="cell" style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <div
                                 style={{
                                   width: '32px',
@@ -1239,10 +1131,7 @@ export default function AdminFeatures() {
                           <td
                             role="cell"
                             data-label={labelUi('Hình thức ngoại lệ')}
-                            style={{
-                              padding: '14px 16px',
-                              verticalAlign: 'middle',
-                            }}
+                            style={{ padding: '14px 16px', verticalAlign: 'middle' }}
                           >
                             <div>
                               <span
@@ -1280,55 +1169,49 @@ export default function AdminFeatures() {
                                 {item.overrideType === 'FORCE_DISABLE' && '⛔ '}
                                 {item.overrideLabel}
                               </span>
-                              {item.overrideType === 'TRIAL' &&
-                                item.daysRemaining !== null && (
-                                  <div
-                                    style={{
-                                      fontSize: '10.5px',
-                                      color: '#F59E0B',
-                                      marginTop: '4px',
-                                      fontWeight: '700',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '3px',
-                                    }}
-                                  >
-                                    <Clock size={11} />{' '}
-                                    {item.expired
-                                      ? labelUi('Đã hết hạn')
-                                      : `Còn lại ${item.daysRemaining} ngày`}{' '}
-                                    · {displayDate(item.expiresAt)}
-                                  </div>
-                                )}
-                              {item.overrideType === 'TRIAL' &&
-                                item.daysRemaining === null && (
-                                  <div
-                                    style={{
-                                      fontSize: '10.5px',
-                                      color: t.textSecondary,
-                                      marginTop: '4px',
-                                    }}
-                                  >
-                                    {labelUi('Hết hạn: —')}
-                                  </div>
-                                )}
-                              {item.expiresAt &&
-                                item.overrideType !== 'TRIAL' && (
-                                  <div
-                                    style={{
-                                      fontSize: '10.5px',
-                                      color: t.textSecondary,
-                                      marginTop: '4px',
-                                    }}
-                                  >
-                                    {item.expired
-                                      ? labelUi('Đã hết hạn')
-                                      : labelUi('Hết hạn')}
-                                    : {displayDate(item.expiresAt)}
-                                  </div>
-                                )}
-                              {(!activeDrawerFeature.enabledGlobal ||
-                                item.expired) && (
+                              {item.overrideType === 'TRIAL' && item.daysRemaining !== null && (
+                                <div
+                                  style={{
+                                    fontSize: '10.5px',
+                                    color: '#F59E0B',
+                                    marginTop: '4px',
+                                    fontWeight: '700',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                  }}
+                                >
+                                  <Clock size={11} />{' '}
+                                  {item.expired
+                                    ? labelUi('Đã hết hạn')
+                                    : `Còn lại ${item.daysRemaining} ngày`}{' '}
+                                  · {displayDate(item.expiresAt)}
+                                </div>
+                              )}
+                              {item.overrideType === 'TRIAL' && item.daysRemaining === null && (
+                                <div
+                                  style={{
+                                    fontSize: '10.5px',
+                                    color: t.textSecondary,
+                                    marginTop: '4px',
+                                  }}
+                                >
+                                  {labelUi('Hết hạn: —')}
+                                </div>
+                              )}
+                              {item.expiresAt && item.overrideType !== 'TRIAL' && (
+                                <div
+                                  style={{
+                                    fontSize: '10.5px',
+                                    color: t.textSecondary,
+                                    marginTop: '4px',
+                                  }}
+                                >
+                                  {item.expired ? labelUi('Đã hết hạn') : labelUi('Hết hạn')}:{' '}
+                                  {displayDate(item.expiresAt)}
+                                </div>
+                              )}
+                              {(!activeDrawerFeature.enabledGlobal || item.expired) && (
                                 <div
                                   style={{
                                     fontSize: '10.5px',
@@ -1348,10 +1231,7 @@ export default function AdminFeatures() {
                           <td
                             role="cell"
                             data-label={labelUi('Lý do / Ghi chú')}
-                            style={{
-                              padding: '14px 16px',
-                              verticalAlign: 'middle',
-                            }}
+                            style={{ padding: '14px 16px', verticalAlign: 'middle' }}
                           >
                             <div
                               style={{
@@ -1386,15 +1266,8 @@ export default function AdminFeatures() {
                           >
                             <button
                               disabled={actionsDisabled || !canManageOverrides}
-                              onClick={() =>
-                                handleRemoveOverride(
-                                  item.tenantId,
-                                  item.tenantName,
-                                )
-                              }
-                              title={labelUi(
-                                'Gỡ bỏ quyền ghi đè, hoàn về mặc định',
-                              )}
+                              onClick={() => handleRemoveOverride(item.tenantId, item.tenantName)}
+                              title={labelUi('Gỡ bỏ quyền ghi đè, hoàn về mặc định')}
                               style={{
                                 padding: '6px 12px',
                                 borderRadius: '10px',
@@ -1410,14 +1283,12 @@ export default function AdminFeatures() {
                                 transition: 'all 0.15s ease',
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor =
-                                  '#EF4444';
-                                e.currentTarget.style.color = '#FFFFFF';
+                                e.currentTarget.style.backgroundColor = '#EF4444'
+                                e.currentTarget.style.color = '#FFFFFF'
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor =
-                                  'rgba(239, 68, 68, 0.08)';
-                                e.currentTarget.style.color = '#EF4444';
+                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'
+                                e.currentTarget.style.color = '#EF4444'
                               }}
                             >
                               <Trash2 size={12} />
@@ -1517,27 +1388,13 @@ export default function AdminFeatures() {
             >
               <div>
                 <h3
-                  style={{
-                    fontSize: '17px',
-                    fontWeight: '900',
-                    color: t.textPrimary,
-                    margin: 0,
-                  }}
+                  style={{ fontSize: '17px', fontWeight: '900', color: t.textPrimary, margin: 0 }}
                 >
                   Thêm Khách sạn Áp dụng Ngoại lệ
                 </h3>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    color: t.textSecondary,
-                    margin: '3px 0 0 0',
-                  }}
-                >
-                  Module:{' '}
-                  <strong style={{ color: t.primary }}>
-                    {activeDrawerFeature.name}
-                  </strong>{' '}
-                  ({activeDrawerFeature.code})
+                <p style={{ fontSize: '12px', color: t.textSecondary, margin: '3px 0 0 0' }}>
+                  Module: <strong style={{ color: t.primary }}>{activeDrawerFeature.name}</strong> (
+                  {activeDrawerFeature.code})
                 </p>
               </div>
               <button
@@ -1579,9 +1436,7 @@ export default function AdminFeatures() {
                   disabled={busy || loading}
                   required
                   value={newOverride.tenantId}
-                  onChange={(e) =>
-                    setNewOverride({ ...newOverride, tenantId: e.target.value })
-                  }
+                  onChange={(e) => setNewOverride({ ...newOverride, tenantId: e.target.value })}
                   style={{
                     width: '100%',
                     padding: '12px 14px',
@@ -1597,16 +1452,13 @@ export default function AdminFeatures() {
                   {tenants.map((item) => {
                     const isAlreadyOverridden = (
                       tenantOverrides[activeDrawerFeature.code] || []
-                    ).some((o) => o.tenantId === item.id);
+                    ).some((o) => o.tenantId === item.id)
                     return (
                       <option key={item.id} value={item.id}>
-                        {item.name} ({item.subdomain || '—'}) -{' '}
-                        {item.plan || '—'}{' '}
-                        {isAlreadyOverridden
-                          ? labelUi('[Đang có ngoại lệ]')
-                          : ''}
+                        {item.name} ({item.subdomain || '—'}) - {item.plan || '—'}{' '}
+                        {isAlreadyOverridden ? labelUi('[Đang có ngoại lệ]') : ''}
                       </option>
-                    );
+                    )
                   })}
                 </select>
               </div>
@@ -1627,39 +1479,21 @@ export default function AdminFeatures() {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
                     gap: '8px',
                   }}
                 >
                   {[
-                    {
-                      type: 'FORCE_ENABLE',
-                      label: 'Vượt cấp VIP',
-                      desc: 'Mở vĩnh viễn',
-                    },
-                    {
-                      type: 'TRIAL',
-                      label: 'Dùng thử 30 ngày',
-                      desc: 'Hết hạn về gói',
-                    },
-                    {
-                      type: 'FORCE_DISABLE',
-                      label: 'Ép buộc tắt',
-                      desc: 'Chặn riêng cơ sở',
-                    },
+                    { type: 'FORCE_ENABLE', label: 'Vượt cấp VIP', desc: 'Mở vĩnh viễn' },
+                    { type: 'TRIAL', label: 'Dùng thử 30 ngày', desc: 'Hết hạn về gói' },
+                    { type: 'FORCE_DISABLE', label: 'Ép buộc tắt', desc: 'Chặn riêng cơ sở' },
                   ].map((opt) => (
                     <button
                       key={opt.type}
                       type="button"
                       aria-pressed={newOverride.overrideType === opt.type}
                       disabled={busy || loading}
-                      onClick={() =>
-                        setNewOverride({
-                          ...newOverride,
-                          overrideType: opt.type,
-                        })
-                      }
+                      onClick={() => setNewOverride({ ...newOverride, overrideType: opt.type })}
                       style={{
                         padding: '10px 12px',
                         borderRadius: '12px',
@@ -1679,21 +1513,12 @@ export default function AdminFeatures() {
                         style={{
                           fontSize: '12px',
                           fontWeight: '800',
-                          color:
-                            newOverride.overrideType === opt.type
-                              ? t.primary
-                              : t.textPrimary,
+                          color: newOverride.overrideType === opt.type ? t.primary : t.textPrimary,
                         }}
                       >
                         {opt.label}
                       </div>
-                      <div
-                        style={{
-                          fontSize: '10px',
-                          color: t.textSecondary,
-                          marginTop: '2px',
-                        }}
-                      >
+                      <div style={{ fontSize: '10px', color: t.textSecondary, marginTop: '2px' }}>
                         {opt.desc}
                       </div>
                     </button>
@@ -1723,9 +1548,7 @@ export default function AdminFeatures() {
                     'Ví dụ: Khách VIP ký kết hợp đồng 2 năm, Cấp trải nghiệm trước...',
                   )}
                   value={newOverride.notes}
-                  onChange={(e) =>
-                    setNewOverride({ ...newOverride, notes: e.target.value })
-                  }
+                  onChange={(e) => setNewOverride({ ...newOverride, notes: e.target.value })}
                   style={{
                     width: '100%',
                     padding: '11px 14px',
@@ -1766,11 +1589,7 @@ export default function AdminFeatures() {
                 </button>
                 <button
                   type="submit"
-                  disabled={
-                    actionsDisabled ||
-                    !newOverride.tenantId ||
-                    !canManageOverrides
-                  }
+                  disabled={actionsDisabled || !newOverride.tenantId || !canManageOverrides}
                   style={{
                     padding: '10px 22px',
                     borderRadius: '12px',
@@ -1783,9 +1602,7 @@ export default function AdminFeatures() {
                     boxShadow: '0 4px 14px rgba(79, 70, 229, 0.25)',
                   }}
                 >
-                  {busy
-                    ? tUi('common.saving')
-                    : labelUi('Lưu & Áp dụng ngoại lệ')}
+                  {busy ? tUi('common.saving') : labelUi('Lưu & Áp dụng ngoại lệ')}
                 </button>
               </div>
             </form>
@@ -1793,5 +1610,5 @@ export default function AdminFeatures() {
         </div>
       )}
     </div>
-  );
+  )
 }

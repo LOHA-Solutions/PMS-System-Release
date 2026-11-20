@@ -1,100 +1,91 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { Check, Pencil, Plus, Ruler, Save, Search, X } from 'lucide-react';
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { usePms } from '../../data/usePms';
+import { useEffect, useId, useRef, useState } from 'react'
+import { Check, Pencil, Plus, Ruler, Save, Search, X } from 'lucide-react'
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { usePms } from '../../data/usePms'
 
 export default function InventoryUnits() {
-  useI18n();
-  const pms = usePms();
-  const formId = useId();
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('all');
-  const [draft, setDraft] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const inFlight = useRef(false);
-  const triggerRef = useRef(null);
-  const restoreFocus = useRef(false);
+  useI18n()
+  const pms = usePms()
+  const formId = useId()
+  const [query, setQuery] = useState('')
+  const [status, setStatus] = useState('all')
+  const [draft, setDraft] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const inFlight = useRef(false)
+  const triggerRef = useRef(null)
+  const restoreFocus = useRef(false)
   useEffect(() => {
     if (!draft && !busy && restoreFocus.current) {
-      restoreFocus.current = false;
-      triggerRef.current?.focus();
+      restoreFocus.current = false
+      triggerRef.current?.focus()
     }
-  }, [draft, busy]);
-  const canWrite = pms.access('settings.write').allowed;
-  const units = pms.units || [];
+  }, [draft, busy])
+  const canWrite = pms.access('settings.write').allowed
+  const units = pms.units || []
   const rows = units.filter((row) => {
     const matchesQuery = `${row.name} ${row.id}`
       .toLocaleLowerCase()
-      .includes(query.trim().toLocaleLowerCase());
-    return (
-      matchesQuery &&
-      (status === 'all' || (row.active !== false) === (status === 'active'))
-    );
-  });
+      .includes(query.trim().toLocaleLowerCase())
+    return matchesQuery && (status === 'all' || (row.active !== false) === (status === 'active'))
+  })
 
   function openEditor(row, event) {
-    triggerRef.current = event.currentTarget;
-    restoreFocus.current = false;
-    setDraft(row ? { ...row } : { name: '' });
-    setError('');
-    setNotice('');
+    triggerRef.current = event.currentTarget
+    restoreFocus.current = false
+    setDraft(row ? { ...row } : { name: '' })
+    setError('')
+    setNotice('')
   }
 
   function closeEditor() {
-    restoreFocus.current = true;
-    setDraft(null);
-    setError('');
+    restoreFocus.current = true
+    setDraft(null)
+    setError('')
   }
 
   async function save(event) {
-    event.preventDefault();
-    if (inFlight.current || !canWrite || !draft?.name.trim()) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
-    setNotice('');
+    event.preventDefault()
+    if (inFlight.current || !canWrite || !draft?.name.trim()) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      await pms.saveMaster('units', { ...draft, name: draft.name.trim() });
-      closeEditor();
-      setNotice(tUi('inventorySettings.saved'));
+      await pms.saveMaster('units', { ...draft, name: draft.name.trim() })
+      closeEditor()
+      setNotice(tUi('inventorySettings.saved'))
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
 
   async function toggle(row) {
-    if (inFlight.current || !canWrite) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
-    setNotice('');
+    if (inFlight.current || !canWrite) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      await pms.toggleMaster('units', row.id);
+      await pms.toggleMaster('units', row.id)
       setDraft((current) =>
-        current?.id === row.id
-          ? { ...current, active: row.active === false }
-          : current,
-      );
-      setNotice(tUi('inventorySettings.saved'));
+        current?.id === row.id ? { ...current, active: row.active === false } : current,
+      )
+      setNotice(tUi('inventorySettings.saved'))
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
 
   return (
-    <section
-      className="inventory-units"
-      aria-labelledby={`${formId}-title`}
-      aria-busy={busy}
-    >
+    <section className="inventory-units" aria-labelledby={`${formId}-title`} aria-busy={busy}>
       <header className="inventory-units-heading">
         <div>
           <h2 id={`${formId}-title`}>
@@ -134,20 +125,10 @@ export default function InventoryUnits() {
       )}
 
       {canWrite && draft && (
-        <form
-          className="inventory-units-editor"
-          onSubmit={save}
-          data-workspace-draft
-        >
+        <form className="inventory-units-editor" onSubmit={save} data-workspace-draft>
           <fieldset disabled={busy}>
             <div className="inventory-units-editor-heading">
-              <h3>
-                {tUi(
-                  draft.id
-                    ? 'inventorySettings.editUnit'
-                    : 'inventorySettings.addUnit',
-                )}
-              </h3>
+              <h3>{tUi(draft.id ? 'inventorySettings.editUnit' : 'inventorySettings.addUnit')}</h3>
               <button
                 type="button"
                 className="inventory-units-icon-button"
@@ -158,8 +139,7 @@ export default function InventoryUnits() {
               </button>
             </div>
             <label htmlFor={`${formId}-name`}>
-              {tUi('inventorySettings.unitName')}{' '}
-              <span aria-hidden="true">*</span>
+              {tUi('inventorySettings.unitName')} <span aria-hidden="true">*</span>
             </label>
             <input
               id={`${formId}-name`}
@@ -169,20 +149,13 @@ export default function InventoryUnits() {
               value={draft.name}
               placeholder={tUi('inventorySettings.unitPlaceholder')}
               onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
+                setDraft((current) => ({ ...current, name: event.target.value }))
               }
             />
             <div className="inventory-units-editor-footer">
               <span>{tUi('inventorySettings.requiredHint')}</span>
               <div>
-                <button
-                  type="button"
-                  className="inventory-units-button"
-                  onClick={closeEditor}
-                >
+                <button type="button" className="inventory-units-button" onClick={closeEditor}>
                   {tUi('common.cancel')}
                 </button>
                 <button
@@ -220,10 +193,7 @@ export default function InventoryUnits() {
           <option value="inactive">{tUi('common.inactive')}</option>
         </select>
         <span className="inventory-units-results">
-          {tUi('inventorySettings.results', {
-            shown: rows.length,
-            total: units.length,
-          })}
+          {tUi('inventorySettings.results', { shown: rows.length, total: units.length })}
         </span>
       </div>
       {rows.length ? (
@@ -247,10 +217,7 @@ export default function InventoryUnits() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={row.active === false ? 'is-inactive' : undefined}
-                >
+                <tr key={row.id} className={row.active === false ? 'is-inactive' : undefined}>
                   <td>
                     <div className="inventory-units-name">
                       <span className="inventory-units-row-icon">
@@ -264,11 +231,7 @@ export default function InventoryUnits() {
                       className={`inventory-units-status ${row.active !== false ? 'is-active' : ''}`}
                     >
                       <span aria-hidden="true" />
-                      {tUi(
-                        row.active !== false
-                          ? 'common.active'
-                          : 'common.inactive',
-                      )}
+                      {tUi(row.active !== false ? 'common.active' : 'common.inactive')}
                     </span>
                   </td>
                   {canWrite && (
@@ -289,9 +252,7 @@ export default function InventoryUnits() {
                           className="inventory-units-switch"
                           role="switch"
                           aria-checked={row.active !== false}
-                          aria-label={tUi('inventorySettings.toggle', {
-                            name: row.name,
-                          })}
+                          aria-label={tUi('inventorySettings.toggle', { name: row.name })}
                           title={tUi('inventorySettings.toggleHint')}
                           disabled={busy}
                           onClick={() => toggle(row)}
@@ -311,27 +272,17 @@ export default function InventoryUnits() {
           <span>
             <Ruler size={26} aria-hidden="true" />
           </span>
-          <h3>
-            {tUi(
-              units.length
-                ? 'inventorySettings.noResults'
-                : 'inventorySettings.empty',
-            )}
-          </h3>
+          <h3>{tUi(units.length ? 'inventorySettings.noResults' : 'inventorySettings.empty')}</h3>
           <p>
-            {tUi(
-              units.length
-                ? 'inventorySettings.noResultsHint'
-                : 'inventorySettings.emptyHint',
-            )}
+            {tUi(units.length ? 'inventorySettings.noResultsHint' : 'inventorySettings.emptyHint')}
           </p>
           {units.length > 0 && (
             <button
               type="button"
               className="inventory-units-button"
               onClick={() => {
-                setQuery('');
-                setStatus('all');
+                setQuery('')
+                setStatus('all')
               }}
             >
               {tUi('inventorySettings.clearFilters')}
@@ -340,5 +291,5 @@ export default function InventoryUnits() {
         </div>
       )}
     </section>
-  );
+  )
 }

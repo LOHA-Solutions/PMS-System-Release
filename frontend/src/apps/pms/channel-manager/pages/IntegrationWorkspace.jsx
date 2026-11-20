@@ -1,10 +1,6 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useSearchParams } from 'react-router-dom';
-import { useRef } from 'react';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useSearchParams } from 'react-router-dom'
+import { useRef } from 'react'
 import {
   ArrowRight,
   BedDouble,
@@ -16,23 +12,23 @@ import {
   RefreshCw,
   Settings2,
   ShieldCheck,
-} from 'lucide-react';
-import LinkedChannexTools from '../../../manager/channex/components/LinkedChannexTools';
-import { useChannels } from '../useChannels';
-import { useRevealActive } from '../../components/useRevealActive';
-import { integrationState, integrationTab } from '../integration';
-import { connectionStatus } from '../presentation';
-import { ChannelWorkspace } from './OTA';
-import { HistoryWorkspace } from './OTAHistory';
-import { ClientChannelWorkspace } from './ClientChannels';
-import '../IntegrationWorkspace.css';
+} from 'lucide-react'
+import LinkedChannexTools from '../../../manager/channex/components/LinkedChannexTools'
+import { useChannels } from '../useChannels'
+import { useRevealActive } from '../../components/useRevealActive'
+import { integrationState, integrationTab } from '../integration'
+import { connectionStatus } from '../presentation'
+import { ChannelWorkspace } from './OTA'
+import { HistoryWorkspace } from './OTAHistory'
+import { ClientChannelWorkspace } from './ClientChannels'
+import '../IntegrationWorkspace.css'
 
 const tabs = [
   ['overview', 'Tổng quan & hướng dẫn', LayoutDashboard],
   ['connection', 'Kết nối & ghép phòng', BedDouble],
   ['channels', 'Kênh bán phòng', Link2],
   ['history', 'Lịch sử đồng bộ', Clock3],
-];
+]
 
 export default function IntegrationWorkspace({
   pms,
@@ -41,34 +37,31 @@ export default function IntegrationWorkspace({
   initialTab = 'overview',
   hideHeading = false,
 }) {
-  useI18n();
-  const [params, setParams] = useSearchParams();
-  const manager = ['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(
-    pms.user?.globalRole,
-  );
-  const requested = params.get('tab') || initialTab;
+  useI18n()
+  const [params, setParams] = useSearchParams()
+  const manager = ['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(pms.user?.globalRole)
+  const requested = params.get('tab') || initialTab
   const tab =
     params.has('success') || params.has('channel_id') || params.has('token')
       ? 'channels'
       : manager && requested === 'advanced'
         ? 'advanced'
-        : integrationTab(requested);
-  const tabsRef = useRef(null);
-  useRevealActive(tabsRef, tab);
+        : integrationTab(requested)
+  const tabsRef = useRef(null)
+  useRevealActive(tabsRef, tab)
   const visibleTabs = manager
     ? [...tabs, ['advanced', 'Dữ liệu Channex nâng cao', Settings2]]
-    : tabs;
-  const query = useChannels(pms.requestTenant, pms.tenantId);
-  const state = integrationState(query.data || {});
-  const status = connectionStatus(query.data?.connection);
-  const path = (value) =>
-    basePath + (basePath.includes('?') ? '&' : '?') + 'tab=' + value;
+    : tabs
+  const query = useChannels(pms.requestTenant, pms.tenantId)
+  const state = integrationState(query.data || {})
+  const status = connectionStatus(query.data?.connection)
+  const path = (value) => basePath + (basePath.includes('?') ? '&' : '?') + 'tab=' + value
   function selectTab(value) {
     setParams((previous) => {
-      const next = new URLSearchParams(previous);
-      next.set('tab', value);
-      return next;
-    });
+      const next = new URLSearchParams(previous)
+      next.set('tab', value)
+      return next
+    })
   }
   const props = {
     pms,
@@ -77,17 +70,13 @@ export default function IntegrationWorkspace({
     connectionPath: path('connection'),
     historyPath: path('history'),
     channelsPath: path('channels'),
-  };
+  }
   return (
     <div className="ota-integration">
       <header className="ota-integration-heading">
         {!hideHeading && (
           <div>
-            {embedded ? (
-              <h2>{tUi('nav.channels')}</h2>
-            ) : (
-              <h1>{tUi('nav.channels')}</h1>
-            )}
+            {embedded ? <h2>{tUi('nav.channels')}</h2> : <h1>{tUi('nav.channels')}</h1>}
             <p>
               Kết nối, quản lý kênh bán và đồng bộ với PMS của{' '}
               {pms.tenant?.name || labelUi('khách sạn đang chọn')}.
@@ -141,11 +130,7 @@ export default function IntegrationWorkspace({
             <div className="ota-notice ota-notice--error" role="alert">
               <Info size={18} aria-hidden="true" />
               <span>{query.error}</span>
-              <button
-                type="button"
-                className="ota-button"
-                onClick={query.refresh}
-              >
+              <button type="button" className="ota-button" onClick={query.refresh}>
                 {tUi('common.retry')}
               </button>
             </div>
@@ -194,9 +179,7 @@ export default function IntegrationWorkspace({
                       <strong>{state.pending.length} yêu cầu đang xử lý</strong>
                       <p>
                         {state.bookingReviewCount
-                          ? tUi('channels.review.count', {
-                              count: state.bookingReviewCount,
-                            })
+                          ? tUi('channels.review.count', { count: state.bookingReviewCount })
                           : state.failed.length
                             ? `${state.failed.length} yêu cầu cần kiểm tra`
                             : state.latest?.status === 'succeeded'
@@ -211,9 +194,7 @@ export default function IntegrationWorkspace({
                   aria-labelledby="ota-guide-title"
                 >
                   <div>
-                    <h3 id="ota-guide-title">
-                      {labelUi('Thiết lập theo từng bước')}
-                    </h3>
+                    <h3 id="ota-guide-title">{labelUi('Thiết lập theo từng bước')}</h3>
                     <p>
                       {labelUi(
                         'Giá và phòng trống đi từ PMS lên Channex; đặt phòng mới, thay đổi và hủy đi từ Channex về PMS.',
@@ -223,11 +204,7 @@ export default function IntegrationWorkspace({
                   <ol>
                     <li>
                       <span>
-                        {state.connected ? (
-                          <CheckCircle2 size={20} aria-hidden="true" />
-                        ) : (
-                          '1'
-                        )}
+                        {state.connected ? <CheckCircle2 size={20} aria-hidden="true" /> : '1'}
                       </span>
                       <div>
                         <strong>{labelUi('Kết nối khách sạn')}</strong>
@@ -242,26 +219,18 @@ export default function IntegrationWorkspace({
                         className="ota-button"
                         onClick={() => selectTab('connection')}
                       >
-                        {state.connected
-                          ? labelUi('Xem kết nối')
-                          : labelUi('Bắt đầu')}
+                        {state.connected ? labelUi('Xem kết nối') : labelUi('Bắt đầu')}
                         <ArrowRight size={15} aria-hidden="true" />
                       </button>
                     </li>
                     <li>
                       <span>
-                        {state.mapped > 0 ? (
-                          <CheckCircle2 size={20} aria-hidden="true" />
-                        ) : (
-                          '2'
-                        )}
+                        {state.mapped > 0 ? <CheckCircle2 size={20} aria-hidden="true" /> : '2'}
                       </span>
                       <div>
                         <strong>{labelUi('Ghép phòng theo tên')}</strong>
                         <p>
-                          {labelUi(
-                            'Chọn loại phòng PMS, loại phòng Channex và gói giá tương ứng.',
-                          )}
+                          {labelUi('Chọn loại phòng PMS, loại phòng Channex và gói giá tương ứng.')}
                         </p>
                       </div>
                       <button
@@ -294,11 +263,7 @@ export default function IntegrationWorkspace({
                     </li>
                     <li>
                       <span>
-                        {state.ready ? (
-                          <CheckCircle2 size={20} aria-hidden="true" />
-                        ) : (
-                          '4'
-                        )}
+                        {state.ready ? <CheckCircle2 size={20} aria-hidden="true" /> : '4'}
                       </span>
                       <div>
                         <strong>{tUi('channels.onboarding.title')}</strong>
@@ -338,9 +303,7 @@ export default function IntegrationWorkspace({
                   <div className="ota-notice ota-notice--info" role="status">
                     <Info size={18} aria-hidden="true" />
                     <span>
-                      {tUi('channels.review.notice', {
-                        count: state.bookingReviewCount,
-                      })}
+                      {tUi('channels.review.notice', { count: state.bookingReviewCount })}
                     </span>
                     <button
                       type="button"
@@ -388,19 +351,13 @@ export default function IntegrationWorkspace({
             <Info size={18} aria-hidden="true" />
             <span>
               {query.error ||
-                labelUi(
-                  'Liên kết khách sạn Channex trước khi mở phòng, gói giá và đặt phòng.',
-                )}
+                labelUi('Liên kết khách sạn Channex trước khi mở phòng, gói giá và đặt phòng.')}
             </span>
-            <button
-              type="button"
-              className="ota-button"
-              onClick={() => selectTab('connection')}
-            >
+            <button type="button" className="ota-button" onClick={() => selectTab('connection')}>
               {labelUi('Mở kết nối')}
             </button>
           </div>
         ))}
     </div>
-  );
+  )
 }

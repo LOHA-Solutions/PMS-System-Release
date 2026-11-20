@@ -101,6 +101,101 @@
   color: var(--accent-primary, #086ab4);
   font-weight: 600;
 }
+.loha-reservations-tasks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.loha-reservations-task-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+.loha-reservations-task-presets button,
+.loha-reservations-task-date > button,
+.loha-reservations-filter-error-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #dce5ee);
+  border-radius: 8px;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #122b44);
+  font-size: 13px;
+  font-weight: 600;
+}
+.loha-reservations-task-presets .is-selected {
+  background: var(--accent-primary, #086ab4);
+  border-color: var(--accent-primary, #086ab4);
+  color: #fff;
+}
+.loha-reservations-task-date {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+}
+.loha-reservations-task-date-label {
+  font-weight: 600;
+  color: var(--text-secondary, #5a7084);
+}
+.loha-reservations-task-date input[type='text'] {
+  min-height: 40px;
+  max-width: 170px;
+  border: 1px solid #aabccb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 14px;
+}
+.loha-reservations-task-date small,
+.loha-reservations-advanced small {
+  color: var(--text-secondary, #5a7084);
+  font-size: 12px;
+}
+.loha-reservations-task-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-secondary, #5a7084);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.loha-reservations-filter-error {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #f2c6c4;
+  border-radius: 12px;
+  background: #fff4f3;
+  color: #9f2520;
+  font-size: 13px;
+}
+.loha-reservations-filter-error > svg {
+  flex-shrink: 0;
+}
+.loha-reservations-filter-error ul {
+  margin: 6px 0 8px;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+.loha-reservations-filter-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.loha-reservations-scope {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .loha-reservations-panel {
   background: var(--bg-card, #fff);
   border: 1px solid var(--border-color, #dce5ee);
@@ -402,6 +497,18 @@
   .loha-reservations-search input,
   .loha-reservations select {
     min-height: 44px;
+  }
+  .loha-reservations-task-presets button,
+  .loha-reservations-task-date > button,
+  .loha-reservations-filter-error-actions button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .loha-reservations-task-date input[type='text'] {
+    min-height: 44px;
+  }
+  .loha-reservations-task-date input[type='text'] {
+    font-size: 16px;
   }
   .loha-reservations .loha-reservations-code {
     display: inline-flex;

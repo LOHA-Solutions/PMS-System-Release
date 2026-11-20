@@ -1,12 +1,12 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { useId, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { shortDate } from '../planCalendar';
-import { automaticDayPlans, automaticPlanDates } from '../automaticPlan';
-import { useAutomaticShifts } from '../useAutomaticShifts';
-import AutomaticDayPlan from './AutomaticDayPlan';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { useId, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { shortDate } from '../planCalendar'
+import { automaticDayPlans, automaticPlanDates } from '../automaticPlan'
+import { useAutomaticShifts } from '../useAutomaticShifts'
+import AutomaticDayPlan from './AutomaticDayPlan'
 
 export default function AutomaticPlanForm({
   initial,
@@ -20,28 +20,23 @@ export default function AutomaticPlanForm({
   onSave,
   onClose,
 }) {
-  useI18n();
+  useI18n()
   const datesId = useId(),
-    staffId = useId();
-  const [range, setRange] = useState({
-    start: initial.date,
-    end: initial.date,
-  });
-  const [omittedDates, setOmittedDates] = useState([]);
+    staffId = useId()
+  const [range, setRange] = useState({ start: initial.date, end: initial.date })
+  const [omittedDates, setOmittedDates] = useState([])
   const [staffIds, setStaffIds] = useState(() =>
     staff.filter((row) => row.active).map((row) => row.id),
-  );
-  const [configurations, setConfigurations] = useState({});
-  const days = automaticPlanDates(range.start, range.end);
-  const dates = days.filter((day) => !omittedDates.includes(day));
-  const activeStaff = staff.filter((row) => row.active);
-  const selectedStaff = activeStaff.filter((row) => staffIds.includes(row.id));
+  )
+  const [configurations, setConfigurations] = useState({})
+  const days = automaticPlanDates(range.start, range.end)
+  const dates = days.filter((day) => !omittedDates.includes(day))
+  const activeStaff = staff.filter((row) => row.active)
+  const selectedStaff = activeStaff.filter((row) => staffIds.includes(row.id))
   const eligibleRooms = rooms.filter(
     (room) =>
-      room.uuid &&
-      room.active !== false &&
-      !['maintenance', 'inspection'].includes(room.condition),
-  );
+      room.uuid && room.active !== false && !['maintenance', 'inspection'].includes(room.condition),
+  )
   const shiftQuery = useAutomaticShifts({
     start: range.start,
     end: range.end,
@@ -49,23 +44,21 @@ export default function AutomaticPlanForm({
     knownRange: knownShiftRange,
     knownShifts,
     source: shiftsSource,
-  });
+  })
   const dayPlans = automaticDayPlans(
     dates,
     selectedStaff.map((row) => row.id),
     configurations,
-  );
+  )
   const roomError = dayPlans.some(
     (plan) =>
       plan.roomIds &&
       (!plan.roomIds.length ||
         plan.roomIds.length > 500 ||
-        plan.roomIds.some(
-          (id) => !eligibleRooms.some((room) => room.uuid === id),
-        )),
+        plan.roomIds.some((id) => !eligibleRooms.some((room) => room.uuid === id))),
   )
     ? tUi('hk.autoRoomSelectionError')
-    : '';
+    : ''
   const shiftError =
     !shiftQuery.loading &&
     dayPlans.some((plan) =>
@@ -82,15 +75,15 @@ export default function AutomaticPlanForm({
       ),
     )
       ? tUi('hk.autoInvalidShift')
-      : '';
-  const rangeError = !days.length ? tUi('hk.autoRangeError') : '';
+      : ''
+  const rangeError = !days.length ? tUi('hk.autoRangeError') : ''
   const selectionError = !dates.length
     ? tUi('hk.autoNoDates')
     : !selectedStaff.length
       ? tUi('hk.autoNoStaff')
       : selectedStaff.length > 100
         ? tUi('hk.autoStaffLimit')
-        : '';
+        : ''
   const blocked = Boolean(
     rangeError ||
     selectionError ||
@@ -98,22 +91,22 @@ export default function AutomaticPlanForm({
     shiftError ||
     shiftQuery.loading ||
     shiftQuery.error,
-  );
+  )
   function changeRange(next) {
-    setRange(next);
-    setOmittedDates([]);
+    setRange(next)
+    setOmittedDates([])
   }
   return (
     <form
       data-workspace-draft
       onSubmit={(event) => {
-        event.preventDefault();
+        event.preventDefault()
         if (!busy && !blocked)
           onSave({
             dates,
             staffIds: selectedStaff.map((row) => row.id),
             ...(dayPlans.length ? { dayPlans } : {}),
-          });
+          })
       }}
     >
       <p className="hk-plan-hint">{tUi('hk.autoIntro')}</p>
@@ -143,26 +136,14 @@ export default function AutomaticPlanForm({
             {rangeError}
           </p>
         )}
-        <div
-          className="hk-auto-selection"
-          role="group"
-          aria-labelledby={datesId}
-        >
+        <div className="hk-auto-selection" role="group" aria-labelledby={datesId}>
           <div className="hk-auto-selection-heading">
             <h3 id={datesId}>{tUi('hk.autoDates')}</h3>
             <div className="hk-plan-actions">
-              <button
-                type="button"
-                disabled={!days.length}
-                onClick={() => setOmittedDates([])}
-              >
+              <button type="button" disabled={!days.length} onClick={() => setOmittedDates([])}>
                 {tUi('hk.autoSelectAll')}
               </button>
-              <button
-                type="button"
-                disabled={!days.length}
-                onClick={() => setOmittedDates(days)}
-              >
+              <button type="button" disabled={!days.length} onClick={() => setOmittedDates(days)}>
                 {tUi('hk.autoClear')}
               </button>
             </div>
@@ -186,11 +167,7 @@ export default function AutomaticPlanForm({
             ))}
           </div>
         </div>
-        <div
-          className="hk-auto-selection"
-          role="group"
-          aria-labelledby={staffId}
-        >
+        <div className="hk-auto-selection" role="group" aria-labelledby={staffId}>
           <div className="hk-auto-selection-heading">
             <h3 id={staffId}>{tUi('hk.autoStaff')}</h3>
             <div className="hk-plan-actions">
@@ -201,11 +178,7 @@ export default function AutomaticPlanForm({
               >
                 {tUi('hk.autoSelectAll')}
               </button>
-              <button
-                type="button"
-                disabled={!activeStaff.length}
-                onClick={() => setStaffIds([])}
-              >
+              <button type="button" disabled={!activeStaff.length} onClick={() => setStaffIds([])}>
                 {tUi('hk.autoClear')}
               </button>
             </div>
@@ -231,9 +204,7 @@ export default function AutomaticPlanForm({
           {!activeStaff.length && (
             <p className="hk-plan-hint">
               {tUi('hk.assignmentNoStaff')}{' '}
-              <Link to="/id/housekeeping/staff">
-                {tUi('hk.staffAndShifts')}
-              </Link>
+              <Link to="/id/housekeeping/staff">{tUi('hk.staffAndShifts')}</Link>
             </p>
           )}
         </div>
@@ -263,34 +234,26 @@ export default function AutomaticPlanForm({
               shifts={shiftQuery.shifts}
               loading={shiftQuery.loading || Boolean(shiftQuery.error)}
               open={dates.length === 1}
-              onChange={(next) =>
-                setConfigurations((previous) => ({ ...previous, [day]: next }))
-              }
+              onChange={(next) => setConfigurations((previous) => ({ ...previous, [day]: next }))}
               onApplyRooms={() =>
                 setConfigurations((previous) => {
-                  const roomIds = previous[day]?.roomIds ?? null;
+                  const roomIds = previous[day]?.roomIds ?? null
                   return {
                     ...previous,
                     ...Object.fromEntries(
                       dates.map((date) => [
                         date,
-                        {
-                          ...previous[date],
-                          roomIds: roomIds === null ? null : [...roomIds],
-                        },
+                        { ...previous[date], roomIds: roomIds === null ? null : [...roomIds] },
                       ]),
                     ),
-                  };
+                  }
                 })
               }
             />
           ))}
         </div>
         <p className="hk-auto-summary" role="status">
-          {tUi('hk.autoSummary', {
-            days: dates.length,
-            staff: selectedStaff.length,
-          })}
+          {tUi('hk.autoSummary', { days: dates.length, staff: selectedStaff.length })}
         </p>
         {!rangeError && selectionError && (
           <p className="hk-plan-hint" role="status">
@@ -319,5 +282,5 @@ export default function AutomaticPlanForm({
         </div>
       </fieldset>
     </form>
-  );
+  )
 }

@@ -10,22 +10,67 @@ branch_labels = None
 depends_on = None
 
 PMS_TABLES = (
-    "booking_notes", "cash_documents", "channel_booking_reviews", "channel_bookings",
-    "channel_connections", "channel_jobs", "channel_mappings", "channel_revisions", "charges",
-    "commission_payouts", "commission_settlements", "daily_rates", "day_reconciliations",
-    "exchange_rates", "guests", "housekeeping_logs", "housekeeping_shifts", "housekeeping_staff",
-    "housekeeping_tasks", "idempotency_records", "inventory_controls", "inventory_documents",
-    "ledger_entries", "masters", "notification_settings", "payments", "physical_rooms",
-    "pos_invoice_items", "pos_invoices", "pos_payments", "pos_refunds", "pricing_promotions",
-    "pricing_rules", "pricing_vouchers", "refunds", "reservation_guests", "reservation_nights",
-    "reservation_rooms", "reservations", "room_blocks", "room_type_availability", "room_types",
-    "service_stock_ingredients", "service_stock_links", "stock_balances", "stock_movements",
+    "booking_notes",
+    "cash_documents",
+    "channel_booking_reviews",
+    "channel_bookings",
+    "channel_connections",
+    "channel_jobs",
+    "channel_mappings",
+    "channel_revisions",
+    "charges",
+    "commission_payouts",
+    "commission_settlements",
+    "daily_rates",
+    "day_reconciliations",
+    "exchange_rates",
+    "guests",
+    "housekeeping_logs",
+    "housekeeping_shifts",
+    "housekeeping_staff",
+    "housekeeping_tasks",
+    "idempotency_records",
+    "inventory_controls",
+    "inventory_documents",
+    "ledger_entries",
+    "masters",
+    "notification_settings",
+    "payments",
+    "physical_rooms",
+    "pos_invoice_items",
+    "pos_invoices",
+    "pos_payments",
+    "pos_refunds",
+    "pricing_promotions",
+    "pricing_rules",
+    "pricing_vouchers",
+    "refunds",
+    "reservation_guests",
+    "reservation_nights",
+    "reservation_rooms",
+    "reservations",
+    "room_blocks",
+    "room_type_availability",
+    "room_types",
+    "service_stock_ingredients",
+    "service_stock_links",
+    "stock_balances",
+    "stock_movements",
     "voucher_redemptions",
 )
 SAAS_EVENTS = (
-    "tenant.created", "tenant.updated", "subscription.updated", "system_user.created",
-    "system_user.updated", "plan.created", "plan.updated", "plan.deleted", "feature.updated",
-    "feature_override.upserted", "feature_override.deleted", "channex.property.created",
+    "tenant.created",
+    "tenant.updated",
+    "subscription.updated",
+    "system_user.created",
+    "system_user.updated",
+    "plan.created",
+    "plan.updated",
+    "plan.deleted",
+    "feature.updated",
+    "feature_override.upserted",
+    "feature_override.deleted",
+    "channex.property.created",
 )
 
 
@@ -64,12 +109,14 @@ def upgrade():
     # SaaS activity has a finite event vocabulary. Operational audit details and
     # exports remain under the same hotel membership policy as their source data.
     events = ",".join(f"'{event}'" for event in SAAS_EVENTS)
-    audit_scope = f"({pms_scope('audit_logs')} OR ({SYSTEM} AND (tenant_id IS NULL OR event IN ({events}))))"
+    audit_scope = (
+        f"({pms_scope('audit_logs')} OR ({SYSTEM} AND (tenant_id IS NULL OR event IN ({events}))))"
+    )
     op.execute("DROP POLICY tenant_scope ON audit_logs")
     op.execute(f"""CREATE POLICY tenant_scope ON audit_logs
         USING ({audit_scope}) WITH CHECK ({audit_scope})""")
 
-    own = f"""({SERVICE} OR ({pms_scope('notifications')} AND
+    own = f"""({SERVICE} OR ({pms_scope("notifications")} AND
         recipient_user_id=nullif(current_setting('app.user_id',true),'')))"""
     op.execute("DROP POLICY own_inbox ON notifications")
     op.execute("DROP POLICY own_read ON notifications")
@@ -78,7 +125,7 @@ def upgrade():
     op.execute(f"""CREATE POLICY own_read ON notifications FOR UPDATE
         USING ({own}) WITH CHECK ({own})""")
     op.execute(f"""CREATE POLICY tenant_delivery ON notifications FOR INSERT
-        WITH CHECK ({pms_scope('notifications')})""")
+        WITH CHECK ({pms_scope("notifications")})""")
 
     # Narrow SaaS helpers expose only licensed-room quota and fixed bootstrap
     # units. Both restore service scope on return and on errors.
@@ -130,7 +177,12 @@ def downgrade():
         op.execute(f'DROP POLICY tenant_scope ON "{table}"')
         op.execute(f"""CREATE POLICY tenant_scope ON "{table}"
             USING ({TENANT} OR {SYSTEM}) WITH CHECK ({TENANT} OR {SYSTEM})""")
-    for policy in ("membership_read", "membership_insert", "membership_update", "membership_delete"):
+    for policy in (
+        "membership_read",
+        "membership_insert",
+        "membership_update",
+        "membership_delete",
+    ):
         op.execute(f"DROP POLICY {policy} ON tenant_users")
     op.execute(f"""CREATE POLICY tenant_scope ON tenant_users
         USING ({TENANT} OR {SYSTEM}) WITH CHECK ({TENANT} OR {SYSTEM})""")

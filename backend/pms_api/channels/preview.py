@@ -53,7 +53,9 @@ class AriPreviewView(CommonMethodView):
             )
         }
         if any(row["rate_plan_id"] not in mappings for row in restrictions):
-            raise ApiError(409, "channel_snapshot_changed", "Ghép nối vừa thay đổi. Tải lại giá xem trước.")
+            raise ApiError(
+                409, "channel_snapshot_changed", "Ghép nối vừa thay đổi. Tải lại giá xem trước."
+            )
         type_ids = [row.room_type_id for row in mappings.values()]
         room_names = dict(
             db.session.execute(

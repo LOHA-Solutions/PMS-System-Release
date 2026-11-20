@@ -1,27 +1,14 @@
-import { emailInput, emailPattern } from '../../../../shared/lib/validation.js';
-import { catalogNumericInput } from './catalogForm.js';
-import React, { useEffect, useId, useRef, useState } from 'react';
-import {
-  Check,
-  List,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Save,
-  Search,
-  X,
-} from 'lucide-react';
-import { getIntlLocale } from '../../../../shared/i18n/store.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { AccessLink } from '../../../../shared/components/AccessControl';
-import { usePms } from '../../data/usePms';
-import { money } from '../../data/model';
-import { useRevealActive } from '../../components/useRevealActive';
-import './SettingsCatalogs.css';
+import { emailInput, emailPattern } from '../../../../shared/lib/validation.js'
+import { catalogNumericInput } from './catalogForm.js'
+import React, { useEffect, useId, useRef, useState } from 'react'
+import { Check, List, Pencil, Plus, RefreshCw, Save, Search, X } from 'lucide-react'
+import { getIntlLocale } from '../../../../shared/i18n/store.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { AccessLink } from '../../../../shared/components/AccessControl'
+import { usePms } from '../../data/usePms'
+import { money } from '../../data/model'
+import { useRevealActive } from '../../components/useRevealActive'
+import './SettingsCatalogs.css'
 
 function CatalogSwitch({ active, disabled, label, onToggle }) {
   return (
@@ -37,7 +24,7 @@ function CatalogSwitch({ active, disabled, label, onToggle }) {
     >
       <span aria-hidden="true" />
     </button>
-  );
+  )
 }
 
 function CatalogStatus({ active }) {
@@ -46,7 +33,7 @@ function CatalogStatus({ active }) {
       <span aria-hidden="true" />
       {tUi(active ? 'common.active' : 'common.inactive')}
     </span>
-  );
+  )
 }
 
 function CatalogNotice({ error, message }) {
@@ -64,7 +51,7 @@ function CatalogNotice({ error, message }) {
         </p>
       )}
     </>
-  );
+  )
 }
 
 function CatalogEmpty({ filtered, onClear }) {
@@ -73,69 +60,53 @@ function CatalogEmpty({ filtered, onClear }) {
       <span>
         <List size={25} aria-hidden="true" />
       </span>
-      <h3>
-        {tUi(
-          filtered ? 'inventorySettings.noResults' : 'inventorySettings.empty',
-        )}
-      </h3>
-      <p>
-        {tUi(
-          filtered
-            ? 'inventorySettings.noResultsHint'
-            : 'settings.catalogEmptyHint',
-        )}
-      </p>
+      <h3>{tUi(filtered ? 'inventorySettings.noResults' : 'inventorySettings.empty')}</h3>
+      <p>{tUi(filtered ? 'inventorySettings.noResultsHint' : 'settings.catalogEmptyHint')}</p>
       {filtered && (
         <button type="button" className="pms-catalog-button" onClick={onClear}>
           {tUi('inventorySettings.clearFilters')}
         </button>
       )}
     </div>
-  );
+  )
 }
 
-function EditorFooter({ busy, editing, onCancel }) {
+function EditorFooter({ busy, editing, onCancel, disabled = false }) {
   return (
     <div className="pms-catalog-editor-footer">
       <div>
         <button type="button" className="pms-catalog-button" onClick={onCancel}>
           {tUi('common.cancel')}
         </button>
-        <button type="submit" className="pms-catalog-button is-primary">
+        <button type="submit" disabled={disabled} className="pms-catalog-button is-primary">
           <Save size={16} aria-hidden="true" />
-          {tUi(
-            busy
-              ? 'common.saving'
-              : editing
-                ? 'common.saveChanges'
-                : 'common.save',
-          )}
+          {tUi(busy ? 'common.saving' : editing ? 'common.saveChanges' : 'common.save')}
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 function useEditorFocus(draft, busy) {
-  const triggerRef = useRef(null);
-  const restoreFocus = useRef(false);
+  const triggerRef = useRef(null)
+  const restoreFocus = useRef(false)
   useEffect(() => {
     if (!draft && !busy && restoreFocus.current) {
-      restoreFocus.current = false;
-      if (triggerRef.current?.isConnected) triggerRef.current.focus();
+      restoreFocus.current = false
+      if (triggerRef.current?.isConnected) triggerRef.current.focus()
     }
-  }, [draft, busy]);
+  }, [draft, busy])
   const rememberTrigger = (trigger) => {
-    triggerRef.current = trigger;
-    restoreFocus.current = false;
-  };
+    triggerRef.current = trigger
+    restoreFocus.current = false
+  }
   const requestRestore = () => {
-    restoreFocus.current = true;
-  };
+    restoreFocus.current = true
+  }
   const cancelRestore = () => {
-    restoreFocus.current = false;
-  };
-  return { rememberTrigger, requestRestore, cancelRestore };
+    restoreFocus.current = false
+  }
+  return { rememberTrigger, requestRestore, cancelRestore }
 }
 
 export function MasterGrid({
@@ -148,108 +119,136 @@ export function MasterGrid({
   activation = false,
   searchable = false,
 }) {
-  useI18n();
-  const pms = usePms();
-  const formId = useId();
-  const canWrite = pms.access('settings.write').allowed;
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [draft, setDraft] = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const busyRef = useRef(false);
-  const { rememberTrigger, requestRestore } = useEditorFocus(draft, busy);
-  const allRows = rows || pms[catalog] || [];
+  useI18n()
+  const pms = usePms()
+  const formId = useId()
+  const canWrite = pms.access('settings.write').allowed
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
+  const [draft, setDraft] = useState(null)
+  const [editing, setEditing] = useState(false)
+  const [newOption, setNewOption] = useState(null)
+  const [addedOptions, setAddedOptions] = useState({})
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
+  const { rememberTrigger, requestRestore } = useEditorFocus(draft, busy)
+  const allRows = rows || pms[catalog] || []
   const list = allRows.filter(
     (row) =>
       !searchable ||
       ((!category || row.category === category) &&
         `${row.name} ${row.id}`.toLowerCase().includes(query.toLowerCase())),
-  );
-  const categoryOptions = fields.find(
-    (field) => field.key === 'category',
-  )?.options;
+  )
+  const categoryOptions = fields.find((field) => field.key === 'category')?.options
   const blank = () =>
     Object.fromEntries(
-      fields.map((field) => [
-        field.key,
-        field.default ?? (field.type === 'number' ? 0 : ''),
-      ]),
-    );
+      fields.map((field) => [field.key, field.default ?? (field.type === 'number' ? 0 : '')]),
+    )
+  const optionsFor = (field) => [
+    ...(field.options || []),
+    ...(addedOptions[field.key] || []).filter(
+      (added) => !field.options?.some((option) => (option.value ?? option) === added.value),
+    ),
+  ]
 
   const openEditor = (event, row) => {
-    if (busyRef.current || !canWrite) return;
-    rememberTrigger(event.currentTarget);
-    setDraft(row ? { ...row } : blank());
-    setEditing(Boolean(row));
-    setError('');
-    setMessage('');
-  };
+    if (busyRef.current || !canWrite) return
+    rememberTrigger(event.currentTarget)
+    setDraft(row ? { ...row } : blank())
+    setNewOption(null)
+    setEditing(Boolean(row))
+    setError('')
+    setMessage('')
+  }
   const closeEditor = () => {
-    requestRestore();
-    setDraft(null);
-    setEditing(false);
-    setError('');
-  };
+    if (busyRef.current) return
+    requestRestore()
+    setDraft(null)
+    setEditing(false)
+    setError('')
+    setNewOption(null)
+  }
   const save = async (event) => {
-    event.preventDefault();
-    if (busyRef.current || !canWrite || !draft) return;
-    busyRef.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (busyRef.current || !canWrite || !draft || newOption) return
+    busyRef.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      const item = { ...draft };
+      const item = { ...draft }
       if (catalog === 'roomTypes' && !item.code?.trim()) {
-        if (
-          !editing ||
-          (pms[catalog] || []).find((row) => row.id === item.id)?.code
-        )
-          throw new Error(tUi('settings.typeCodeRequired'));
-        delete item.code;
+        if (!editing || (pms[catalog] || []).find((row) => row.id === item.id)?.code)
+          throw new Error(tUi('settings.typeCodeRequired'))
+        delete item.code
       }
       for (const field of fields)
         if (field.type === 'number')
-          item[field.key] = catalogNumericInput(field.key, item[field.key]);
-      if (
-        !editing &&
-        item.id &&
-        (pms[catalog] || []).some((row) => row.id === item.id)
-      )
-        throw new Error(tUi('settings.duplicateCode'));
-      if (!editing) delete item.id;
-      await pms.saveMaster(catalog, transform ? transform(item) : item);
-      closeEditor();
-      setMessage(tUi('settings.catalogSaved'));
+          item[field.key] = catalogNumericInput(field.key, item[field.key])
+      if (!editing && item.id && (pms[catalog] || []).some((row) => row.id === item.id))
+        throw new Error(tUi('settings.duplicateCode'))
+      if (!editing) delete item.id
+      await pms.saveMaster(catalog, transform ? transform(item) : item)
+      requestRestore()
+      setDraft(null)
+      setEditing(false)
+      setMessage(tUi('settings.catalogSaved'))
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      busyRef.current = false;
-      setBusy(false);
+      busyRef.current = false
+      setBusy(false)
     }
-  };
-  const toggle = async (row) => {
-    if (busyRef.current || !canWrite) return;
-    busyRef.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+  }
+  const createOption = async (field) => {
+    const name = newOption?.name.trim()
+    if (!name || busyRef.current || !canWrite) return
+    busyRef.current = true
+    setBusy(true)
+    setError('')
     try {
-      await pms.toggleMaster(catalog, row.id);
-      setDraft((current) =>
-        current?.id === row.id
-          ? { ...current, active: row.active === false }
-          : current,
-      );
+      const existing = optionsFor(field).find(
+        (option) =>
+          (option.label ?? option).trim().toLocaleLowerCase() === name.toLocaleLowerCase(),
+      )
+      if (existing?.disabled) throw new Error(tUi('settings.optionInactive'))
+      const option = existing
+        ? { value: existing.value ?? existing, label: existing.label ?? existing }
+        : await field.createOption(name)
+      if (!existing)
+        setAddedOptions((current) => ({
+          ...current,
+          [field.key]: [...(current[field.key] || []), option],
+        }))
+      setDraft((current) => ({ ...current, [field.key]: option.value }))
+      setNewOption(null)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      busyRef.current = false;
-      setBusy(false);
+      busyRef.current = false
+      setBusy(false)
     }
-  };
+  }
+  const toggle = async (row) => {
+    if (busyRef.current || !canWrite) return
+    busyRef.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
+    try {
+      await pms.toggleMaster(catalog, row.id)
+      setDraft((current) =>
+        current?.id === row.id ? { ...current, active: row.active === false } : current,
+      )
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      busyRef.current = false
+      setBusy(false)
+    }
+  }
 
   const renderValue = (row, field) => {
     if (field.type === 'checkbox')
@@ -261,34 +260,22 @@ export function MasterGrid({
           readOnly
           disabled
         />
-      );
-    if (field.key === 'price')
-      return money(row[field.key] ?? 0, pms.settings?.currency);
-    if (field.type === 'number')
-      return Number(row[field.key] || 0).toLocaleString(getIntlLocale());
+      )
+    if (field.key === 'price') return money(row[field.key] ?? 0, pms.settings?.currency)
+    if (field.type === 'number') return Number(row[field.key] || 0).toLocaleString(getIntlLocale())
     if (field.key === 'category')
-      return (
-        <span className="pms-catalog-category">{row[field.key] || '—'}</span>
-      );
+      return <span className="pms-catalog-category">{row[field.key] || '—'}</span>
     if (field.key === 'code')
-      return (
-        <span className="pms-catalog-code">
-          {row.code || tUi('common.unsetCode')}
-        </span>
-      );
+      return <span className="pms-catalog-code">{row.code || tUi('common.unsetCode')}</span>
     return (
-      field.options?.find((option) => option.value === row[field.key])?.label ??
+      optionsFor(field).find((option) => option.value === row[field.key])?.label ??
       row[field.key] ??
       '—'
-    );
-  };
+    )
+  }
 
   return (
-    <section
-      className="pms-catalog"
-      aria-labelledby={`${formId}-title`}
-      aria-busy={busy}
-    >
+    <section className="pms-catalog" aria-labelledby={`${formId}-title`} aria-busy={busy}>
       <header className="pms-catalog-heading">
         <div>
           <h2 id={`${formId}-title`}>
@@ -317,11 +304,7 @@ export function MasterGrid({
       )}
 
       {canWrite && draft && (
-        <form
-          className="pms-catalog-editor"
-          onSubmit={save}
-          data-workspace-draft
-        >
+        <form className="pms-catalog-editor" onSubmit={save} data-workspace-draft>
           <fieldset disabled={busy}>
             <div className="pms-catalog-editor-heading">
               <h3>
@@ -343,9 +326,7 @@ export function MasterGrid({
                   className={`pms-catalog-field${field.key === 'roomNumbers' ? ' is-wide' : ''}${field.type === 'checkbox' ? ' is-checkbox' : ''}`}
                   key={field.key}
                 >
-                  <label htmlFor={`${formId}-${field.key}`}>
-                    {labelUi(field.label)}
-                  </label>
+                  <label htmlFor={`${formId}-${field.key}`}>{labelUi(field.label)}</label>
                   {field.type === 'checkbox' ? (
                     <input
                       id={`${formId}-${field.key}`}
@@ -353,42 +334,100 @@ export function MasterGrid({
                       type="checkbox"
                       checked={!!draft[field.key]}
                       onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [field.key]: event.target.checked,
-                        }))
+                        setDraft((current) => ({ ...current, [field.key]: event.target.checked }))
                       }
                     />
                   ) : field.options ? (
-                    <select
-                      id={`${formId}-${field.key}`}
-                      autoFocus={index === 0}
-                      value={draft[field.key] ?? ''}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">{tUi('common.select')}</option>
-                      {field.options.map((option) => (
-                        <option
-                          key={option.value ?? option}
-                          value={option.value ?? option}
-                          disabled={option.disabled}
+                    <>
+                      <div className="pms-catalog-select-row">
+                        <select
+                          id={`${formId}-${field.key}`}
+                          autoFocus={index === 0}
+                          aria-describedby={field.hint ? `${formId}-${field.key}-hint` : undefined}
+                          value={draft[field.key] ?? ''}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, [field.key]: event.target.value }))
+                          }
                         >
-                          {option.label ?? option}
-                        </option>
-                      ))}
-                    </select>
+                          <option value="">{tUi('common.select')}</option>
+                          {optionsFor(field).map((option) => (
+                            <option
+                              key={option.value ?? option}
+                              value={option.value ?? option}
+                              disabled={option.disabled}
+                            >
+                              {option.label ?? option}
+                            </option>
+                          ))}
+                        </select>
+                        {field.createOption && (
+                          <button
+                            type="button"
+                            className="pms-catalog-button"
+                            aria-label={tUi('settings.addOption', { field: labelUi(field.label) })}
+                            aria-expanded={newOption?.key === field.key}
+                            disabled={Boolean(newOption)}
+                            onClick={() => {
+                              setNewOption({ key: field.key, name: '' })
+                              setError('')
+                            }}
+                          >
+                            <Plus size={16} aria-hidden="true" />
+                            {tUi('settings.catalogAdd')}
+                          </button>
+                        )}
+                      </div>
+                      {newOption?.key === field.key && (
+                        <div className="pms-catalog-create-option">
+                          <label htmlFor={`${formId}-${field.key}-new`}>
+                            {tUi('settings.addOption', { field: labelUi(field.label) })}
+                          </label>
+                          <input
+                            id={`${formId}-${field.key}-new`}
+                            autoFocus
+                            maxLength={field.maxLength || 160}
+                            value={newOption.name}
+                            onChange={(event) =>
+                              setNewOption((current) => ({ ...current, name: event.target.value }))
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                createOption(field)
+                              }
+                              if (event.key === 'Escape') {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                setNewOption(null)
+                              }
+                            }}
+                          />
+                          <div>
+                            <button
+                              type="button"
+                              className="pms-catalog-button"
+                              onClick={() => setNewOption(null)}
+                            >
+                              {tUi('common.cancel')}
+                            </button>
+                            <button
+                              type="button"
+                              className="pms-catalog-button is-primary"
+                              disabled={!newOption.name.trim()}
+                              onClick={() => createOption(field)}
+                            >
+                              {tUi('common.save')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <input
                       id={`${formId}-${field.key}`}
                       autoFocus={index === 0}
-                      type={
-                        field.type === 'number' ? 'text' : field.type || 'text'
-                      }
+                      type={field.type === 'number' ? 'text' : field.type || 'text'}
                       inputMode={
                         field.type === 'number'
                           ? field.key === 'capacity'
@@ -419,12 +458,14 @@ export function MasterGrid({
                       value={draft[field.key] ?? ''}
                       placeholder={labelUi(field.label)}
                       onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }))
+                        setDraft((current) => ({ ...current, [field.key]: event.target.value }))
                       }
                     />
+                  )}
+                  {field.hint && (
+                    <p id={`${formId}-${field.key}-hint`} className="pms-catalog-field-hint">
+                      {field.hint}
+                    </p>
                   )}
                 </div>
               ))}
@@ -436,10 +477,7 @@ export function MasterGrid({
                   active={draft.active !== false}
                   label={tUi('settings.enableCatalog')}
                   onToggle={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      active: current.active === false,
-                    }))
+                    setDraft((current) => ({ ...current, active: current.active === false }))
                   }
                 />
               </div>
@@ -448,6 +486,7 @@ export function MasterGrid({
               busy={busy}
               editing={editing}
               onCancel={closeEditor}
+              disabled={Boolean(newOption)}
             />
           </fieldset>
         </form>
@@ -473,30 +512,19 @@ export function MasterGrid({
             >
               <option value="">{tUi('common.allCategories')}</option>
               {categoryOptions.map((option) => (
-                <option
-                  key={option.value ?? option}
-                  value={option.value ?? option}
-                >
+                <option key={option.value ?? option} value={option.value ?? option}>
                   {option.label ?? option}
                 </option>
               ))}
             </select>
           )}
           <span className="pms-catalog-results">
-            {tUi('inventorySettings.results', {
-              shown: list.length,
-              total: allRows.length,
-            })}
+            {tUi('inventorySettings.results', { shown: list.length, total: allRows.length })}
           </span>
         </div>
       )}
       {list.length ? (
-        <div
-          className="pms-catalog-table"
-          role="region"
-          aria-label={labelUi(title)}
-          tabIndex={0}
-        >
+        <div className="pms-catalog-table" role="region" aria-label={labelUi(title)} tabIndex={0}>
           <table>
             <thead>
               <tr>
@@ -515,10 +543,7 @@ export function MasterGrid({
             </thead>
             <tbody>
               {list.map((row) => (
-                <tr
-                  key={row.id}
-                  className={row.active === false ? 'is-inactive' : undefined}
-                >
+                <tr key={row.id} className={row.active === false ? 'is-inactive' : undefined}>
                   {fields.map((field) => (
                     <td
                       key={field.key}
@@ -567,114 +592,91 @@ export function MasterGrid({
         <CatalogEmpty
           filtered={Boolean(searchable && (query || category))}
           onClear={() => {
-            setQuery('');
-            setCategory('');
+            setQuery('')
+            setCategory('')
           }}
         />
       )}
     </section>
-  );
+  )
 }
 
 export function BookingSources() {
-  useI18n();
-  const formId = useId();
-  const [filterType, setFilterType] = useState('Travel Agency');
-  const typeTabsRef = useRef(null);
-  useRevealActive(typeTabsRef, filterType);
-  const {
-    bookingSources: sources = [],
-    saveMaster,
-    toggleMaster,
-    access,
-  } = usePms();
-  const [draft, setDraft] = useState(null);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
-  const working = useRef(false);
-  const { rememberTrigger, requestRestore, cancelRestore } = useEditorFocus(
-    draft,
-    busy,
-  );
-  const canWrite = access('settings.write').allowed;
-  const filteredSources = sources.filter(
-    (source) => source.type === filterType,
-  );
-  const showCommissionAndEmail = [
-    'OTA',
-    'Travel Agency',
-    'Corporate',
-    'Reference',
-  ].includes(filterType);
+  useI18n()
+  const formId = useId()
+  const [filterType, setFilterType] = useState('Travel Agency')
+  const typeTabsRef = useRef(null)
+  useRevealActive(typeTabsRef, filterType)
+  const { bookingSources: sources = [], saveMaster, toggleMaster, access } = usePms()
+  const [draft, setDraft] = useState(null)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+  const working = useRef(false)
+  const { rememberTrigger, requestRestore, cancelRestore } = useEditorFocus(draft, busy)
+  const canWrite = access('settings.write').allowed
+  const filteredSources = sources.filter((source) => source.type === filterType)
+  const showCommissionAndEmail = ['OTA', 'Travel Agency', 'Corporate', 'Reference'].includes(
+    filterType,
+  )
 
   const openEditor = (event, row) => {
-    if (working.current || !canWrite) return;
-    rememberTrigger(event.currentTarget);
-    setDraft(
-      row
-        ? { ...row, email: row.email || '' }
-        : { name: '', commission: 0, email: '' },
-    );
-    setError('');
-    setMessage('');
-  };
+    if (working.current || !canWrite) return
+    rememberTrigger(event.currentTarget)
+    setDraft(row ? { ...row, email: row.email || '' } : { name: '', commission: 0, email: '' })
+    setError('')
+    setMessage('')
+  }
   const closeEditor = () => {
-    requestRestore();
-    setDraft(null);
-    setError('');
-  };
+    requestRestore()
+    setDraft(null)
+    setError('')
+  }
   const toggleSource = async (row) => {
-    if (working.current || !canWrite) return;
-    working.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    if (working.current || !canWrite) return
+    working.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      await toggleMaster('bookingSources', row.id);
+      await toggleMaster('bookingSources', row.id)
       setDraft((current) =>
-        current?.id === row.id
-          ? { ...current, active: row.active === false }
-          : current,
-      );
-      setMessage(tUi('settings.sourceStatusSaved'));
+        current?.id === row.id ? { ...current, active: row.active === false } : current,
+      )
+      setMessage(tUi('settings.sourceStatusSaved'))
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      working.current = false;
-      setBusy(false);
+      working.current = false
+      setBusy(false)
     }
-  };
+  }
   const save = async (event) => {
-    event.preventDefault();
-    if (working.current || !canWrite || !draft) return;
-    working.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (working.current || !canWrite || !draft) return
+    working.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
       await saveMaster('bookingSources', {
         ...draft,
         type: filterType,
         commission: catalogNumericInput('commission', draft.commission),
         email: draft.email?.trim() ? emailInput(draft.email) : '',
-      });
-      closeEditor();
-      setMessage(tUi('settings.sourceSaved'));
+      })
+      closeEditor()
+      setMessage(tUi('settings.sourceSaved'))
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      working.current = false;
-      setBusy(false);
+      working.current = false
+      setBusy(false)
     }
-  };
+  }
 
   return (
-    <section
-      className="pms-catalog"
-      aria-labelledby={`${formId}-title`}
-      aria-busy={busy}
-    >
+    <section className="pms-catalog" aria-labelledby={`${formId}-title`} aria-busy={busy}>
       <header className="pms-catalog-heading">
         <div>
           <h2 id={`${formId}-title`}>
@@ -690,7 +692,7 @@ export function BookingSources() {
               className="pms-catalog-button"
               aria-disabled={busy}
               onClick={(event) => {
-                if (busy) event.preventDefault();
+                if (busy) event.preventDefault()
               }}
             >
               <RefreshCw size={16} aria-hidden="true" />
@@ -716,25 +718,23 @@ export function BookingSources() {
         role="group"
         aria-label={tUi('common.type')}
       >
-        {['Travel Agency', 'Corporate', 'OTA', 'Direct', 'Reference'].map(
-          (type) => (
-            <button
-              key={type}
-              type="button"
-              aria-pressed={filterType === type}
-              disabled={busy}
-              onClick={() => {
-                cancelRestore();
-                setFilterType(type);
-                setDraft(null);
-                setError('');
-                setMessage('');
-              }}
-            >
-              {type}
-            </button>
-          ),
-        )}
+        {['Travel Agency', 'Corporate', 'OTA', 'Direct', 'Reference'].map((type) => (
+          <button
+            key={type}
+            type="button"
+            aria-pressed={filterType === type}
+            disabled={busy}
+            onClick={() => {
+              cancelRestore()
+              setFilterType(type)
+              setDraft(null)
+              setError('')
+              setMessage('')
+            }}
+          >
+            {type}
+          </button>
+        ))}
       </div>
       <CatalogNotice error={error} message={message} />
       {!canWrite && (
@@ -744,11 +744,7 @@ export function BookingSources() {
       )}
 
       {canWrite && draft && (
-        <form
-          className="pms-catalog-editor"
-          onSubmit={save}
-          data-workspace-draft
-        >
+        <form className="pms-catalog-editor" onSubmit={save} data-workspace-draft>
           <fieldset disabled={busy}>
             <div className="pms-catalog-editor-heading">
               <h3>
@@ -778,10 +774,7 @@ export function BookingSources() {
                   value={draft.name}
                   placeholder={tUi('settings.sourceName')}
                   onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
+                    setDraft((current) => ({ ...current, name: event.target.value }))
                   }
                 />
               </div>
@@ -789,8 +782,7 @@ export function BookingSources() {
                 <>
                   <div className="pms-catalog-field">
                     <label htmlFor={`${formId}-commission`}>
-                      {tUi('settings.commissionPercent')}{' '}
-                      <span aria-hidden="true">*</span>
+                      {tUi('settings.commissionPercent')} <span aria-hidden="true">*</span>
                     </label>
                     <input
                       id={`${formId}-commission`}
@@ -801,17 +793,12 @@ export function BookingSources() {
                       required
                       value={draft.commission}
                       onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          commission: event.target.value,
-                        }))
+                        setDraft((current) => ({ ...current, commission: event.target.value }))
                       }
                     />
                   </div>
                   <div className="pms-catalog-field is-wide">
-                    <label htmlFor={`${formId}-email`}>
-                      {tUi('settings.sourceEmail')}
-                    </label>
+                    <label htmlFor={`${formId}-email`}>{tUi('settings.sourceEmail')}</label>
                     <input
                       id={`${formId}-email`}
                       type="email"
@@ -820,24 +807,15 @@ export function BookingSources() {
                       value={draft.email}
                       placeholder={tUi('settings.optionalEmail')}
                       onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          email: event.target.value,
-                        }))
+                        setDraft((current) => ({ ...current, email: event.target.value }))
                       }
                     />
                   </div>
                 </>
               )}
             </div>
-            <p className="pms-catalog-required-hint">
-              {tUi('inventorySettings.requiredHint')}
-            </p>
-            <EditorFooter
-              busy={busy}
-              editing={Boolean(draft.id)}
-              onCancel={closeEditor}
-            />
+            <p className="pms-catalog-required-hint">{tUi('inventorySettings.requiredHint')}</p>
+            <EditorFooter busy={busy} editing={Boolean(draft.id)} onCancel={closeEditor} />
           </fieldset>
         </form>
       )}
@@ -878,18 +856,11 @@ export function BookingSources() {
             </thead>
             <tbody>
               {filteredSources.map((source) => (
-                <tr
-                  key={source.id}
-                  className={
-                    source.active === false ? 'is-inactive' : undefined
-                  }
-                >
+                <tr key={source.id} className={source.active === false ? 'is-inactive' : undefined}>
                   <td className="pms-catalog-name">{source.name}</td>
                   {showCommissionAndEmail && (
                     <>
-                      <td className="pms-catalog-number">
-                        {source.commission}%
-                      </td>
+                      <td className="pms-catalog-number">{source.commission}%</td>
                       <td>{source.email || '—'}</td>
                     </>
                   )}
@@ -927,5 +898,5 @@ export function BookingSources() {
         <CatalogEmpty filtered={false} />
       )}
     </section>
-  );
+  )
 }

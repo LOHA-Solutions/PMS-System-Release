@@ -82,7 +82,7 @@ def revision_identity(entity, property_id):
         inserted = (
             inserted.replace(tzinfo=UTC) if inserted.tzinfo is None else inserted.astimezone(UTC)
         )
-    except KeyError, ValueError, TypeError, AttributeError, OverflowError:
+    except (KeyError, ValueError, TypeError, AttributeError, OverflowError):
         invalid("invalid_booking_revision")
     return {
         "id": identifier(entity.get("id")),
@@ -109,8 +109,14 @@ def financial_lines(items, kind):
             description = text(item.get("name"), 200, required=True)
         except ApiError:
             invalid("booking_financial_extras_unsupported")
-        lines.append({"kind": kind, "description": description, "amount": amount,
-                      "included": item["is_inclusive"] if kind == "tax" else False})
+        lines.append(
+            {
+                "kind": kind,
+                "description": description,
+                "amount": amount,
+                "included": item["is_inclusive"] if kind == "tax" else False,
+            }
+        )
     return lines
 
 
@@ -148,7 +154,9 @@ def normalize(entity, property_id):
         prices = {day: money_value(value, allow_zero=True) for day, value in prices.items()}
         if sum(prices.values(), Decimal(0)) != money_value(room.get("amount"), allow_zero=True):
             invalid("booking_amount_mismatch")
-        room_extras = financial_lines(room.get("taxes"), "tax") + financial_lines(room.get("services"), "service")
+        room_extras = financial_lines(room.get("taxes"), "tax") + financial_lines(
+            room.get("services"), "service"
+        )
         included = sum((line["amount"] for line in room_extras if line["included"]), Decimal(0))
         if included > sum(prices.values(), Decimal(0)):
             invalid("booking_amount_mismatch")
@@ -176,7 +184,11 @@ def normalize(entity, property_id):
             }
         )
     amount = money_value(raw.get("amount"), allow_zero=True)
-    if sum((sum(r["prices"].values(), Decimal(0)) for r in parsed), Decimal(0)) + sum((line["amount"] for line in extras), Decimal(0)) != amount:
+    if (
+        sum((sum(r["prices"].values(), Decimal(0)) for r in parsed), Decimal(0))
+        + sum((line["amount"] for line in extras), Decimal(0))
+        != amount
+    ):
         invalid("booking_amount_mismatch")
     commission = raw.get("ota_commission")
     if commission is not None:
@@ -240,12 +252,21 @@ def review_details(entity):
     details["paymentCollect"] = value(raw.get("payment_collect"), 20)
 
     def extras(items):
-        return [
-            {"name": value(line.get("name"), 200), "totalPrice": value(line.get("total_price"), 48),
-             "type": value(line.get("type"), 80), "included": line.get("is_inclusive") is True,
-             "withheld": line.get("is_withheld") is True}
-            for line in items[:100] if isinstance(line, dict)
-        ] if isinstance(items, list) else []
+        return (
+            [
+                {
+                    "name": value(line.get("name"), 200),
+                    "totalPrice": value(line.get("total_price"), 48),
+                    "type": value(line.get("type"), 80),
+                    "included": line.get("is_inclusive") is True,
+                    "withheld": line.get("is_withheld") is True,
+                }
+                for line in items[:100]
+                if isinstance(line, dict)
+            ]
+            if isinstance(items, list)
+            else []
+        )
 
     details["services"] = extras(raw.get("services"))
     details["taxes"] = extras(raw.get("taxes"))
@@ -270,7 +291,9 @@ def review_details(entity):
                     day: value(amount, 48)
                     for day, amount in list(room["days"].items())[:366]
                     if isinstance(day, str) and len(day) == 10
-                } if isinstance(room.get("days"), dict) else {},
+                }
+                if isinstance(room.get("days"), dict)
+                else {},
                 "occupancy": {
                     key: occupancy.get(key)
                     for key in ("adults", "children", "infants")
@@ -283,7 +306,9 @@ def review_details(entity):
     return details
 
 
-def import_revision(tenant_id, entity, property_id, *, retry_review=False, verify_cancellation=None):
+def import_revision(
+    tenant_id, entity, property_id, *, retry_review=False, verify_cancellation=None
+):
     # The tenant lock also serializes two first revisions before a booking link exists.
     lock_tenant(tenant_id)
     revision = revision_identity(entity, property_id)
@@ -390,9 +415,12 @@ def import_revision(tenant_id, entity, property_id, *, retry_review=False, verif
                     invalid("booking_requires_review")
                 if row and row.status == "CONFIRMED":
                     if db.session.scalar(
-                        select(Charge.id).where(
-                            Charge.tenant_id == tenant_id, Charge.reservation_id == row.id,
-                        ).limit(1)
+                        select(Charge.id)
+                        .where(
+                            Charge.tenant_id == tenant_id,
+                            Charge.reservation_id == row.id,
+                        )
+                        .limit(1)
                     ):
                         invalid("booking_requires_review")
                     from ..reconciliation.business_days import ensure_open_day
@@ -504,7 +532,8 @@ def import_revision(tenant_id, entity, property_id, *, retry_review=False, verif
                     booking_id=revision["bookingId"],
                     reservation_id=row.id if row else None,
                     outcome="cancelled"
-                    if pending_review.revision_id == watermark["id"] and watermark["status"] == "cancelled"
+                    if pending_review.revision_id == watermark["id"]
+                    and watermark["status"] == "cancelled"
                     else "stale",
                 )
             )
@@ -517,7 +546,9 @@ def apply_stay(tenant_id, revision, row):
 
     ensure_open_day(tenant_id, min(row.check_in, revision["start"]) if row else revision["start"])
     mappings = {}
-    for mapping in db.session.scalars(select(ChannelMapping).where(ChannelMapping.tenant_id == tenant_id)):
+    for mapping in db.session.scalars(
+        select(ChannelMapping).where(ChannelMapping.tenant_id == tenant_id)
+    ):
         for rate_id in [mapping.remote_rate_plan_id, *(mapping.inbound_rate_plan_ids or [])]:
             key = (mapping.remote_room_type_id, rate_id)
             if key in mappings and mappings[key].id != mapping.id:
@@ -525,9 +556,11 @@ def apply_stay(tenant_id, revision, row):
             mappings[key] = mapping
     previous_commission = (row.pricing_snapshot or {}).get("commission") if row else None
     if (
-        previous_commission and "providerAmount" in previous_commission
+        previous_commission
+        and "providerAmount" in previous_commission
         and revision["otaCommission"] is None
-        and revision["amount"] != Decimal((row.pricing_snapshot.get("channel") or {}).get("amount", "-1"))
+        and revision["amount"]
+        != Decimal((row.pricing_snapshot.get("channel") or {}).get("amount", "-1"))
     ):
         invalid("booking_commission_missing")
     for room in revision["rooms"]:
@@ -640,11 +673,14 @@ def apply_stay(tenant_id, revision, row):
             "exchangeRate": str(snapshot["exchange_rate"]),
             "baseAmount": str(snapshot["base_amount"]),
             "paymentCollect": revision["paymentCollect"],
-            "otaCommission": str(revision["otaCommission"]) if revision["otaCommission"] is not None else None,
+            "otaCommission": str(revision["otaCommission"])
+            if revision["otaCommission"] is not None
+            else None,
             "extras": [{**line, "amount": str(line["amount"])} for line in revision["extras"]],
             "rooms": [
                 {
-                    "roomTypeId": room["typeId"], "ratePlanId": room["rateId"],
+                    "roomTypeId": room["typeId"],
+                    "ratePlanId": room["rateId"],
                     "days": {day: str(amount) for day, amount in room["providerPrices"].items()},
                 }
                 for room in revision["rooms"]
@@ -730,14 +766,26 @@ def apply_stay(tenant_id, revision, row):
     from flask import g
 
     for line in revision["extras"]:
-        db.session.add(Charge(
-            tenant_id=tenant_id, reservation_id=row.id, description=line["description"],
-            kind=line["kind"], quantity=1, unit_price=line["amount"], amount=line["amount"],
-            currency=row.currency, user_id=g.user.id,
-            **snapshot_money(tenant_id, row.currency, line["amount"], source=row),
-        ))
+        db.session.add(
+            Charge(
+                tenant_id=tenant_id,
+                reservation_id=row.id,
+                description=line["description"],
+                kind=line["kind"],
+                quantity=1,
+                unit_price=line["amount"],
+                amount=line["amount"],
+                currency=row.currency,
+                user_id=g.user.id,
+                **snapshot_money(tenant_id, row.currency, line["amount"], source=row),
+            )
+        )
     row.base_amount = sum((Decimal(n["baseAmount"]) for n in nightly), Decimal(0)) + sum(
-        (snapshot_money(tenant_id, row.currency, line["amount"], source=row)["base_amount"] for line in revision["extras"]), Decimal(0)
+        (
+            snapshot_money(tenant_id, row.currency, line["amount"], source=row)["base_amount"]
+            for line in revision["extras"]
+        ),
+        Decimal(0),
     )
     row.pricing_snapshot = {
         **row.pricing_snapshot,

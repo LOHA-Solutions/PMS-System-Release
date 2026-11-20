@@ -1,11 +1,11 @@
-import LohaBrand from './LohaBrand';
-import { t, useI18n } from '../i18n/useI18n.js';
-import './RequestActivity.css';
-import './LohaLoading.css';
+import LohaBrand from './LohaBrand'
+import { t, useI18n } from '../i18n/useI18n.js'
+import './RequestActivity.css'
+import './LohaLoading.css'
 
 export default function LohaLoading({ message, fullPage = false }) {
-  useI18n();
-  const Container = fullPage ? 'main' : 'section';
+  useI18n()
+  const Container = fullPage ? 'main' : 'section'
   return (
     <Container
       className={`loha-loading${fullPage ? ' loha-loading-full' : ''}`}
@@ -22,5 +22,5 @@ export default function LohaLoading({ message, fullPage = false }) {
         <p className="loha-loading-hint">{t('system.preparingWorkspace')}</p>
       </div>
     </Container>
-  );
+  )
 }

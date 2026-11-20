@@ -1,7 +1,7 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { Plus } from 'lucide-react'
 
 export default function ManualTaskForm({
   initial,
@@ -13,59 +13,50 @@ export default function ManualTaskForm({
   onSave,
   onClose,
 }) {
-  useI18n();
+  useI18n()
   const [form, setForm] = useState({
     date: initial.date,
-    room: '',
+    room: initial.room ? String(initial.room) : '',
     staffId: initial.staffId || '',
     shiftId: '',
     note: '',
-  });
-  const [loaded, setLoaded] = useState({ date: '', shifts: [], error: '' });
-  const [retry, setRetry] = useState(0);
-  const request = useRef(requestTenant);
+  })
+  const [loaded, setLoaded] = useState({ date: '', shifts: [], error: '' })
+  const [retry, setRetry] = useState(0)
+  const request = useRef(requestTenant)
   useEffect(() => {
-    request.current = requestTenant;
-  }, [requestTenant]);
+    request.current = requestTenant
+  }, [requestTenant])
   useEffect(() => {
-    let active = true;
+    let active = true
     if (form.date)
       request
-        .current(
-          '/housekeeping/shifts?' + new URLSearchParams({ date: form.date }),
-        )
+        .current('/housekeeping/shifts?' + new URLSearchParams({ date: form.date }))
         .then((data) => {
-          if (active)
-            setLoaded({ date: form.date, shifts: data.shifts, error: '' });
+          if (active) setLoaded({ date: form.date, shifts: data.shifts, error: '' })
         })
         .catch((err) => {
-          if (active)
-            setLoaded({ date: form.date, shifts: [], error: err.message });
-        });
+          if (active) setLoaded({ date: form.date, shifts: [], error: err.message })
+        })
     return () => {
-      active = false;
-    };
-  }, [form.date, shiftsSource, retry]);
-  const loading = Boolean(form.date) && loaded.date !== form.date;
+      active = false
+    }
+  }, [form.date, shiftsSource, retry])
+  const loading = Boolean(form.date) && loaded.date !== form.date
   const shifts = loaded.shifts.filter(
-    (row) =>
-      row.active && row.staffId === form.staffId && row.date === form.date,
-  );
+    (row) => row.active && row.staffId === form.staffId && row.date === form.date,
+  )
   const setField = (field, value) =>
     setForm((previous) => ({
       ...previous,
       [field]: value,
       ...(['date', 'staffId'].includes(field) ? { shiftId: '' } : {}),
-    }));
+    }))
   return (
     <form
       onSubmit={(event) => {
-        event.preventDefault();
-        onSave({
-          ...form,
-          staffId: form.staffId || null,
-          shiftId: form.shiftId || null,
-        });
+        event.preventDefault()
+        onSave({ ...form, staffId: form.staffId || null, shiftId: form.shiftId || null })
       }}
       data-workspace-draft
     >
@@ -74,11 +65,7 @@ export default function ManualTaskForm({
         <div className="hk-plan-fields">
           <label>
             {tUi('hk.workDate')}
-            <DateInput
-              required
-              value={form.date}
-              onChange={(value) => setField('date', value)}
-            />
+            <DateInput required value={form.date} onChange={(value) => setField('date', value)} />
           </label>
           <label>
             {tUi('hk.roomToClean')}
@@ -124,9 +111,7 @@ export default function ManualTaskForm({
               disabled={!form.staffId || loading || Boolean(loaded.error)}
               onChange={(event) => setField('shiftId', event.target.value)}
             >
-              <option value="">
-                {loading ? tUi('hk.loadingShifts') : tUi('hk.noShift')}
-              </option>
+              <option value="">{loading ? tUi('hk.loadingShifts') : tUi('hk.noShift')}</option>
               {shifts.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.startTime} – {row.endTime}
@@ -151,8 +136,8 @@ export default function ManualTaskForm({
             <button
               type="button"
               onClick={() => {
-                setLoaded({ date: '', shifts: [], error: '' });
-                setRetry((value) => value + 1);
+                setLoaded({ date: '', shifts: [], error: '' })
+                setRetry((value) => value + 1)
               }}
             >
               {tUi('hk.reloadShifts')}
@@ -164,16 +149,12 @@ export default function ManualTaskForm({
           <button type="button" onClick={onClose}>
             {tUi('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="primary"
-            disabled={loading || Boolean(loaded.error)}
-          >
+          <button type="submit" className="primary" disabled={loading || Boolean(loaded.error)}>
             <Plus size={16} aria-hidden="true" />
             {busy ? tUi('common.creating') : tUi('hk.createTask')}
           </button>
         </div>
       </fieldset>
     </form>
-  );
+  )
 }

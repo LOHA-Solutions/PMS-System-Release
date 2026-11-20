@@ -1,98 +1,150 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate } from '../../../../shared/lib/date.js';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate } from '../../../../shared/lib/date.js'
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { usePms } from '../../data/usePms'
+import { nights, money as formatMoney, today } from '../../data/model'
+import { useInventoryQuery } from '../../inventory/useInventoryQuery'
+import { rateRangeError } from '../rateRange'
+import { dateRangeParams } from '../../../../shared/lib/dateRangeQuery.js'
 import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useState } from 'react';
-import { usePms } from '../../data/usePms';
-import { today, addDays, nights, money as formatMoney } from '../../data/model';
-import { useInventoryQuery } from '../../inventory/useInventoryQuery';
-import { rateRangeError } from '../rateRange';
-import { dateRangeParams } from '../../../../shared/lib/dateRangeQuery.js';
-import '../../components/DomainForms.css';
-import '../RatesInventory.css';
+  RATE_PARAM,
+  rateTypeIssue,
+  rateTypeStatus,
+  readRateParams,
+  safeAddDays,
+  useRateView,
+} from '../rateModes.js'
+import RateModeNav from '../components/RateModeNav.jsx'
+import '../../components/DomainForms.css'
+import '../RatesInventory.css'
 
 export default function NightlyRates() {
-  const { tenantId, user } = usePms();
-  return <NightlyEditor key={`${tenantId}:${user?.id}`} />;
+  const { tenantId, user, authGeneration } = usePms()
+  return <NightlyEditor key={`${tenantId}:${user?.id}:${authGeneration}`} />
 }
 
 function NightlyEditor() {
-  useI18n();
-  const {
-    roomTypes,
-    rooms,
-    roomBlocks,
-    settings,
-    access,
-    saveRate,
-    addBlock,
-    deleteBlock,
-  } = usePms();
-  const activeTypes = roomTypes.filter((type) => type.active !== false);
-  const activeRooms = rooms.filter((room) => room.active !== false);
-  const [range, setRange] = useState({
-    start: today(settings.timezone),
-    end: addDays(today(settings.timezone), 7),
-  });
-  const [rate, setRate] = useState({
-    roomTypeId: activeTypes[0]?.id || '',
-    price: '',
-    stopSell: false,
-  });
-  const [block, setBlock] = useState({
-    room: activeRooms[0]?.id || '',
-    reason: '',
-  });
+  useI18n()
+  const { roomTypes, rooms, roomBlocks, settings, access, saveRate, addBlock, deleteBlock } =
+    usePms()
+  const activeTypes = roomTypes.filter((type) => type.active !== false)
+  const activeRooms = rooms.filter((room) => room.active !== false)
+  const view = useRateView({ timezone: settings.timezone, defaultNights: 7 })
+  const range = view.range
+  const [rate, setRate] = useState({ price: '', stopSell: false })
+  const [block, setBlock] = useState({ room: activeRooms[0]?.id || '', reason: '' })
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
-  const [feedbackGroup, setFeedbackGroup] = useState('rates');
+    [notice, setNotice] = useState('')
+  const [feedbackGroup, setFeedbackGroup] = useState('rates')
+  const [preview, setPreview] = useState(null),
+    inFlight = useRef(false)
   const [startValid, setStartValid] = useState(true),
-    [endValid, setEndValid] = useState(true);
-  const rangeError =
-    !startValid || !endValid
-      ? labelUi('Ngày không hợp lệ.')
-      : rateRangeError(range);
-  const query = useInventoryQuery(
-    rangeError ? null : '/rates?' + dateRangeParams(range),
-  );
-  const rows = query.data?.rates || [];
-  const canWrite = access('settings.write', 'ARI_MANAGEMENT', true).allowed;
+    [endValid, setEndValid] = useState(true)
+  // Date and type problems are separated so a bad rateType stays fixable via its select
+  // and never blocks the independent room-block form; date issues still block every read/write.
+  const [searchParams] = useSearchParams()
+  const dateParams = new URLSearchParams(searchParams)
+  dateParams.delete(RATE_PARAM.type)
+  const dateUrlError = readRateParams(dateParams, {
+    todayDate: today(settings.timezone),
+    defaultNights: 7,
+  }).urlError
+  const typeDuplicate = searchParams.getAll(RATE_PARAM.type).length > 1
+  const typeStatus = typeDuplicate ? 'duplicate' : rateTypeStatus(roomTypes, view.typeId)
+  const typeError = typeDuplicate
+    ? 'Tham số loại phòng trong liên kết bị lặp. Chọn lại một loại phòng đang hoạt động.'
+    : rateTypeIssue(typeStatus)
+  const dateError =
+    dateUrlError ||
+    (!startValid || !endValid ? labelUi('Ngày không hợp lệ.') : rateRangeError(range))
+  const rangeError = dateError || typeError
+  const query = useInventoryQuery(dateError ? null : '/rates?' + dateRangeParams(range))
+  const rows = query.data?.rates || []
+  const canWrite = access('settings.write', 'ARI_MANAGEMENT', true).allowed
+  const selectedType = view.typeId || activeTypes[0]?.id || ''
+  // Invalid/duplicate types render a disabled placeholder so choosing any active type is a real change.
+  const typePlaceholder = typeDuplicate ? '' : typeError ? view.typeId : null
+  const fingerprint = JSON.stringify([
+    range,
+    selectedType,
+    rate.price,
+    rate.stopSell,
+    settings.currency,
+  ])
+  const shownPreview = preview?.key === fingerprint && canWrite && !rangeError ? preview : null
+  const rateLocked =
+    busy ||
+    !canWrite ||
+    Boolean(rangeError) ||
+    query.loading ||
+    Boolean(query.error) ||
+    !activeTypes.length
+  function previewRate() {
+    if (
+      inFlight.current ||
+      !canWrite ||
+      rangeError ||
+      query.loading ||
+      query.error ||
+      !activeTypes.some((row) => row.id === selectedType)
+    )
+      return
+    try {
+      setPreview({
+        key: fingerprint,
+        body: { ...range, ...rate, roomTypeId: selectedType, price: decimalInput(rate.price) },
+        currency: settings.currency,
+      })
+      setError('')
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   async function run(action, message, requiresRange = true, group = 'rates') {
-    if (busy || !canWrite || (requiresRange && rangeError)) return;
-    setBusy(true);
-    setError('');
-    setNotice('');
-    setFeedbackGroup(group);
+    if (
+      inFlight.current ||
+      !canWrite ||
+      (requiresRange && (group === 'blocks' ? dateError : rangeError))
+    )
+      return false
+    inFlight.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
+    setFeedbackGroup(group)
     try {
-      await action();
-      query.refresh();
-      setNotice(message);
+      await action()
+      query.refresh()
+      setNotice(message)
+      return true
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
+      return false
     } finally {
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
 
   return (
-    <section
-      className="rates-nightly"
-      aria-label={labelUi('Giá theo ngày và khóa phòng')}
-    >
+    <section className="rates-nightly" aria-label={labelUi('Giá theo ngày và khóa phòng')}>
+      {/* Carry only an explicit, valid type; the implicit first-type default must not narrow the matrix. */}
+      <RateModeNav
+        current="form"
+        busy={busy || !startValid || !endValid}
+        context={{ ...range, typeId: typeStatus === 'active' ? view.typeId : undefined }}
+      />
       <section className="domain-panel">
         <div className="rates-section-heading">
           <div>
             <h2>{labelUi('Giá theo ngày')}</h2>
             <p>
-              {labelUi(
-                'Áp dụng giá riêng hoặc dừng bán một loại phòng trong khoảng ngày đã chọn.',
-              )}
+              {labelUi('Áp dụng giá riêng hoặc dừng bán một loại phòng trong khoảng ngày đã chọn.')}
             </p>
           </div>
         </div>
@@ -104,7 +156,7 @@ function NightlyEditor() {
               required
               disabled={busy}
               value={range.start}
-              onChange={(start) => setRange((old) => ({ ...old, start }))}
+              onChange={(start) => view.update({ start })}
               onValidityChange={setStartValid}
             />
           </label>
@@ -114,22 +166,22 @@ function NightlyEditor() {
               aria-label={labelUi('Giá đến ngày')}
               required
               disabled={busy}
-              min={range.start ? addDays(range.start, 1) : undefined}
-              max={range.start ? addDays(range.start, 366) : undefined}
+              min={safeAddDays(range.start, 1)}
+              max={safeAddDays(range.start, 366)}
               value={range.end}
-              onChange={(end) => setRange((old) => ({ ...old, end }))}
+              onChange={(end) => view.update({ end })}
               onValidityChange={setEndValid}
             />
           </label>
         </div>
-        {rangeError ? (
+        {dateError ? (
           <p className="domain-error" role="alert">
-            {rangeError}
+            {dateError}
           </p>
         ) : (
           <p className="rates-muted">
-            Áp dụng cho {nights(range.start, range.end)} đêm. Ngày kết thúc
-            không nằm trong khoảng áp dụng.
+            Áp dụng cho {nights(range.start, range.end)} đêm. Ngày kết thúc không nằm trong khoảng
+            áp dụng.
           </p>
         )}
         {((feedbackGroup === 'rates' && error) || query.error) && (
@@ -144,53 +196,41 @@ function NightlyEditor() {
         )}
         {!canWrite && (
           <p className="rates-notice">
-            {labelUi(
-              'Bạn có quyền xem. Cần quyền quản lý để thay đổi giá hoặc khóa phòng.',
-            )}
+            {labelUi('Bạn có quyền xem. Cần quyền quản lý để thay đổi giá hoặc khóa phòng.')}
           </p>
         )}
         <form
           onSubmit={(event) => {
-            event.preventDefault();
-            run(
-              () =>
-                saveRate({
-                  ...range,
-                  ...rate,
-                  price: decimalInput(rate.price),
-                }),
-              'Đã cập nhật giá và trạng thái bán trong khoảng ngày đã chọn.',
-            );
+            event.preventDefault()
+            previewRate()
           }}
         >
-          <fieldset
-            className="rates-form-section"
-            disabled={
-              busy ||
-              !canWrite ||
-              Boolean(rangeError) ||
-              query.loading ||
-              Boolean(query.error) ||
-              !activeTypes.length
-            }
-          >
+          <fieldset className="rates-form-section" disabled={busy}>
+            {typeError && (
+              <p className="domain-error" role="alert" id="nightly-type-error">
+                {typeError}
+              </p>
+            )}
             <div className="rates-form-grid">
               <label>
                 {tUi('common.roomType')}
                 <select
                   aria-label={labelUi('Loại phòng áp dụng giá')}
                   required
-                  value={rate.roomTypeId}
-                  onChange={(event) =>
-                    setRate((old) => ({
-                      ...old,
-                      roomTypeId: event.target.value,
-                    }))
-                  }
+                  disabled={busy || !activeTypes.length}
+                  aria-invalid={Boolean(typeError)}
+                  aria-describedby={typeError ? 'nightly-type-error' : undefined}
+                  value={typePlaceholder ?? selectedType}
+                  onChange={(event) => view.update({ typeId: event.target.value })}
                 >
-                  {!activeTypes.length && (
-                    <option value="">{labelUi('Chưa có loại phòng')}</option>
+                  {typePlaceholder !== null && (
+                    <option value={typePlaceholder} disabled>
+                      {typeDuplicate
+                        ? 'Chọn lại loại phòng'
+                        : 'Loại phòng không hợp lệ: ' + view.typeId}
+                    </option>
                   )}
+                  {!activeTypes.length && <option value="">{labelUi('Chưa có loại phòng')}</option>}
                   {activeTypes.map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.name}
@@ -203,15 +243,14 @@ function NightlyEditor() {
                 <input
                   aria-label={labelUi('Giá từng đêm')}
                   required
+                  disabled={rateLocked}
                   type="text"
                   inputMode="decimal"
                   pattern="[0-9]{1,15}([.][0-9]{1,4})?"
                   maxLength={20}
                   placeholder={labelUi('Nhập giá áp dụng')}
                   value={rate.price}
-                  onChange={(event) =>
-                    setRate((old) => ({ ...old, price: event.target.value }))
-                  }
+                  onChange={(event) => setRate((old) => ({ ...old, price: event.target.value }))}
                 />
               </label>
             </div>
@@ -219,28 +258,64 @@ function NightlyEditor() {
               <label className="rates-checkbox">
                 <input
                   type="checkbox"
+                  disabled={rateLocked}
                   checked={rate.stopSell}
                   onChange={(event) =>
-                    setRate((old) => ({
-                      ...old,
-                      stopSell: event.target.checked,
-                    }))
+                    setRate((old) => ({ ...old, stopSell: event.target.checked }))
                   }
                 />
                 {labelUi('Dừng bán loại phòng trong khoảng ngày này')}
               </label>
-              <button type="submit" className="primary">
+              <button type="submit" className="primary" disabled={rateLocked}>
                 {busy ? tUi('common.saving') : labelUi('Áp dụng giá theo ngày')}
               </button>
             </div>
           </fieldset>
         </form>
+        {shownPreview && (
+          <section className="rates-notice" aria-label="Xem trước cập nhật giá">
+            <h3>Xem trước cập nhật giá</h3>
+            <p>
+              {activeTypes.find((row) => row.id === selectedType)?.name} · {formatDate(range.start)}{' '}
+              – {formatDate(range.end)} (không gồm ngày cuối) · {nights(range.start, range.end)} đêm
+              · {formatMoney(shownPreview.body.price, shownPreview.currency)} / đêm ·{' '}
+              {shownPreview.body.stopSell ? 'Dừng bán' : 'Mở bán'}
+            </p>
+            <button
+              type="button"
+              className="primary"
+              disabled={busy || query.loading || Boolean(query.error)}
+              onClick={async () => {
+                if (
+                  !shownPreview ||
+                  shownPreview.key !== fingerprint ||
+                  query.loading ||
+                  query.error ||
+                  !activeTypes.some((row) => row.id === selectedType)
+                )
+                  return
+                if (
+                  await run(
+                    () => saveRate(shownPreview.body),
+                    'Đã cập nhật giá và trạng thái bán trong khoảng ngày đã chọn.',
+                  )
+                )
+                  setPreview(null)
+              }}
+            >
+              Xác nhận cập nhật giá
+            </button>
+            <button type="button" disabled={busy} onClick={() => setPreview(null)}>
+              Hủy xem trước
+            </button>
+          </section>
+        )}
         {query.loading ? (
           <p className="rates-empty" role="status">
             {labelUi('Đang tải giá theo ngày…')}
           </p>
         ) : (
-          !rangeError &&
+          !dateError &&
           !query.error && (
             <details className="rates-details">
               <summary>Xem giá áp dụng theo ngày ({rows.length} dòng)</summary>
@@ -259,9 +334,7 @@ function NightlyEditor() {
                       rows.map((row) => (
                         <tr key={row.roomTypeId + row.date}>
                           <td>
-                            {roomTypes.find(
-                              (type) => type.id === row.roomTypeId,
-                            )?.name ||
+                            {roomTypes.find((type) => type.id === row.roomTypeId)?.name ||
                               labelUi('Loại phòng không còn hoạt động')}
                           </td>
                           <td>{formatDate(row.date)}</td>
@@ -270,9 +343,7 @@ function NightlyEditor() {
                             <span
                               className={`rates-badge ${row.stopSell ? 'is-paused' : 'is-active'}`}
                             >
-                              {row.stopSell
-                                ? tUi('rates.stopSell')
-                                : labelUi('Đang bán')}
+                              {row.stopSell ? tUi('rates.stopSell') : labelUi('Đang bán')}
                             </span>
                           </td>
                         </tr>
@@ -321,13 +392,13 @@ function NightlyEditor() {
         )}
         <form
           onSubmit={(event) => {
-            event.preventDefault();
+            event.preventDefault()
             run(
               () => addBlock({ ...range, ...block }),
               'Đã khóa phòng trong khoảng ngày đã chọn.',
               true,
               'blocks',
-            );
+            )
           }}
         >
           <fieldset
@@ -335,7 +406,7 @@ function NightlyEditor() {
             disabled={
               busy ||
               !canWrite ||
-              Boolean(rangeError) ||
+              Boolean(dateError) ||
               query.loading ||
               Boolean(query.error) ||
               !activeRooms.length
@@ -348,13 +419,9 @@ function NightlyEditor() {
                   aria-label={labelUi('Phòng cần khóa')}
                   required
                   value={block.room}
-                  onChange={(event) =>
-                    setBlock((old) => ({ ...old, room: event.target.value }))
-                  }
+                  onChange={(event) => setBlock((old) => ({ ...old, room: event.target.value }))}
                 >
-                  {!activeRooms.length && (
-                    <option value="">{labelUi('Chưa có phòng')}</option>
-                  )}
+                  {!activeRooms.length && <option value="">{labelUi('Chưa có phòng')}</option>}
                   {activeRooms.map((room) => (
                     <option key={room.id} value={room.id}>
                       {tUi('common.room')} {room.id}
@@ -371,17 +438,13 @@ function NightlyEditor() {
                   maxLength="500"
                   placeholder={labelUi('Ví dụ: bảo trì hoặc sửa chữa')}
                   value={block.reason}
-                  onChange={(event) =>
-                    setBlock((old) => ({ ...old, reason: event.target.value }))
-                  }
+                  onChange={(event) => setBlock((old) => ({ ...old, reason: event.target.value }))}
                 />
               </label>
             </div>
             <div className="rates-form-actions">
               <span className="rates-muted">
-                {labelUi(
-                  'Phòng có đặt chỗ trong khoảng này sẽ không thể khóa.',
-                )}
+                {labelUi('Phòng có đặt chỗ trong khoảng này sẽ không thể khóa.')}
               </span>
               <button type="submit" className="primary">
                 {busy ? tUi('common.saving') : labelUi('Khóa phòng')}
@@ -391,9 +454,7 @@ function NightlyEditor() {
         </form>
         <div className="rates-section-heading">
           <h3>{labelUi('Các khoảng khóa phòng')}</h3>
-          <span className="rates-muted">
-            {roomBlocks.length} khoảng đã cấu hình
-          </span>
+          <span className="rates-muted">{roomBlocks.length} khoảng đã cấu hình</span>
         </div>
         <div className="rates-scroll">
           <table>
@@ -449,5 +510,5 @@ function NightlyEditor() {
         </div>
       </section>
     </section>
-  );
+  )
 }

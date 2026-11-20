@@ -11,9 +11,9 @@
 .pms-shell
   .pms-main
   :is(
-    input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not(
-        [type='range']
-      ):not([type='color']),
+    input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='range']):not(
+        [type='color']
+      ),
     select,
     textarea
   ) {
@@ -26,11 +26,7 @@
 
 .pms-shell
   .pms-main
-  :is(
-    input:not([type='checkbox']):not([type='radio']),
-    select,
-    textarea
-  ):focus-visible {
+  :is(input:not([type='checkbox']):not([type='radio']), select, textarea):focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
@@ -43,11 +39,7 @@
 }
 .pms-shell
   .pms-main
-  :is(
-    input:not([type='checkbox']):not([type='radio']),
-    select,
-    textarea
-  ):disabled {
+  :is(input:not([type='checkbox']):not([type='radio']), select, textarea):disabled {
   background-color: #f1f5f9;
   color: var(--text-muted);
 }
@@ -67,9 +59,7 @@
   border-radius: var(--pms-control-radius);
 }
 
-.pms-shell
-  .pms-main
-  :is(.domain-panel, .pms-profile-panel, .ota-panel, .pms-form-dialog) {
+.pms-shell .pms-main :is(.domain-panel, .pms-profile-panel, .ota-panel, .pms-form-dialog) {
   border-radius: var(--pms-panel-radius);
 }
 .pms-shell .pms-main .ota-button--primary {
@@ -85,9 +75,9 @@
   .pms-shell
     .pms-main
     :is(
-      input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not(
-          [type='range']
-        ):not([type='color']),
+      input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='range']):not(
+          [type='color']
+        ),
       select,
       textarea
     ) {

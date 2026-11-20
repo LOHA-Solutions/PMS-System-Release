@@ -1,10 +1,6 @@
-import { formatDateTime } from '../../../../shared/lib/date.js';
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
+import { formatDateTime } from '../../../../shared/lib/date.js'
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
 import {
   CheckCircle2,
   KeyRound,
@@ -14,120 +10,98 @@ import {
   Save,
   ShieldCheck,
   UserRound,
-} from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import {
-  passwordChangeInput,
-  profileName,
-} from '../../../pms/profile/pages/profileForm';
-import './AdminProfile.css';
+} from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import { passwordChangeInput, profileName } from '../../../pms/profile/pages/profileForm'
+import './AdminProfile.css'
 
-const dateText = (value) => formatDateTime(value);
-const emptyPasswords = { currentPassword: '', newPassword: '', confirm: '' };
+const dateText = (value) => formatDateTime(value)
+const emptyPasswords = { currentPassword: '', newPassword: '', confirm: '' }
 
 export default function AdminProfile() {
-  const { authGeneration } = usePms();
-  return <ProfileWorkspace key={authGeneration} />;
+  const { authGeneration } = usePms()
+  return <ProfileWorkspace key={authGeneration} />
 }
 
 function ProfileWorkspace() {
-  useI18n();
-  const {
-    user,
-    saveOwnProfile,
-    changePassword,
-    getOwnSessions,
-    revokeOtherSessions,
-  } = usePms();
-  const [name, setName] = useState(user?.name || '');
-  const [passwords, setPasswords] = useState(emptyPasswords);
-  const [sessionData, setSessionData] = useState({
-    revision: -1,
-    rows: [],
-    error: '',
-  });
-  const [revision, setRevision] = useState(0);
-  const [pending, setPending] = useState('');
-  const [feedback, setFeedback] = useState({});
-  const working = useRef(false);
+  useI18n()
+  const { user, saveOwnProfile, changePassword, getOwnSessions, revokeOtherSessions } = usePms()
+  const [name, setName] = useState(user?.name || '')
+  const [passwords, setPasswords] = useState(emptyPasswords)
+  const [sessionData, setSessionData] = useState({ revision: -1, rows: [], error: '' })
+  const [revision, setRevision] = useState(0)
+  const [pending, setPending] = useState('')
+  const [feedback, setFeedback] = useState({})
+  const working = useRef(false)
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
     getOwnSessions()
       .then((data) => {
-        if (!cancelled)
-          setSessionData({ revision, rows: data.sessions || [], error: '' });
+        if (!cancelled) setSessionData({ revision, rows: data.sessions || [], error: '' })
       })
       .catch((failure) => {
-        if (!cancelled)
-          setSessionData({ revision, rows: [], error: failure.message });
-      });
+        if (!cancelled) setSessionData({ revision, rows: [], error: failure.message })
+      })
     return () => {
-      cancelled = true;
-    };
-  }, [getOwnSessions, revision]);
-  const loading = sessionData.revision !== revision;
-  const sessions = loading ? [] : sessionData.rows;
-  const sessionError = loading ? '' : sessionData.error;
-  const busy = Boolean(pending);
-  const roleName =
-    user?.globalRole === 'SUPER_ADMIN' ? 'Super Admin' : 'System Manager';
+      cancelled = true
+    }
+  }, [getOwnSessions, revision])
+  const loading = sessionData.revision !== revision
+  const sessions = loading ? [] : sessionData.rows
+  const sessionError = loading ? '' : sessionData.error
+  const busy = Boolean(pending)
+  const roleName = user?.globalRole === 'SUPER_ADMIN' ? 'Super Admin' : 'System Manager'
   const initials = (user?.name || user?.email || 'LOHA')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
     .join('')
-    .toUpperCase();
+    .toUpperCase()
 
   async function run(section, action, success) {
-    if (working.current) return;
-    working.current = true;
-    setPending(section);
-    setFeedback((previous) => ({ ...previous, [section]: null }));
+    if (working.current) return
+    working.current = true
+    setPending(section)
+    setFeedback((previous) => ({ ...previous, [section]: null }))
     try {
-      await action();
-      setFeedback((previous) => ({
-        ...previous,
-        [section]: { message: success },
-      }));
+      await action()
+      setFeedback((previous) => ({ ...previous, [section]: { message: success } }))
     } catch (failure) {
-      setFeedback((previous) => ({
-        ...previous,
-        [section]: { error: failure.message },
-      }));
+      setFeedback((previous) => ({ ...previous, [section]: { error: failure.message } }))
     } finally {
-      working.current = false;
-      setPending('');
+      working.current = false
+      setPending('')
     }
   }
 
   function saveProfile(event) {
-    event.preventDefault();
+    event.preventDefault()
     run(
       'info',
       async () => {
-        const result = await saveOwnProfile(profileName(name));
-        setName(result.user.name);
+        const result = await saveOwnProfile(profileName(name))
+        setName(result.user.name)
       },
       tUi('profile.saved'),
-    );
+    )
   }
 
   function savePassword(event) {
-    event.preventDefault();
+    event.preventDefault()
     run(
       'password',
       async () => {
-        await changePassword(passwordChangeInput(passwords));
-        setPasswords(emptyPasswords);
-        setRevision((value) => value + 1);
+        await changePassword(passwordChangeInput(passwords))
+        setPasswords(emptyPasswords)
+        setRevision((value) => value + 1)
       },
       tUi('profile.passwordSaved'),
-    );
+    )
   }
 
   function renderFeedback(section) {
-    const status = feedback[section];
+    const status = feedback[section]
     return (
       status && (
         <p
@@ -138,25 +112,20 @@ function ProfileWorkspace() {
           {labelUi(status.error || status.message)}
         </p>
       )
-    );
+    )
   }
 
   return (
     <div className="manager-page manager-self-profile">
       <div className="manager-page-heading">
         <div>
-          <span className="manager-eyebrow">
-            {labelUi('Tài khoản quản trị')}
-          </span>
+          <span className="manager-eyebrow">{labelUi('Tài khoản quản trị')}</span>
           <h2>{labelUi('Hồ sơ & bảo mật')}</h2>
           <p>{labelUi('Thông tin cá nhân và các phiên đăng nhập của bạn.')}</p>
         </div>
       </div>
 
-      <section
-        className="manager-panel manager-profile-summary"
-        aria-label={tUi('nav.profile')}
-      >
+      <section className="manager-panel manager-profile-summary" aria-label={tUi('nav.profile')}>
         <span className="manager-profile-avatar" aria-hidden="true">
           {initials}
         </span>
@@ -255,10 +224,7 @@ function ProfileWorkspace() {
                 value={passwords.currentPassword}
                 disabled={busy}
                 onChange={(event) =>
-                  setPasswords((value) => ({
-                    ...value,
-                    currentPassword: event.target.value,
-                  }))
+                  setPasswords((value) => ({ ...value, currentPassword: event.target.value }))
                 }
               />
             </label>
@@ -275,10 +241,7 @@ function ProfileWorkspace() {
                 value={passwords.newPassword}
                 disabled={busy}
                 onChange={(event) =>
-                  setPasswords((value) => ({
-                    ...value,
-                    newPassword: event.target.value,
-                  }))
+                  setPasswords((value) => ({ ...value, newPassword: event.target.value }))
                 }
               />
             </label>
@@ -294,31 +257,19 @@ function ProfileWorkspace() {
                 value={passwords.confirm}
                 disabled={busy}
                 onChange={(event) =>
-                  setPasswords((value) => ({
-                    ...value,
-                    confirm: event.target.value,
-                  }))
+                  setPasswords((value) => ({ ...value, confirm: event.target.value }))
                 }
               />
             </label>
           </div>
-          <p
-            className="manager-profile-hint"
-            id="manager-profile-password-hint"
-          >
+          <p className="manager-profile-hint" id="manager-profile-password-hint">
             {tUi('profile.passwordHint')}
           </p>
           <footer className="manager-profile-card-actions">
             {renderFeedback('password')}
-            <button
-              className="manager-button manager-button-primary"
-              type="submit"
-              disabled={busy}
-            >
+            <button className="manager-button manager-button-primary" type="submit" disabled={busy}>
               <ShieldCheck size={16} aria-hidden="true" />
-              {pending === 'password'
-                ? tUi('common.updating')
-                : tUi('profile.updatePassword')}
+              {pending === 'password' ? tUi('common.updating') : tUi('profile.updatePassword')}
             </button>
           </footer>
         </form>
@@ -374,16 +325,12 @@ function ProfileWorkspace() {
                     </strong>
                     <small>
                       {tUi('profile.signedIn')}{' '}
-                      <time dateTime={session.createdAt}>
-                        {dateText(session.createdAt)}
-                      </time>
+                      <time dateTime={session.createdAt}>{dateText(session.createdAt)}</time>
                     </small>
                   </div>
                   <small className="manager-profile-session-expiry">
                     {labelUi('Hết hạn')}{' '}
-                    <time dateTime={session.expiresAt}>
-                      {dateText(session.expiresAt)}
-                    </time>
+                    <time dateTime={session.expiresAt}>{dateText(session.expiresAt)}</time>
                   </small>
                 </li>
               ))}
@@ -404,20 +351,18 @@ function ProfileWorkspace() {
               run(
                 'sessions',
                 async () => {
-                  await revokeOtherSessions();
-                  setRevision((value) => value + 1);
+                  await revokeOtherSessions()
+                  setRevision((value) => value + 1)
                 },
                 tUi('profile.revoked'),
               )
             }
           >
             <LogOut size={16} aria-hidden="true" />
-            {pending === 'sessions'
-              ? tUi('common.updating')
-              : tUi('profile.revokeOthers')}
+            {pending === 'sessions' ? tUi('common.updating') : tUi('profile.revokeOthers')}
           </button>
         </footer>
       </section>
     </div>
-  );
+  )
 }

@@ -1,10 +1,6 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { t as tUi, tr as labelUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Building2,
   ChevronDown,
@@ -16,75 +12,84 @@ import {
   ShieldCheck,
   UserRound,
   Users,
-} from 'lucide-react';
-import { AccessLink as Link } from '../../../shared/components/AccessControl';
-import LegacyOverlay from './LegacyOverlay';
-import UsageInfoModal from './UsageInfoModal';
-import NotificationBell from './NotificationBell';
-import { usePms } from '../data/usePms';
-import { ROLE_NAMES } from '../data/access';
-import LanguageSwitcher from '../../../shared/i18n/LanguageSwitcher.jsx';
-import { useDraftNavigation } from '../../../shared/drafts/DraftGuardProvider';
+} from 'lucide-react'
+import { AccessLink as Link } from '../../../shared/components/AccessControl'
+import LegacyOverlay from './LegacyOverlay'
+import UsageInfoModal from './UsageInfoModal'
+import NotificationBell from './NotificationBell'
+import { usePms } from '../data/usePms'
+import { ROLE_NAMES } from '../data/access'
+import LanguageSwitcher from '../../../shared/i18n/LanguageSwitcher.jsx'
+import { useDraftNavigation } from '../../../shared/drafts/DraftGuardProvider'
 
 export default function Header({ onOpenNavigation }) {
-  useI18n();
-  const { logout, user, role, tenant, isManager, subscription, settingsPath } =
-    usePms();
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [usageOpen, setUsageOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
-  const profileRef = useRef(null);
-  const triggerRef = useRef(null);
-  const navigate = useNavigate();
-  const { requestLeave } = useDraftNavigation();
+  useI18n()
+  const {
+    logout,
+    user,
+    role,
+    tenant,
+    hotels,
+    selectTenant,
+    isManager,
+    subscription,
+    settingsPath,
+  } = usePms()
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [usageOpen, setUsageOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const profileRef = useRef(null)
+  const triggerRef = useRef(null)
+  const navigate = useNavigate()
+  const { requestLeave } = useDraftNavigation()
   const initials = (user?.name || user?.email || 'L')
     .trim()
     .split(/\s+/)
     .slice(0, 2)
     .map((word) => word[0])
     .join('')
-    .toUpperCase();
+    .toUpperCase()
   useEffect(() => {
-    if (!profileOpen) return;
+    if (!profileOpen) return
     const closeOutside = (event) => {
-      if (!profileRef.current?.contains(event.target)) setProfileOpen(false);
-    };
+      if (!profileRef.current?.contains(event.target)) setProfileOpen(false)
+    }
     const closeEscape = (event) => {
       if (event.key === 'Escape') {
-        setProfileOpen(false);
-        triggerRef.current?.focus();
+        setProfileOpen(false)
+        triggerRef.current?.focus()
       }
-    };
-    document.addEventListener('pointerdown', closeOutside);
-    document.addEventListener('keydown', closeEscape);
+    }
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('keydown', closeEscape)
     return () => {
-      document.removeEventListener('pointerdown', closeOutside);
-      document.removeEventListener('keydown', closeEscape);
-    };
-  }, [profileOpen]);
+      document.removeEventListener('pointerdown', closeOutside)
+      document.removeEventListener('keydown', closeEscape)
+    }
+  }, [profileOpen])
   function handleLogout() {
     requestLeave(async () => {
-      setSigningOut(true);
+      setSigningOut(true)
       try {
-        await logout();
-        navigate('/id/login');
+        await logout()
+        navigate('/id/login')
       } catch {
         /* Provider displays the server error and keeps the session. */
       } finally {
-        setSigningOut(false);
+        setSigningOut(false)
       }
-    });
+    })
   }
   function openUsage() {
-    setProfileOpen(false);
-    setUsageOpen(true);
+    setProfileOpen(false)
+    setUsageOpen(true)
   }
   const links = [
     { to: '/id/profile', label: 'Hồ sơ cá nhân', icon: UserRound },
     { to: '/id/profile?tab=security', label: 'Đổi mật khẩu', icon: KeyRound },
     { to: settingsPath, label: 'Cài đặt hệ thống', icon: Settings },
     { to: '/id/users', label: 'Quản lý người dùng', icon: Users },
-  ];
+  ]
   return (
     <header className="pms-topbar">
       <div className="pms-topbar-context">
@@ -99,9 +104,23 @@ export default function Header({ onOpenNavigation }) {
           <Menu size={20} />
         </button>
         <Building2 className="pms-context-icon" size={20} aria-hidden="true" />
-        <div>
-          <span>{tUi('header.workspace')}</span>
-          <strong title={tenant?.name}>{tenant?.name || 'LOHA PMS'}</strong>
+        <div className="pms-topbar-hotel">
+          <label htmlFor="pms-topbar-hotel-select">{tUi('header.workspace')}</label>
+          <select
+            id="pms-topbar-hotel-select"
+            aria-label={tUi('nav.selectHotel')}
+            value={tenant?.id || ''}
+            onChange={(e) => selectTenant(e.target.value)}
+            disabled={!hotels.length}
+            title={tenant?.name}
+          >
+            {!hotels.length && <option value="">{tUi('nav.noHotel')}</option>}
+            {hotels.map((hotel) => (
+              <option key={hotel.id} value={hotel.id}>
+                {hotel.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <div className="pms-topbar-actions">
@@ -147,10 +166,7 @@ export default function Header({ onOpenNavigation }) {
                 <LanguageSwitcher />
               </div>
               {isManager && (
-                <Link
-                  to="/manager/tenants"
-                  onClick={() => setProfileOpen(false)}
-                >
+                <Link to="/manager/tenants" onClick={() => setProfileOpen(false)}>
                   <ShieldCheck size={17} />
                   {tUi('header.admin')}
                 </Link>
@@ -179,13 +195,10 @@ export default function Header({ onOpenNavigation }) {
         </div>
       </div>
       {usageOpen && (
-        <LegacyOverlay
-          title={tUi('header.usage')}
-          onClose={() => setUsageOpen(false)}
-        >
+        <LegacyOverlay title={tUi('header.usage')} onClose={() => setUsageOpen(false)}>
           <UsageInfoModal isOpen onClose={() => setUsageOpen(false)} />
         </LegacyOverlay>
       )}
     </header>
-  );
+  )
 }

@@ -1,26 +1,19 @@
-import { useState } from 'react';
-import { Save } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { shortDate, taskKind } from '../planCalendar';
+import { useState } from 'react'
+import { Save } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { shortDate, taskKind } from '../planCalendar'
 
-export default function AssignmentForm({
-  tasks,
-  staff,
-  shifts,
-  busy,
-  onSave,
-  onClose,
-}) {
-  useI18n();
-  const [taskId, setTaskId] = useState(tasks[0]?.id || '');
+export default function AssignmentForm({ tasks, staff, shifts, busy, onSave, onClose }) {
+  useI18n()
+  const [taskId, setTaskId] = useState(tasks[0]?.id || '')
   const [staffId, setStaffId] = useState(''),
-    [shiftId, setShiftId] = useState('');
-  const task = tasks.find((row) => row.id === taskId);
-  const activeStaff = staff.filter((row) => row.active);
+    [shiftId, setShiftId] = useState('')
+  const task = tasks.find((row) => row.id === taskId)
+  const activeStaff = staff.filter((row) => row.active)
   const availableShifts = shifts.filter(
     (row) => row.active && row.staffId === staffId && row.date === task?.date,
-  );
+  )
   if (!tasks.length)
     return (
       <>
@@ -33,19 +26,14 @@ export default function AssignmentForm({
           </button>
         </div>
       </>
-    );
+    )
   return (
     <form
       data-workspace-draft
       onSubmit={(event) => {
-        event.preventDefault();
-        if (busy || !task || !activeStaff.some((row) => row.id === staffId))
-          return;
-        onSave(task, {
-          staffId,
-          shiftId: shiftId || null,
-          revision: task.revision,
-        });
+        event.preventDefault()
+        if (busy || !task || !activeStaff.some((row) => row.id === staffId)) return
+        onSave(task, { staffId, shiftId: shiftId || null, revision: task.revision })
       }}
     >
       <p className="hk-plan-hint">{tUi('hk.assignmentIntro')}</p>
@@ -57,15 +45,14 @@ export default function AssignmentForm({
               required
               value={taskId}
               onChange={(event) => {
-                setTaskId(event.target.value);
-                setShiftId('');
+                setTaskId(event.target.value)
+                setShiftId('')
               }}
             >
               <option value="">{tUi('hk.assignmentChooseTask')}</option>
               {tasks.map((row) => (
                 <option key={row.id} value={row.id}>
-                  {tUi('common.room')} {row.room} · {shortDate(row.date)} ·{' '}
-                  {taskKind(row)}
+                  {tUi('common.room')} {row.room} · {shortDate(row.date)} · {taskKind(row)}
                 </option>
               ))}
             </select>
@@ -76,8 +63,8 @@ export default function AssignmentForm({
               required
               value={staffId}
               onChange={(event) => {
-                setStaffId(event.target.value);
-                setShiftId('');
+                setStaffId(event.target.value)
+                setShiftId('')
               }}
             >
               <option value="">{tUi('hk.chooseStaff')}</option>
@@ -120,16 +107,12 @@ export default function AssignmentForm({
           <button type="button" onClick={onClose}>
             {tUi('common.cancel')}
           </button>
-          <button
-            type="submit"
-            className="primary"
-            disabled={!task || !activeStaff.length}
-          >
+          <button type="submit" className="primary" disabled={!task || !activeStaff.length}>
             <Save size={15} aria-hidden="true" />
             {busy ? tUi('common.saving') : tUi('hk.saveAssignment')}
           </button>
         </div>
       </fieldset>
     </form>
-  );
+  )
 }

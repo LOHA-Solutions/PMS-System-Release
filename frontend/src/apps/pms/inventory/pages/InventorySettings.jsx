@@ -1,16 +1,8 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import { phoneInput, phonePattern } from '../../../../shared/lib/phone.js';
-import {
-  emailInput,
-  emailPattern,
-  taxIdPattern,
-} from '../../../../shared/lib/validation.js';
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useId, useRef, useState } from 'react';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import { phoneInput, phonePattern } from '../../../../shared/lib/phone.js'
+import { emailInput, emailPattern, taxIdPattern } from '../../../../shared/lib/validation.js'
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Boxes,
   Check,
@@ -26,14 +18,14 @@ import {
   Truck,
   Warehouse,
   X,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { useInventoryQuery } from '../useInventoryQuery';
-import InventoryDocuments, { InventoryLines } from '../InventoryDocuments';
-import { quantityText } from '../values';
-import '../../components/DomainForms.css';
-import '../Inventory.css';
-import './InventorySettings.css';
+} from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { useInventoryQuery } from '../useInventoryQuery'
+import InventoryDocuments, { InventoryLines } from '../InventoryDocuments'
+import { quantityText } from '../values'
+import '../../components/DomainForms.css'
+import '../Inventory.css'
+import './InventorySettings.css'
 
 const definitions = {
   warehouses: {
@@ -44,12 +36,7 @@ const definitions = {
     fields: [
       { key: 'name', label: 'Tên kho', required: true },
       { key: 'location', label: 'Vị trí' },
-      {
-        key: 'isDefault',
-        label: 'Kho mặc định',
-        type: 'checkbox',
-        group: 'otherInfo',
-      },
+      { key: 'isDefault', label: 'Kho mặc định', type: 'checkbox', group: 'otherInfo' },
     ],
   },
   itemCategories: {
@@ -60,21 +47,14 @@ const definitions = {
     fields: [
       { key: 'name', label: 'Tên danh mục', required: true },
       { key: 'parentId', label: 'Danh mục cha', catalog: 'itemCategories' },
-      {
-        key: 'sortOrder',
-        label: 'Thứ tự',
-        type: 'number',
-        integer: true,
-        default: '0',
-      },
+      { key: 'sortOrder', label: 'Thứ tự', type: 'number', integer: true, default: '0' },
     ],
   },
   items: {
     title: 'Hàng hóa & Vật tư',
     nameKey: 'itemsName',
     icon: Package,
-    description:
-      'Giá vốn ban đầu chỉ là cấu hình mặt hàng; tồn thực tế được ghi qua phiếu kho.',
+    description: 'Giá vốn ban đầu chỉ là cấu hình mặt hàng; tồn thực tế được ghi qua phiếu kho.',
     fields: [
       { key: 'name', label: 'Tên mặt hàng', required: true },
       { key: 'sku', label: 'Mã hàng / SKU', required: true },
@@ -87,13 +67,7 @@ const definitions = {
         default: '0',
         group: 'pricingInfo',
       },
-      {
-        key: 'sellingPrice',
-        label: 'Giá bán',
-        type: 'number',
-        default: '0',
-        group: 'pricingInfo',
-      },
+      { key: 'sellingPrice', label: 'Giá bán', type: 'number', default: '0', group: 'pricingInfo' },
       {
         key: 'minStock',
         label: 'Ngưỡng cảnh báo tồn',
@@ -116,27 +90,21 @@ const definitions = {
       { key: 'email', label: 'Email', type: 'email', group: 'contactInfo' },
       { key: 'address', label: 'Địa chỉ', group: 'contactInfo' },
       { key: 'bankName', label: 'Ngân hàng', group: 'paymentInfo' },
-      {
-        key: 'bankAccount',
-        label: 'Số tài khoản ngân hàng',
-        group: 'paymentInfo',
-      },
+      { key: 'bankAccount', label: 'Số tài khoản ngân hàng', group: 'paymentInfo' },
       { key: 'notes', label: 'Ghi chú', type: 'textarea', group: 'otherInfo' },
     ],
   },
-};
+}
 
 function StatusBadge({ active, recipe = false }) {
   return (
-    <span
-      className={`inventory-settings-status ${active ? 'is-active' : 'is-inactive'}`}
-    >
+    <span className={`inventory-settings-status ${active ? 'is-active' : 'is-inactive'}`}>
       <span aria-hidden="true" />
       {recipe
         ? tUi(active ? 'hk.applying' : 'hk.stopped')
         : tUi(active ? 'common.active' : 'common.inactive')}
     </span>
-  );
+  )
 }
 
 function EmptyState({ filtered = false, onClear }) {
@@ -145,29 +113,21 @@ function EmptyState({ filtered = false, onClear }) {
       <span className="inventory-settings-empty-icon" aria-hidden="true">
         {filtered ? <Search size={24} /> : <Boxes size={28} />}
       </span>
-      <strong>
-        {tUi(`inventorySettings.${filtered ? 'noResults' : 'empty'}`)}
-      </strong>
-      <p>
-        {tUi(`inventorySettings.${filtered ? 'noResultsHint' : 'emptyHint'}`)}
-      </p>
+      <strong>{tUi(`inventorySettings.${filtered ? 'noResults' : 'empty'}`)}</strong>
+      <p>{tUi(`inventorySettings.${filtered ? 'noResultsHint' : 'emptyHint'}`)}</p>
       {filtered && (
-        <button
-          type="button"
-          className="inventory-settings-text-button"
-          onClick={onClear}
-        >
+        <button type="button" className="inventory-settings-text-button" onClick={onClear}>
           {tUi('inventorySettings.clearFilters')}
         </button>
       )}
     </div>
-  );
+  )
 }
 
 function MasterEditor({ catalog, data, pms, refreshed }) {
-  useI18n();
+  useI18n()
   const definition = definitions[catalog],
-    Icon = definition.icon;
+    Icon = definition.icon
   const blank = () => ({
     active: true,
     ...Object.fromEntries(
@@ -176,27 +136,26 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
         field.default ?? (field.type === 'checkbox' ? false : ''),
       ]),
     ),
-  });
+  })
   const [draft, setDraft] = useState(null),
     [search, setSearch] = useState(''),
-    [status, setStatus] = useState('');
+    [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState('')
   const inFlight = useRef(false),
     formRef = useRef(null),
-    triggerRef = useRef(null);
+    triggerRef = useRef(null)
   const formId = useId(),
     editing = draft !== null,
-    draftId = draft?.id;
+    draftId = draft?.id
   useEffect(() => {
-    if (editing)
-      formRef.current?.querySelector('input, select, textarea')?.focus();
-    else triggerRef.current?.focus();
-  }, [editing, draftId]);
-  const canWrite = pms.access('inventory.write').allowed;
-  const allRows = data[catalog] || [];
-  const term = search.trim().toLocaleLowerCase('vi');
+    if (editing) formRef.current?.querySelector('input, select, textarea')?.focus()
+    else triggerRef.current?.focus()
+  }, [editing, draftId])
+  const canWrite = pms.access('inventory.write').allowed
+  const allRows = data[catalog] || []
+  const term = search.trim().toLocaleLowerCase('vi')
   const rows = allRows.filter(
     (row) =>
       (!status || (row.active !== false) === (status === 'active')) &&
@@ -207,92 +166,77 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
             .toLocaleLowerCase('vi')
             .includes(term),
       ),
-  );
-  const singular = tUi(`inventorySettings.${definition.nameKey}`);
+  )
+  const singular = tUi(`inventorySettings.${definition.nameKey}`)
   const close = () => {
-    setDraft(null);
-    setError('');
-  };
+    setDraft(null)
+    setError('')
+  }
   function edit(row, event) {
-    triggerRef.current = event.currentTarget;
-    setDraft({ ...blank(), ...row });
-    setError('');
-    setNotice('');
+    triggerRef.current = event.currentTarget
+    setDraft({ ...blank(), ...row })
+    setError('')
+    setNotice('')
   }
   async function save(input, clear = false) {
-    if (inFlight.current || !canWrite) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
-    setNotice('');
+    if (inFlight.current || !canWrite) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      await pms.saveInventoryMaster(catalog, input);
-      if (clear) setDraft(null);
+      await pms.saveInventoryMaster(catalog, input)
+      if (clear) setDraft(null)
       else if (draft?.id === input.id)
-        setDraft((previous) => ({ ...previous, active: input.active }));
-      setNotice(tUi('inventorySettings.saved'));
-      refreshed();
+        setDraft((previous) => ({ ...previous, active: input.active }))
+      setNotice(tUi('inventorySettings.saved'))
+      refreshed()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   function submit(event) {
-    event.preventDefault();
+    event.preventDefault()
     try {
       const values = Object.fromEntries(
         definition.fields.map((field) => {
-          const value = draft[field.key];
+          const value = draft[field.key]
           if (field.integer)
-            return [
-              field.key,
-              Number(decimalInput(value, { precision: 0, max: '100000' })),
-            ];
-          if (field.type === 'number') return [field.key, decimalInput(value)];
-          if (field.catalog) return [field.key, value || null];
-          if (field.type === 'checkbox') return [field.key, value];
+            return [field.key, Number(decimalInput(value, { precision: 0, max: '100000' }))]
+          if (field.type === 'number') return [field.key, decimalInput(value)]
+          if (field.catalog) return [field.key, value || null]
+          if (field.type === 'checkbox') return [field.key, value]
           const text = value.trim(),
             maximum = ['address', 'notes'].includes(field.key)
               ? 500
               : ['sku', 'unit'].includes(field.key)
                 ? 80
-                : 160;
+                : 160
           if ((field.required && !text) || text.length > maximum)
             throw new Error(
               `${field.label}: nhập tối đa ${maximum} ký tự${field.required ? ' và không để trống' : ''}.`,
-            );
-          return [field.key, text];
+            )
+          return [field.key, text]
         }),
-      );
+      )
       if (catalog === 'suppliers') {
-        values.phone = phoneInput(values.phone);
-        if (values.email) values.email = emailInput(values.email);
-        if (
-          values.taxCode &&
-          !new RegExp(`^(?:${taxIdPattern})$`, 'u').test(values.taxCode)
-        )
-          throw new Error(
-            'Mã số thuế chỉ gồm chữ số và có thể có hậu tố -xxx.',
-          );
+        values.phone = phoneInput(values.phone)
+        if (values.email) values.email = emailInput(values.email)
+        if (values.taxCode && !new RegExp(`^(?:${taxIdPattern})$`, 'u').test(values.taxCode))
+          throw new Error('Mã số thuế chỉ gồm chữ số và có thể có hậu tố -xxx.')
       }
-      save(
-        {
-          ...(draft.id ? { id: draft.id } : {}),
-          active: draft.active,
-          ...values,
-        },
-        true,
-      );
+      save({ ...(draft.id ? { id: draft.id } : {}), active: draft.active, ...values }, true)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     }
   }
   const groups = [
     ...new Set(definition.fields.map((field) => field.group || 'basicInfo')),
     'status',
-  ];
+  ]
   const columns =
     catalog === 'warehouses'
       ? ['name', 'location', 'isDefault']
@@ -300,13 +244,13 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
         ? ['name', 'categoryId', 'pricing', 'minStock']
         : catalog === 'suppliers'
           ? ['name', 'contact', 'taxCode']
-          : ['name', 'parentId', 'sortOrder'];
+          : ['name', 'parentId', 'sortOrder']
   const columnLabel = (key) =>
     key === 'pricing' || key === 'contact'
       ? tUi(`inventorySettings.${key}`)
       : key === 'minStock'
         ? tUi('inventorySettings.stockThreshold')
-        : labelUi(definition.fields.find((field) => field.key === key).label);
+        : labelUi(definition.fields.find((field) => field.key === key).label)
   function shown(row, key) {
     if (key === 'name')
       return (
@@ -322,12 +266,10 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                 {row.unit && <> · {row.unit}</>}
               </small>
             )}
-            {catalog === 'suppliers' && row.address && (
-              <small>{row.address}</small>
-            )}
+            {catalog === 'suppliers' && row.address && <small>{row.address}</small>}
           </span>
         </div>
-      );
+      )
     if (key === 'isDefault')
       return row.isDefault ? (
         <span className="inventory-settings-default">
@@ -336,14 +278,14 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
         </span>
       ) : (
         <span className="inventory-settings-muted">—</span>
-      );
+      )
     if (key === 'pricing')
       return (
         <div className="inventory-settings-prices">
           <span>{quantityText(row.costPrice)}</span>
           <small>{quantityText(row.sellingPrice)}</small>
         </div>
-      );
+      )
     if (key === 'contact')
       return (
         <div className="inventory-settings-contact">
@@ -352,14 +294,11 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
           {row.email && <small>{row.email}</small>}
           {!row.contactPerson && !row.phone && !row.email && '—'}
         </div>
-      );
-    const field = definition.fields.find((candidate) => candidate.key === key);
+      )
+    const field = definition.fields.find((candidate) => candidate.key === key)
     if (field.catalog)
-      return (
-        data[field.catalog]?.find((option) => option.id === row[key])?.name ||
-        '—'
-      );
-    return field.type === 'number' ? quantityText(row[key]) : row[key] || '—';
+      return data[field.catalog]?.find((option) => option.id === row[key])?.name || '—'
+    return field.type === 'number' ? quantityText(row[key]) : row[key] || '—'
   }
   return (
     <section
@@ -411,9 +350,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
             <div className="inventory-settings-editor-header">
               <div>
                 <h3 id={`${formId}-title`}>
-                  {tUi(`inventorySettings.${draft.id ? 'edit' : 'add'}`, {
-                    name: singular,
-                  })}
+                  {tUi(`inventorySettings.${draft.id ? 'edit' : 'add'}`, { name: singular })}
                 </h3>
                 <p>{tUi('inventorySettings.requiredHint')}</p>
               </div>
@@ -429,9 +366,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
             {groups.map((group) => (
               <div className="inventory-settings-field-group" key={group}>
                 <h4>
-                  {group === 'status'
-                    ? tUi('common.status')
-                    : tUi(`inventorySettings.${group}`)}
+                  {group === 'status' ? tUi('common.status') : tUi(`inventorySettings.${group}`)}
                 </h4>
                 <div className="inventory-settings-fields">
                   {group === 'status' ? (
@@ -447,9 +382,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                         }
                       >
                         <option value="active">{tUi('common.active')}</option>
-                        <option value="inactive">
-                          {tUi('common.inactive')}
-                        </option>
+                        <option value="inactive">{tUi('common.inactive')}</option>
                       </select>
                     </label>
                   ) : (
@@ -459,35 +392,24 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                         const options = (data[field.catalog] || []).filter(
                           (option) =>
                             option.id !== draft.id &&
-                            (option.active !== false ||
-                              option.id === draft[field.key]),
-                        );
+                            (option.active !== false || option.id === draft[field.key]),
+                        )
                         const change = (value) =>
-                          setDraft((previous) => ({
-                            ...previous,
-                            [field.key]: value,
-                          }));
+                          setDraft((previous) => ({ ...previous, [field.key]: value }))
                         if (field.type === 'checkbox')
                           return (
-                            <label
-                              key={field.key}
-                              className="inventory-settings-checkbox"
-                            >
+                            <label key={field.key} className="inventory-settings-checkbox">
                               <input
                                 type="checkbox"
                                 checked={draft[field.key]}
-                                onChange={(event) =>
-                                  change(event.target.checked)
-                                }
+                                onChange={(event) => change(event.target.checked)}
                               />
                               <span>
                                 {labelUi(field.label)}
-                                <small>
-                                  {tUi('inventorySettings.defaultHint')}
-                                </small>
+                                <small>{tUi('inventorySettings.defaultHint')}</small>
                               </span>
                             </label>
-                          );
+                          )
                         return (
                           <label
                             key={field.key}
@@ -500,10 +422,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                             <span>
                               {labelUi(field.label)}
                               {field.required && (
-                                <span
-                                  className="inventory-settings-required"
-                                  aria-hidden="true"
-                                >
+                                <span className="inventory-settings-required" aria-hidden="true">
                                   {' '}
                                   *
                                 </span>
@@ -514,9 +433,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                                 value={draft[field.key] || ''}
                                 onChange={(event) => change(event.target.value)}
                               >
-                                <option value="">
-                                  {labelUi('Không chọn')}
-                                </option>
+                                <option value="">{labelUi('Không chọn')}</option>
                                 {options.map((option) => (
                                   <option key={option.id} value={option.id}>
                                     {option.name}
@@ -532,11 +449,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                               />
                             ) : (
                               <input
-                                type={
-                                  field.type === 'number'
-                                    ? 'text'
-                                    : field.type || 'text'
-                                }
+                                type={field.type === 'number' ? 'text' : field.type || 'text'}
                                 inputMode={
                                   field.type === 'number'
                                     ? field.integer
@@ -575,13 +488,13 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                                     field.key === 'phone' &&
                                     /[^0-9+ .()-]/.test(event.target.value)
                                   )
-                                    return;
-                                  change(event.target.value);
+                                    return
+                                  change(event.target.value)
                                 }}
                               />
                             )}
                           </label>
-                        );
+                        )
                       })
                   )}
                 </div>
@@ -614,10 +527,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
           <span className="inventory-settings-sr-only">
             {tUi('inventorySettings.statusFilter')}
           </span>
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="">{tUi('common.allStatuses')}</option>
             <option value="active">{tUi('common.active')}</option>
             <option value="inactive">{tUi('common.inactive')}</option>
@@ -641,10 +551,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                 ))}
                 <th scope="col">{tUi('common.status')}</th>
                 {canWrite && (
-                  <th
-                    scope="col"
-                    className="inventory-settings-actions-heading"
-                  >
+                  <th scope="col" className="inventory-settings-actions-heading">
                     {tUi('common.actions')}
                   </th>
                 )}
@@ -652,10 +559,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={row.id === draft?.id ? 'is-editing' : undefined}
-                >
+                <tr key={row.id} className={row.id === draft?.id ? 'is-editing' : undefined}>
                   {columns.map((key) => (
                     <td
                       key={key}
@@ -678,9 +582,7 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                           type="button"
                           className="inventory-settings-text-button"
                           disabled={busy}
-                          aria-label={tUi('inventorySettings.edit', {
-                            name: row.name,
-                          })}
+                          aria-label={tUi('inventorySettings.edit', { name: row.name })}
                           onClick={(event) => edit(row, event)}
                         >
                           <Edit2 size={14} aria-hidden="true" />
@@ -692,13 +594,9 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
                           disabled={busy}
                           aria-label={`${tUi(row.active === false ? 'common.activate' : 'common.inactive')}: ${row.name}`}
                           title={
-                            row.active === false
-                              ? tUi('common.activate')
-                              : labelUi('Ngừng sử dụng')
+                            row.active === false ? tUi('common.activate') : labelUi('Ngừng sử dụng')
                           }
-                          onClick={() =>
-                            save({ id: row.id, active: row.active === false })
-                          }
+                          onClick={() => save({ id: row.id, active: row.active === false })}
                         >
                           <Power size={15} aria-hidden="true" />
                         </button>
@@ -714,85 +612,74 @@ function MasterEditor({ catalog, data, pms, refreshed }) {
         <EmptyState
           filtered={Boolean(term || status)}
           onClear={() => {
-            setSearch('');
-            setStatus('');
+            setSearch('')
+            setStatus('')
           }}
         />
       )}
       <footer className="inventory-settings-list-footer">
-        {tUi('inventorySettings.results', {
-          shown: rows.length,
-          total: allRows.length,
-        })}
+        {tUi('inventorySettings.results', { shown: rows.length, total: allRows.length })}
       </footer>
     </section>
-  );
+  )
 }
 
 function ServiceStockEditor({ data, pms, refreshed }) {
-  useI18n();
+  useI18n()
   const blank = () => ({
     serviceId: '',
     warehouseId: '',
     active: true,
     lines: [{ key: crypto.randomUUID(), itemId: '', quantity: '' }],
-  });
+  })
   const [draft, setDraft] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState('')
   const inFlight = useRef(false),
     formRef = useRef(null),
-    triggerRef = useRef(null);
+    triggerRef = useRef(null)
   const formId = useId(),
     editing = draft !== null,
-    serviceId = draft?.serviceId;
+    serviceId = draft?.serviceId
   useEffect(() => {
-    if (editing) formRef.current?.querySelector('select')?.focus();
-    else triggerRef.current?.focus();
-  }, [editing, serviceId]);
-  const canWrite = pms.access('inventory.write').allowed;
+    if (editing) formRef.current?.querySelector('select')?.focus()
+    else triggerRef.current?.focus()
+  }, [editing, serviceId])
+  const canWrite = pms.access('inventory.write').allowed
   const services = pms.services || [],
-    recipes = data.serviceStockLinks || [];
+    recipes = data.serviceStockLinks || []
   const warehouses = (data.warehouses || []).filter(
     (row) => row.active !== false || row.id === draft?.warehouseId,
-  );
+  )
   const items = (data.items || []).filter(
-    (row) =>
-      row.active !== false ||
-      draft?.lines.some((line) => line.itemId === row.id),
-  );
+    (row) => row.active !== false || draft?.lines.some((line) => line.itemId === row.id),
+  )
   const missingCatalogs =
     !services.some((row) => row.active !== false) ||
     !data.warehouses?.some((row) => row.active !== false) ||
-    !data.items?.some((row) => row.active !== false);
+    !data.items?.some((row) => row.active !== false)
   const close = () => {
-    setDraft(null);
-    setError('');
-  };
+    setDraft(null)
+    setError('')
+  }
   const edit = (row, event) => {
-    triggerRef.current = event.currentTarget;
-    setError('');
-    setNotice('');
+    triggerRef.current = event.currentTarget
+    setError('')
+    setNotice('')
     setDraft(
       row
-        ? {
-            ...row,
-            lines: row.lines.map((line) => ({
-              ...line,
-              key: crypto.randomUUID(),
-            })),
-          }
+        ? { ...row, lines: row.lines.map((line) => ({ ...line, key: crypto.randomUUID() })) }
         : blank(),
-    );
-  };
+    )
+  }
   async function save(event) {
-    event.preventDefault();
-    if (inFlight.current || !canWrite) return;
-    inFlight.current = true;
-    setBusy(true);
-    setError('');
-    setNotice('');
+    event.preventDefault()
+    if (inFlight.current || !canWrite) return
+    inFlight.current = true
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
       await pms.saveServiceStockLink({
         serviceId: draft.serviceId,
@@ -802,15 +689,15 @@ function ServiceStockEditor({ data, pms, refreshed }) {
           itemId: line.itemId,
           quantity: decimalInput(line.quantity, { min: '0.0001' }),
         })),
-      });
-      setDraft(null);
-      setNotice(labelUi('Đã lưu định mức xuất kho của dịch vụ.'));
-      refreshed();
+      })
+      setDraft(null)
+      setNotice(labelUi('Đã lưu định mức xuất kho của dịch vụ.'))
+      refreshed()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   return (
@@ -869,9 +756,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
             <div className="inventory-settings-editor-header">
               <div>
                 <h3 id={`${formId}-title`}>
-                  {tUi(
-                    `inventorySettings.${draft.id ? 'editRecipe' : 'addRecipe'}`,
-                  )}
+                  {tUi(`inventorySettings.${draft.id ? 'editRecipe' : 'addRecipe'}`)}
                 </h3>
                 <p>{tUi('inventorySettings.recipeHint')}</p>
               </div>
@@ -888,10 +773,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
               <label>
                 <span>
                   {labelUi('Dịch vụ POS')}
-                  <span
-                    className="inventory-settings-required"
-                    aria-hidden="true"
-                  >
+                  <span className="inventory-settings-required" aria-hidden="true">
                     {' '}
                     *
                   </span>
@@ -900,18 +782,12 @@ function ServiceStockEditor({ data, pms, refreshed }) {
                   required
                   value={draft.serviceId}
                   onChange={(event) =>
-                    setDraft((previous) => ({
-                      ...previous,
-                      serviceId: event.target.value,
-                    }))
+                    setDraft((previous) => ({ ...previous, serviceId: event.target.value }))
                   }
                 >
                   <option value="">{labelUi('Chọn dịch vụ')}</option>
                   {services
-                    .filter(
-                      (row) =>
-                        row.active !== false || row.id === draft.serviceId,
-                    )
+                    .filter((row) => row.active !== false || row.id === draft.serviceId)
                     .map((row) => (
                       <option key={row.id} value={row.id}>
                         {row.name}
@@ -922,10 +798,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
               <label>
                 <span>
                   {labelUi('Kho xuất dịch vụ')}
-                  <span
-                    className="inventory-settings-required"
-                    aria-hidden="true"
-                  >
+                  <span className="inventory-settings-required" aria-hidden="true">
                     {' '}
                     *
                   </span>
@@ -934,10 +807,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
                   required
                   value={draft.warehouseId}
                   onChange={(event) =>
-                    setDraft((previous) => ({
-                      ...previous,
-                      warehouseId: event.target.value,
-                    }))
+                    setDraft((previous) => ({ ...previous, warehouseId: event.target.value }))
                   }
                 >
                   <option value="">{labelUi('Chọn kho')}</option>
@@ -970,9 +840,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
                 maxLines={100}
                 kind="issue"
                 lines={draft.lines}
-                onChange={(lines) =>
-                  setDraft((previous) => ({ ...previous, lines }))
-                }
+                onChange={(lines) => setDraft((previous) => ({ ...previous, lines }))}
                 items={items}
               />
             </div>
@@ -983,9 +851,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
               <button
                 type="submit"
                 className="primary inventory-icon-button"
-                disabled={
-                  !services.length || !warehouses.length || !items.length
-                }
+                disabled={!services.length || !warehouses.length || !items.length}
               >
                 <Save size={16} aria-hidden="true" />
                 {busy ? tUi('common.saving') : labelUi('Lưu định mức kho')}
@@ -1006,15 +872,10 @@ function ServiceStockEditor({ data, pms, refreshed }) {
               <tr>
                 <th scope="col">{tUi('rooms.services')}</th>
                 <th scope="col">{labelUi('Kho')}</th>
-                <th scope="col">
-                  {labelUi('Định mức cho một đơn vị dịch vụ')}
-                </th>
+                <th scope="col">{labelUi('Định mức cho một đơn vị dịch vụ')}</th>
                 <th scope="col">{tUi('common.status')}</th>
                 {canWrite && (
-                  <th
-                    scope="col"
-                    className="inventory-settings-actions-heading"
-                  >
+                  <th scope="col" className="inventory-settings-actions-heading">
                     {tUi('common.actions')}
                   </th>
                 )}
@@ -1025,24 +886,21 @@ function ServiceStockEditor({ data, pms, refreshed }) {
                 <tr key={row.id}>
                   <td>
                     <strong>
-                      {services.find((service) => service.id === row.serviceId)
-                        ?.name || row.serviceId}
+                      {services.find((service) => service.id === row.serviceId)?.name ||
+                        row.serviceId}
                     </strong>
                   </td>
                   <td>
                     <span className="inventory-settings-warehouse">
                       <MapPin size={14} aria-hidden="true" />
-                      {data.warehouses?.find(
-                        (warehouse) => warehouse.id === row.warehouseId,
-                      )?.name || row.warehouseId}
+                      {data.warehouses?.find((warehouse) => warehouse.id === row.warehouseId)
+                        ?.name || row.warehouseId}
                     </span>
                   </td>
                   <td className="inventory-wrap">
                     <div className="inventory-settings-recipe-items">
                       {row.lines.map((line, index) => {
-                        const item = data.items?.find(
-                          (item) => item.id === line.itemId,
-                        );
+                        const item = data.items?.find((item) => item.id === line.itemId)
                         return (
                           <span key={line.id || `${line.itemId}-${index}`}>
                             {item?.name || line.itemId}
@@ -1050,7 +908,7 @@ function ServiceStockEditor({ data, pms, refreshed }) {
                               {quantityText(line.quantity)} {item?.unit || ''}
                             </strong>
                           </span>
-                        );
+                        )
                       })}
                     </div>
                   </td>
@@ -1082,34 +940,32 @@ function ServiceStockEditor({ data, pms, refreshed }) {
         <EmptyState />
       )}
     </section>
-  );
+  )
 }
 
 export default function InventorySettings({ catalog = 'warehouses' }) {
-  const pms = usePms();
+  const pms = usePms()
   return (
     <SettingsWorkspace
       key={`${pms.tenantId}:${pms.user?.id}:${catalog}`}
       pms={pms}
       catalog={catalog}
     />
-  );
+  )
 }
 
 function SettingsWorkspace({ pms, catalog }) {
-  useI18n();
-  const masters = useInventoryQuery(
-    catalog === 'opening' ? null : '/inventory/masters',
-  );
-  const [data, setData] = useState(null);
+  useI18n()
+  const masters = useInventoryQuery(catalog === 'opening' ? null : '/inventory/masters')
+  const [data, setData] = useState(null)
   // Preserve open editors and drafts when the shared catalogs refresh.
-  if (masters.data && masters.data !== data) setData(masters.data);
+  if (masters.data && masters.data !== data) setData(masters.data)
   if (catalog === 'opening')
     return (
       <div className="inventory-settings inventory-settings-opening">
         <InventoryDocuments kind="opening" embedded />
       </div>
-    );
+    )
   return (
     <div className="pms-domain-page pms-inventory inventory-settings">
       {masters.loading && !data && (
@@ -1127,26 +983,15 @@ function SettingsWorkspace({ pms, catalog }) {
       )}
       {!pms.access('inventory.write').allowed && (
         <p className="inventory-settings-info" role="status">
-          {labelUi(
-            'Danh mục kho đang ở chế độ xem. Bạn chưa có quyền chỉnh sửa.',
-          )}
+          {labelUi('Danh mục kho đang ở chế độ xem. Bạn chưa có quyền chỉnh sửa.')}
         </p>
       )}
       {data &&
         (catalog === 'service_stock' ? (
-          <ServiceStockEditor
-            data={data}
-            pms={pms}
-            refreshed={masters.refresh}
-          />
+          <ServiceStockEditor data={data} pms={pms} refreshed={masters.refresh} />
         ) : (
           <>
-            <MasterEditor
-              catalog={catalog}
-              data={data}
-              pms={pms}
-              refreshed={masters.refresh}
-            />
+            <MasterEditor catalog={catalog} data={data} pms={pms} refreshed={masters.refresh} />
             {catalog === 'items' && (
               <MasterEditor
                 catalog="itemCategories"
@@ -1158,5 +1003,5 @@ function SettingsWorkspace({ pms, catalog }) {
           </>
         ))}
     </div>
-  );
+  )
 }

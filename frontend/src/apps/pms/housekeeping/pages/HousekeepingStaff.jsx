@@ -1,12 +1,8 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate } from '../../../../shared/lib/date.js';
-import { phoneInput, phonePattern } from '../../../../shared/lib/phone.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate } from '../../../../shared/lib/date.js'
+import { phoneInput, phonePattern } from '../../../../shared/lib/phone.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
 import {
   CalendarDays,
   CheckCircle2,
@@ -21,15 +17,15 @@ import {
   User,
   UserPlus,
   Users,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { today } from '../../data/model';
-import { shiftCreationDates } from '../shiftSchedule';
-import FormDialog from '../../components/FormDialog';
-import '../../components/DomainForms.css';
-import './HousekeepingStaff.css';
+} from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { today } from '../../data/model'
+import { shiftCreationDates } from '../shiftSchedule'
+import FormDialog from '../../components/FormDialog'
+import '../../components/DomainForms.css'
+import './HousekeepingStaff.css'
 
-const blankStaff = () => ({ name: '', phone: '', userId: '', active: true });
+const blankStaff = () => ({ name: '', phone: '', userId: '', active: true })
 const blankShift = (date) => ({
   staffId: '',
   date,
@@ -37,20 +33,15 @@ const blankShift = (date) => ({
   endTime: '16:00',
   note: '',
   active: true,
-});
+})
 
 export default function HousekeepingStaff() {
-  const pms = usePms();
-  return (
-    <StaffWorkspace
-      key={`${pms.tenantId}:${pms.settings.timezone}`}
-      pms={pms}
-    />
-  );
+  const pms = usePms()
+  return <StaffWorkspace key={`${pms.tenantId}:${pms.settings.timezone}`} pms={pms} />
 }
 
 function StaffWorkspace({ pms }) {
-  useI18n();
+  useI18n()
   const {
     housekeepingStaff: staff = [],
     housekeepingShifts: shifts = [],
@@ -60,51 +51,42 @@ function StaffWorkspace({ pms }) {
     access,
     saveHousekeepingStaff,
     saveHousekeepingShift,
-  } = pms;
-  const [search, setSearch] = useState('');
-  const [staffForm, setStaffForm] = useState(blankStaff);
-  const [staffEditorOpen, setStaffEditorOpen] = useState(false);
-  const [shiftForm, setShiftForm] = useState(() =>
-    blankShift(today(settings.timezone)),
-  );
-  const [shiftEditorOpen, setShiftEditorOpen] = useState(false);
-  const [shiftPeriod, setShiftPeriod] = useState('day');
-  const [date, setDate] = useState(today(settings.timezone));
-  const [dateValid, setDateValid] = useState(true);
-  const [loaded, setLoaded] = useState({
-    date: '',
-    shifts: [],
-    source: null,
-    error: '',
-  });
-  const requests = useRef(pms.requestTenant);
+  } = pms
+  const [search, setSearch] = useState('')
+  const [staffForm, setStaffForm] = useState(blankStaff)
+  const [staffEditorOpen, setStaffEditorOpen] = useState(false)
+  const [shiftForm, setShiftForm] = useState(() => blankShift(today(settings.timezone)))
+  const [shiftEditorOpen, setShiftEditorOpen] = useState(false)
+  const [shiftPeriod, setShiftPeriod] = useState('day')
+  const [date, setDate] = useState(today(settings.timezone))
+  const [dateValid, setDateValid] = useState(true)
+  const [loaded, setLoaded] = useState({ date: '', shifts: [], source: null, error: '' })
+  const requests = useRef(pms.requestTenant)
   useEffect(() => {
-    requests.current = pms.requestTenant;
-  }, [pms.requestTenant]);
+    requests.current = pms.requestTenant
+  }, [pms.requestTenant])
   useEffect(() => {
-    let current = true;
+    let current = true
     if (!date || !dateValid)
       return () => {
-        current = false;
-      };
+        current = false
+      }
     requests
       .current('/housekeeping/shifts?' + new URLSearchParams({ date }))
       .then((data) => {
-        if (current)
-          setLoaded({ date, shifts: data.shifts, source: shifts, error: '' });
+        if (current) setLoaded({ date, shifts: data.shifts, source: shifts, error: '' })
       })
       .catch((err) => {
-        if (current)
-          setLoaded({ date, shifts: [], source: shifts, error: err.message });
-      });
+        if (current) setLoaded({ date, shifts: [], source: shifts, error: err.message })
+      })
     return () => {
-      current = false;
-    };
-  }, [date, dateValid, tenantId, shifts]);
+      current = false
+    }
+  }, [date, dateValid, tenantId, shifts])
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
-  const canManage = access('housekeeping.manage').allowed;
+    [notice, setNotice] = useState('')
+  const canManage = access('housekeeping.manage').allowed
   const accounts =
     pms.housekeepingAccounts ||
     users.filter(
@@ -116,39 +98,30 @@ function StaffWorkspace({ pms }) {
             member.role === 'HOUSEKEEPING' &&
             member.active !== false,
         ),
-    );
+    )
   const visibleStaff = staff.filter((row) =>
-    `${row.name} ${row.phone}`
-      .toLocaleLowerCase('vi')
-      .includes(search.toLocaleLowerCase('vi')),
-  );
-  const shiftLoading =
-    Boolean(date) && (loaded.date !== date || loaded.source !== shifts);
+    `${row.name} ${row.phone}`.toLocaleLowerCase('vi').includes(search.toLocaleLowerCase('vi')),
+  )
+  const shiftLoading = Boolean(date) && (loaded.date !== date || loaded.source !== shifts)
   const visibleShifts =
     dateValid && loaded.date === date && !shiftLoading
-      ? [...loaded.shifts].sort((a, b) =>
-          a.startTime.localeCompare(b.startTime),
-        )
-      : [];
-  const staffName = (id) =>
-    staff.find((row) => row.id === id)?.name || 'Nhân viên';
-  const shiftDates = shiftCreationDates(
-    shiftForm.date,
-    shiftForm.id ? 'day' : shiftPeriod,
-  );
+      ? [...loaded.shifts].sort((a, b) => a.startTime.localeCompare(b.startTime))
+      : []
+  const staffName = (id) => staff.find((row) => row.id === id)?.name || 'Nhân viên'
+  const shiftDates = shiftCreationDates(shiftForm.date, shiftForm.id ? 'day' : shiftPeriod)
   async function save(action, message, after) {
-    if (busy) return;
-    setBusy(true);
-    setError('');
-    setNotice('');
+    if (busy) return
+    setBusy(true)
+    setError('')
+    setNotice('')
     try {
-      const result = await action();
-      after?.(result);
-      setNotice(typeof message === 'function' ? message(result) : message);
+      const result = await action()
+      after?.(result)
+      setNotice(typeof message === 'function' ? message(result) : message)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
   function editStaff(row) {
@@ -162,32 +135,30 @@ function StaffWorkspace({ pms }) {
             active: row.active,
           }
         : blankStaff(),
-    );
-    setError('');
-    setNotice('');
-    setStaffEditorOpen(true);
+    )
+    setError('')
+    setNotice('')
+    setStaffEditorOpen(true)
   }
   function closeStaffEditor() {
-    if (busy) return;
-    setStaffEditorOpen(false);
-    setStaffForm(blankStaff());
-    setError('');
+    if (busy) return
+    setStaffEditorOpen(false)
+    setStaffForm(blankStaff())
+    setError('')
   }
   function editShift(row) {
-    setShiftForm(
-      row ? { ...row } : blankShift(date || today(settings.timezone)),
-    );
-    setShiftPeriod('day');
-    setError('');
-    setNotice('');
-    setShiftEditorOpen(true);
+    setShiftForm(row ? { ...row } : blankShift(date || today(settings.timezone)))
+    setShiftPeriod('day')
+    setError('')
+    setNotice('')
+    setShiftEditorOpen(true)
   }
   function closeShiftEditor() {
-    if (busy) return;
-    setShiftEditorOpen(false);
-    setShiftForm(blankShift(date || today(settings.timezone)));
-    setShiftPeriod('day');
-    setError('');
+    if (busy) return
+    setShiftEditorOpen(false)
+    setShiftForm(blankShift(date || today(settings.timezone)))
+    setShiftPeriod('day')
+    setError('')
   }
 
   return (
@@ -203,12 +174,7 @@ function StaffWorkspace({ pms }) {
             {staff.length} {tUi('common.staffLower')}
           </span>
           {canManage && (
-            <button
-              type="button"
-              className="primary"
-              disabled={busy}
-              onClick={() => editStaff()}
-            >
+            <button type="button" className="primary" disabled={busy} onClick={() => editStaff()}>
               <UserPlus size={16} aria-hidden="true" />
               {tUi('hk.addStaff')}
             </button>
@@ -227,16 +193,12 @@ function StaffWorkspace({ pms }) {
         </p>
       )}
       <div className="hk-team-grid">
-        <section
-          className="domain-panel hk-roster"
-          aria-labelledby="hk-roster-title"
-        >
+        <section className="domain-panel hk-roster" aria-labelledby="hk-roster-title">
           <div className="hk-section-heading">
             <div>
               <h2 id="hk-roster-title">{tUi('hk.team')}</h2>
               <p>
-                {staff.filter((row) => row.active).length}{' '}
-                {tUi('hk.activeStaffCount')}
+                {staff.filter((row) => row.active).length} {tUi('hk.activeStaffCount')}
               </p>
             </div>
           </div>
@@ -253,24 +215,15 @@ function StaffWorkspace({ pms }) {
           {!visibleStaff.length && (
             <div className="hk-empty" role="status">
               <Users size={26} aria-hidden="true" />
-              <strong>
-                {staff.length ? tUi('hk.staffNotFound') : tUi('hk.noStaff')}
-              </strong>
-              <p>
-                {staff.length
-                  ? tUi('hk.searchStaffHint')
-                  : tUi('hk.addStaffHint')}
-              </p>
+              <strong>{staff.length ? tUi('hk.staffNotFound') : tUi('hk.noStaff')}</strong>
+              <p>{staff.length ? tUi('hk.searchStaffHint') : tUi('hk.addStaffHint')}</p>
             </div>
           )}
           <div className="hk-staff-list">
             {visibleStaff.map((row) => (
               <article
                 key={row.id}
-                className={
-                  'hk-staff-row' +
-                  (staffForm.id === row.id ? ' is-editing' : '')
-                }
+                className={'hk-staff-row' + (staffForm.id === row.id ? ' is-editing' : '')}
                 aria-label={'Nhân viên ' + row.name}
               >
                 <div className="hk-person-heading">
@@ -279,13 +232,9 @@ function StaffWorkspace({ pms }) {
                   </span>
                   <div>
                     <h3>{row.name}</h3>
-                    <span
-                      className={'hk-status' + (row.active ? ' is-active' : '')}
-                    >
+                    <span className={'hk-status' + (row.active ? ' is-active' : '')}>
                       <span aria-hidden="true" />
-                      {row.active
-                        ? tUi('common.active')
-                        : tUi('common.inactive')}
+                      {row.active ? tUi('common.active') : tUi('common.inactive')}
                     </span>
                   </div>
                 </div>
@@ -296,9 +245,7 @@ function StaffWorkspace({ pms }) {
                   </p>
                   <p>
                     <Link2 size={14} aria-hidden="true" />
-                    {row.userId
-                      ? tUi('hk.accountLinked')
-                      : tUi('hk.accountNotLinked')}
+                    {row.userId ? tUi('hk.accountLinked') : tUi('hk.accountNotLinked')}
                   </p>
                 </div>
                 {canManage && (
@@ -315,28 +262,17 @@ function StaffWorkspace({ pms }) {
                     </button>
                     <button
                       type="button"
-                      className={
-                        'hk-text-button' + (row.active ? ' hk-deactivate' : '')
-                      }
+                      className={'hk-text-button' + (row.active ? ' hk-deactivate' : '')}
                       disabled={busy}
-                      aria-label={
-                        (row.active ? 'Ngừng hoạt động ' : 'Kích hoạt ') +
-                        row.name
-                      }
+                      aria-label={(row.active ? 'Ngừng hoạt động ' : 'Kích hoạt ') + row.name}
                       onClick={() =>
                         save(
-                          () =>
-                            saveHousekeepingStaff({
-                              id: row.id,
-                              active: !row.active,
-                            }),
+                          () => saveHousekeepingStaff({ id: row.id, active: !row.active }),
                           'Đã cập nhật trạng thái nhân viên.',
                         )
                       }
                     >
-                      {row.active
-                        ? tUi('common.inactive')
-                        : tUi('common.activate')}
+                      {row.active ? tUi('common.inactive') : tUi('common.activate')}
                     </button>
                   </div>
                 )}
@@ -357,7 +293,7 @@ function StaffWorkspace({ pms }) {
           </p>
           <form
             onSubmit={(event) => {
-              event.preventDefault();
+              event.preventDefault()
               save(
                 () =>
                   saveHousekeepingStaff({
@@ -367,10 +303,10 @@ function StaffWorkspace({ pms }) {
                   }),
                 'Đã lưu nhân viên.',
                 () => {
-                  setStaffForm(blankStaff());
-                  setStaffEditorOpen(false);
+                  setStaffForm(blankStaff())
+                  setStaffEditorOpen(false)
                 },
-              );
+              )
             }}
           >
             <fieldset disabled={busy}>
@@ -385,9 +321,7 @@ function StaffWorkspace({ pms }) {
                     pattern=".*\S.*"
                     maxLength={160}
                     value={staffForm.name}
-                    onChange={(event) =>
-                      setStaffForm({ ...staffForm, name: event.target.value })
-                    }
+                    onChange={(event) => setStaffForm({ ...staffForm, name: event.target.value })}
                     autoComplete="name"
                     placeholder={tUi('hk.staffName')}
                   />
@@ -401,10 +335,7 @@ function StaffWorkspace({ pms }) {
                     value={staffForm.phone}
                     onChange={(event) => {
                       if (!/[^0-9+ .()-]/.test(event.target.value))
-                        setStaffForm({
-                          ...staffForm,
-                          phone: event.target.value,
-                        });
+                        setStaffForm({ ...staffForm, phone: event.target.value })
                     }}
                     autoComplete="tel"
                     placeholder={tUi('hk.phoneExample')}
@@ -415,9 +346,7 @@ function StaffWorkspace({ pms }) {
                   <select
                     aria-describedby="hk-account-help"
                     value={staffForm.userId}
-                    onChange={(event) =>
-                      setStaffForm({ ...staffForm, userId: event.target.value })
-                    }
+                    onChange={(event) => setStaffForm({ ...staffForm, userId: event.target.value })}
                   >
                     <option value="">{tUi('hk.unlinked')}</option>
                     {accounts.map((account) => (
@@ -426,12 +355,8 @@ function StaffWorkspace({ pms }) {
                       </option>
                     ))}
                     {staffForm.userId &&
-                      !accounts.some(
-                        (account) => account.id === staffForm.userId,
-                      ) && (
-                        <option value={staffForm.userId}>
-                          {tUi('hk.linkedAccount')}
-                        </option>
+                      !accounts.some((account) => account.id === staffForm.userId) && (
+                        <option value={staffForm.userId}>{tUi('hk.linkedAccount')}</option>
                       )}
                   </select>
                 </label>
@@ -444,10 +369,7 @@ function StaffWorkspace({ pms }) {
                   <select
                     value={staffForm.active ? 'active' : 'inactive'}
                     onChange={(event) =>
-                      setStaffForm({
-                        ...staffForm,
-                        active: event.target.value === 'active',
-                      })
+                      setStaffForm({ ...staffForm, active: event.target.value === 'active' })
                     }
                   >
                     <option value="active">{tUi('common.active')}</option>
@@ -468,10 +390,7 @@ function StaffWorkspace({ pms }) {
           </form>
         </FormDialog>
       )}
-      <section
-        className="domain-panel hk-shifts"
-        aria-labelledby="hk-shifts-title"
-      >
+      <section className="domain-panel hk-shifts" aria-labelledby="hk-shifts-title">
         <div className="hk-section-heading hk-shifts-heading">
           <div>
             <h2 id="hk-shifts-title">{tUi('hk.shift')}</h2>
@@ -480,12 +399,7 @@ function StaffWorkspace({ pms }) {
           <div className="hk-shifts-actions">
             <label className="hk-date-filter">
               {tUi('hk.shiftViewDate')}
-              <DateInput
-                required
-                value={date}
-                onChange={setDate}
-                onValidityChange={setDateValid}
-              />
+              <DateInput required value={date} onChange={setDate} onValidityChange={setDateValid} />
             </label>
             {canManage && (
               <button
@@ -543,9 +457,7 @@ function StaffWorkspace({ pms }) {
                   </td>
                   <td className="hk-shift-note">{row.note || '—'}</td>
                   <td>
-                    <span
-                      className={'hk-status' + (row.active ? ' is-active' : '')}
-                    >
+                    <span className={'hk-status' + (row.active ? ' is-active' : '')}>
                       <span aria-hidden="true" />
                       {row.active ? tUi('hk.applying') : tUi('hk.stopped')}
                     </span>
@@ -557,10 +469,7 @@ function StaffWorkspace({ pms }) {
                         className="hk-text-button"
                         disabled={busy}
                         aria-label={
-                          'Sửa ca của ' +
-                          staffName(row.staffId) +
-                          ' lúc ' +
-                          row.startTime
+                          'Sửa ca của ' + staffName(row.staffId) + ' lúc ' + row.startTime
                         }
                         onClick={() => editShift(row)}
                       >
@@ -608,16 +517,16 @@ function StaffWorkspace({ pms }) {
           <p className="hk-shift-editor-hint">{tUi('hk.shiftTimeHint')}</p>
           <form
             onSubmit={(event) => {
-              event.preventDefault();
-              if (!shiftDates.length) return;
+              event.preventDefault()
+              if (!shiftDates.length) return
               if (
                 ![shiftForm.startTime, shiftForm.endTime].every((value) =>
                   /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(value),
                 ) ||
                 shiftForm.endTime <= shiftForm.startTime
               ) {
-                setError('Giờ kết thúc phải sau giờ bắt đầu, dùng HH:mm.');
-                return;
+                setError('Giờ kết thúc phải sau giờ bắt đầu, dùng HH:mm.')
+                return
               }
               save(
                 () =>
@@ -630,12 +539,12 @@ function StaffWorkspace({ pms }) {
                     ? tUi('hk.shiftSaved')
                     : tUi('hk.shiftsCreated', { count: result.created ?? 1 }),
                 () => {
-                  setDate(shiftForm.date);
-                  setShiftForm(blankShift(shiftForm.date));
-                  setShiftPeriod('day');
-                  setShiftEditorOpen(false);
+                  setDate(shiftForm.date)
+                  setShiftForm(blankShift(shiftForm.date))
+                  setShiftPeriod('day')
+                  setShiftEditorOpen(false)
                 },
-              );
+              )
             }}
           >
             <fieldset disabled={busy}>
@@ -671,17 +580,12 @@ function StaffWorkspace({ pms }) {
                     required
                     value={shiftForm.staffId}
                     onChange={(event) =>
-                      setShiftForm({
-                        ...shiftForm,
-                        staffId: event.target.value,
-                      })
+                      setShiftForm({ ...shiftForm, staffId: event.target.value })
                     }
                   >
                     <option value="">{tUi('hk.chooseStaff')}</option>
                     {staff
-                      .filter(
-                        (row) => row.active || row.id === shiftForm.staffId,
-                      )
+                      .filter((row) => row.active || row.id === shiftForm.staffId)
                       .map((row) => (
                         <option key={row.id} value={row.id}>
                           {row.name}
@@ -710,10 +614,7 @@ function StaffWorkspace({ pms }) {
                       maxLength={5}
                       value={shiftForm.startTime}
                       onChange={(event) =>
-                        setShiftForm({
-                          ...shiftForm,
-                          startTime: event.target.value,
-                        })
+                        setShiftForm({ ...shiftForm, startTime: event.target.value })
                       }
                     />
                   </label>
@@ -728,10 +629,7 @@ function StaffWorkspace({ pms }) {
                       maxLength={5}
                       value={shiftForm.endTime}
                       onChange={(event) =>
-                        setShiftForm({
-                          ...shiftForm,
-                          endTime: event.target.value,
-                        })
+                        setShiftForm({ ...shiftForm, endTime: event.target.value })
                       }
                     />
                   </label>
@@ -741,9 +639,7 @@ function StaffWorkspace({ pms }) {
                   <input
                     maxLength={500}
                     value={shiftForm.note}
-                    onChange={(event) =>
-                      setShiftForm({ ...shiftForm, note: event.target.value })
-                    }
+                    onChange={(event) => setShiftForm({ ...shiftForm, note: event.target.value })}
                     placeholder={tUi('hk.shiftPlaceholder')}
                   />
                 </label>
@@ -752,10 +648,7 @@ function StaffWorkspace({ pms }) {
                   <select
                     value={shiftForm.active ? 'active' : 'inactive'}
                     onChange={(event) =>
-                      setShiftForm({
-                        ...shiftForm,
-                        active: event.target.value === 'active',
-                      })
+                      setShiftForm({ ...shiftForm, active: event.target.value === 'active' })
                     }
                   >
                     <option value="active">{tUi('hk.applying')}</option>
@@ -772,9 +665,7 @@ function StaffWorkspace({ pms }) {
                       end: formatDate(shiftDates.at(-1)),
                     })}
                   </p>
-                  <p className="hk-shift-period-hint">
-                    {tUi('hk.shiftPeriodHint')}
-                  </p>
+                  <p className="hk-shift-period-hint">{tUi('hk.shiftPeriodHint')}</p>
                 </>
               )}
               {!shiftDates.length && (
@@ -786,11 +677,7 @@ function StaffWorkspace({ pms }) {
                 <button type="button" onClick={closeShiftEditor}>
                   {tUi('common.cancel')}
                 </button>
-                <button
-                  type="submit"
-                  className="primary"
-                  disabled={!shiftDates.length}
-                >
+                <button type="submit" className="primary" disabled={!shiftDates.length}>
                   <Save size={16} aria-hidden="true" />
                   {busy ? tUi('common.saving') : tUi('hk.saveShift')}
                 </button>
@@ -800,5 +687,5 @@ function StaffWorkspace({ pms }) {
         </FormDialog>
       )}
     </div>
-  );
+  )
 }

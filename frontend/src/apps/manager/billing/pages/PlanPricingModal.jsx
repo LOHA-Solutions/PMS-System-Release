@@ -1,29 +1,26 @@
-import React, { useState } from 'react';
-import { Calculator, X } from 'lucide-react';
-import { t as tUi, tr as labelUi } from '../../../../shared/i18n/useI18n.js';
+import React, { useState } from 'react'
+import { Calculator, X } from 'lucide-react'
+import { t as tUi, tr as labelUi } from '../../../../shared/i18n/useI18n.js'
 import {
   calculatePlanPrice,
   defaultRegisteredRooms,
   normalizePricingRules,
-} from '../../../../shared/lib/planPricing.js';
-import { money } from '../../../pms/data/model.js';
-import LegacyOverlay from '../../../pms/components/LegacyOverlay.jsx';
+} from '../../../../shared/lib/planPricing.js'
+import { money } from '../../../pms/data/model.js'
+import LegacyOverlay from '../../../pms/components/LegacyOverlay.jsx'
 
 export function planPricePreview(plan, rooms, cycle) {
   try {
-    return { quote: calculatePlanPrice(plan, rooms, cycle), error: '' };
+    return { quote: calculatePlanPrice(plan, rooms, cycle), error: '' }
   } catch (error) {
-    return { quote: null, error: error.message };
+    return { quote: null, error: error.message }
   }
 }
 
 export function PlanPriceBreakdown({ quote, currency }) {
-  if (!quote) return null;
+  if (!quote) return null
   return (
-    <dl
-      className="manager-plan-price-breakdown"
-      aria-label={labelUi('Chi tiết tính giá')}
-    >
+    <dl className="manager-plan-price-breakdown" aria-label={labelUi('Chi tiết tính giá')}>
       <div>
         <dt>
           {labelUi('Giá cơ bản')} ({quote.baseRooms} {labelUi('phòng')})
@@ -32,8 +29,7 @@ export function PlanPriceBreakdown({ quote, currency }) {
       </div>
       <div>
         <dt>
-          {quote.extraRooms} {labelUi('phòng thêm')} ×{' '}
-          {money(quote.extraRoomPrice, currency)}
+          {quote.extraRooms} {labelUi('phòng thêm')} × {money(quote.extraRoomPrice, currency)}
         </dt>
         <dd>
           {labelUi('Tạm tính')}: {money(quote.subtotal, currency)}
@@ -42,9 +38,7 @@ export function PlanPriceBreakdown({ quote, currency }) {
       <div>
         <dt>
           {labelUi('Điều chỉnh')}
-          {quote.aboveRooms
-            ? ` (${labelUi('Vượt')} ${quote.aboveRooms} ${labelUi('phòng')})`
-            : ''}
+          {quote.aboveRooms ? ` (${labelUi('Vượt')} ${quote.aboveRooms} ${labelUi('phòng')})` : ''}
         </dt>
         <dd>{quote.adjustmentPercent}%</dd>
       </div>
@@ -53,56 +47,43 @@ export function PlanPriceBreakdown({ quote, currency }) {
         <dd>{money(quote.amount, currency)}</dd>
       </div>
     </dl>
-  );
+  )
 }
 
-export default function PlanPricingModal({
-  plan,
-  local = false,
-  theme: t,
-  onClose,
-  onSave,
-}) {
-  const [rules, setRules] = useState(() =>
-    normalizePricingRules(plan.pricingRules),
-  );
-  const [rooms, setRooms] = useState(() => defaultRegisteredRooms(plan));
-  const [cycle, setCycle] = useState('monthly');
+export default function PlanPricingModal({ plan, local = false, theme: t, onClose, onSave }) {
+  const [rules, setRules] = useState(() => normalizePricingRules(plan.pricingRules))
+  const [rooms, setRooms] = useState(() => defaultRegisteredRooms(plan))
+  const [cycle, setCycle] = useState('monthly')
   const [error, setError] = useState(''),
-    [busy, setBusy] = useState(false);
-  const preview = planPricePreview(
-    { ...plan, pricingRules: rules },
-    rooms,
-    cycle,
-  );
+    [busy, setBusy] = useState(false)
+  const preview = planPricePreview({ ...plan, pricingRules: rules }, rooms, cycle)
   const save = async (event) => {
-    event.preventDefault();
-    if (busy) return;
-    setError('');
+    event.preventDefault()
+    if (busy) return
+    setError('')
     try {
-      const normalized = normalizePricingRules(rules);
+      const normalized = normalizePricingRules(rules)
       if (
         plan.code === 'FREE' &&
         [normalized.extraRoomPrice, normalized.extraRoomPriceYear].some(
           (value) => Number(value) !== 0,
         )
       )
-        throw new Error('Gói FREE phải có giá phòng thêm bằng 0.');
-      setBusy(true);
-      await onSave(normalized);
+        throw new Error('Gói FREE phải có giá phòng thêm bằng 0.')
+      setBusy(true)
+      await onSave(normalized)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
-  const update = (key) => (event) =>
-    setRules((value) => ({ ...value, [key]: event.target.value }));
+  }
+  const update = (key) => (event) => setRules((value) => ({ ...value, [key]: event.target.value }))
   return (
     <LegacyOverlay
       title={labelUi('Điều kiện tính giá gói cước')}
       onClose={() => {
-        if (!busy) onClose();
+        if (!busy) onClose()
       }}
       style={{
         position: 'fixed',
@@ -131,8 +112,7 @@ export default function PlanPricingModal({
       >
         <div className="manager-plan-pricing-heading">
           <h2>
-            <Calculator size={20} aria-hidden="true" />{' '}
-            {labelUi('Điều kiện tính giá')}
+            <Calculator size={20} aria-hidden="true" /> {labelUi('Điều kiện tính giá')}
             {plan.name ? `: ${plan.name}` : ''}
           </h2>
           <button
@@ -217,9 +197,7 @@ export default function PlanPricingModal({
                       setRules((value) => ({
                         ...value,
                         adjustments: value.adjustments.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, percent: event.target.value }
-                            : item,
+                          itemIndex === index ? { ...item, percent: event.target.value } : item,
                         ),
                       }))
                     }
@@ -263,26 +241,14 @@ export default function PlanPricingModal({
             {preview.error ? (
               <p role="status">{labelUi(preview.error)}</p>
             ) : (
-              <PlanPriceBreakdown
-                quote={preview.quote}
-                currency={plan.currency}
-              />
+              <PlanPriceBreakdown quote={preview.quote} currency={plan.currency} />
             )}
           </fieldset>
           <div className="manager-invoice-actions">
-            <button
-              type="button"
-              className="manager-button"
-              disabled={busy}
-              onClick={onClose}
-            >
+            <button type="button" className="manager-button" disabled={busy} onClick={onClose}>
               {tUi('common.cancel')}
             </button>
-            <button
-              type="submit"
-              className="manager-button manager-button-primary"
-              disabled={busy}
-            >
+            <button type="submit" className="manager-button manager-button-primary" disabled={busy}>
               {busy
                 ? tUi('common.saving')
                 : local
@@ -293,5 +259,5 @@ export default function PlanPricingModal({
         </form>
       </div>
     </LegacyOverlay>
-  );
+  )
 }

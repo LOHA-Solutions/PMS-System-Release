@@ -1,50 +1,30 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate } from '../../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useState } from 'react';
-import { Pencil, Plus, X } from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { money } from '../../data/model';
-import LegacyOverlay from '../../components/LegacyOverlay';
-import '../../components/DomainForms.css';
-import '../RatesInventory.css';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useState } from 'react'
+import { Pencil, Plus, X } from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { money } from '../../data/model'
+import LegacyOverlay from '../../components/LegacyOverlay'
+import '../../components/DomainForms.css'
+import '../RatesInventory.css'
 
-const titles = {
-  rules: 'Giá nâng cao',
-  vouchers: 'Vouchers',
-  promotions: 'Khuyến mãi',
-};
-const labels = {
-  rules: 'quy tắc',
-  vouchers: 'voucher',
-  promotions: 'khuyến mãi',
-};
+const titles = { rules: 'Giá nâng cao', vouchers: 'Vouchers', promotions: 'Khuyến mãi' }
+const labels = { rules: 'quy tắc', vouchers: 'voucher', promotions: 'khuyến mãi' }
 const descriptions = {
   rules: 'Điều chỉnh giá theo ngày trong tuần hoặc số đêm lưu trú.',
   vouchers: 'Quản lý mã giảm giá và điều kiện sử dụng cho đặt phòng mới.',
   promotions: 'Thiết lập ưu đãi đặt sớm, đặt sát ngày hoặc theo số đêm.',
-};
+}
 const kinds = {
   weekend: 'Theo ngày trong tuần',
   los: 'Theo số đêm',
   earlybird: 'Đặt sớm',
   lastminute: 'Đặt sát ngày',
   staypay: 'Ở N đêm, trả M đêm',
-};
-const weekdays = [
-  'Thứ 2',
-  'Thứ 3',
-  'Thứ 4',
-  'Thứ 5',
-  'Thứ 6',
-  'Thứ 7',
-  'Chủ nhật',
-];
+}
+const weekdays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật']
 const defaults = {
   rules: {
     name: '',
@@ -82,58 +62,51 @@ const defaults = {
     endDate: '',
     active: true,
   },
-};
+}
 
 export default function PricingManagement({ catalog = 'rules' }) {
-  const { tenantId, user } = usePms();
-  return (
-    <PricingEditor
-      key={`${tenantId}:${user?.id}:${catalog}`}
-      catalog={catalog}
-    />
-  );
+  const { tenantId, user } = usePms()
+  return <PricingEditor key={`${tenantId}:${user?.id}:${catalog}`} catalog={catalog} />
 }
 
 function PricingEditor({ catalog }) {
-  useI18n();
-  const { requestTenant, savePricing, access, roomTypes, tenantId, settings } =
-    usePms();
+  useI18n()
+  const { requestTenant, savePricing, access, roomTypes, tenantId, settings } = usePms()
   const [rows, setRows] = useState([]),
     [form, setForm] = useState(null),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false)
   const [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
-    [message, setMessage] = useState('');
+    [message, setMessage] = useState('')
   const writable = access(
     'settings.write',
     catalog === 'rules' ? 'ARI_MANAGEMENT' : 'VOUCHER_PROMO',
     true,
-  ).allowed;
-  const load = () =>
-    requestTenant('/pricing').then((data) => setRows(data[catalog] || []));
+  ).allowed
+  const load = () => requestTenant('/pricing').then((data) => setRows(data[catalog] || []))
   useEffect(() => {
-    let live = true;
+    let live = true
     requestTenant('/pricing')
       .then((data) => {
-        if (live) setRows(data[catalog] || []);
+        if (live) setRows(data[catalog] || [])
       })
       .catch((err) => {
-        if (live) setError(err.message);
+        if (live) setError(err.message)
       })
       .finally(() => {
-        if (live) setLoading(false);
-      });
+        if (live) setLoading(false)
+      })
     return () => {
-      live = false;
-    };
-  }, [requestTenant, catalog, tenantId]);
-  const update = (key, value) => setForm((old) => ({ ...old, [key]: value }));
+      live = false
+    }
+  }, [requestTenant, catalog, tenantId])
+  const update = (key, value) => setForm((old) => ({ ...old, [key]: value }))
   const close = () => {
     if (!busy) {
-      setForm(null);
-      setError('');
+      setForm(null)
+      setError('')
     }
-  };
+  }
   const edit = (row) => {
     setForm({
       ...defaults[catalog],
@@ -142,36 +115,36 @@ function PricingEditor({ catalog }) {
       maxNights: row?.maxNights ?? '',
       usageLimit: row?.usageLimit ?? '',
       maxDaysBefore: row?.maxDaysBefore ?? '',
-    });
-    setError('');
-    setMessage('');
-  };
+    })
+    setError('')
+    setMessage('')
+  }
   async function retry() {
-    setLoading(true);
-    setError('');
+    setLoading(true)
+    setError('')
     try {
-      await load();
+      await load()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function save(event) {
-    event.preventDefault();
-    if (busy || !writable) return;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (busy || !writable) return
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
       const input = Object.fromEntries(
         Object.keys(defaults[catalog]).map((key) => [key, form[key]]),
-      );
-      if (form.id) input.id = form.id;
-      input.name = input.name.trim();
-      if (!input.name) throw new Error('Vui lòng nhập tên cấu hình.');
-      if (catalog === 'rules') input.roomTypeId ||= null;
+      )
+      if (form.id) input.id = form.id
+      input.name = input.name.trim()
+      if (!input.name) throw new Error('Vui lòng nhập tên cấu hình.')
+      if (catalog === 'rules') input.roomTypeId ||= null
       for (const [key, min, max, optional] of [
         ['minNights', 1, 366],
         ['priority', 0, 1000],
@@ -187,53 +160,41 @@ function PricingEditor({ catalog }) {
             optional && input[key] === ''
               ? null
               : Number(
-                  decimalInput(input[key], {
-                    precision: 0,
-                    min: String(min),
-                    max: String(max),
-                  }),
-                );
+                  decimalInput(input[key], { precision: 0, min: String(min), max: String(max) }),
+                )
       for (const key of ['adjustmentPercent', 'percent', 'value', 'minTotal'])
         if (key in input) {
           input[key] = decimalInput(
             input[key],
             key === 'adjustmentPercent'
               ? { min: '-100', max: '1000' }
-              : key === 'percent' ||
-                  (key === 'value' && input.discountType === 'percent')
+              : key === 'percent' || (key === 'value' && input.discountType === 'percent')
                 ? { max: '100' }
                 : {},
-          );
+          )
         }
       if (
         (input.maxNights != null && input.maxNights < input.minNights) ||
-        (input.maxDaysBefore != null &&
-          input.maxDaysBefore < input.minDaysBefore)
+        (input.maxDaysBefore != null && input.maxDaysBefore < input.minDaysBefore)
       )
-        throw new Error(
-          'Giới hạn tối đa phải bằng hoặc lớn hơn giới hạn tối thiểu.',
-        );
+        throw new Error('Giới hạn tối đa phải bằng hoặc lớn hơn giới hạn tối thiểu.')
       if (input.kind === 'staypay' && input.payM >= input.stayN)
-        throw new Error('Số đêm trả tiền phải nhỏ hơn số đêm lưu trú.');
+        throw new Error('Số đêm trả tiền phải nhỏ hơn số đêm lưu trú.')
       if (
-        (input.validFrom &&
-          input.validTo &&
-          input.validFrom >= input.validTo) ||
+        (input.validFrom && input.validTo && input.validFrom >= input.validTo) ||
         (input.startDate && input.endDate && input.startDate >= input.endDate)
       )
-        throw new Error('Ngày kết thúc phải sau ngày bắt đầu.');
+        throw new Error('Ngày kết thúc phải sau ngày bắt đầu.')
       if (catalog === 'vouchers' && !/^[A-Z0-9_-]{1,40}$/.test(input.code))
-        throw new Error(
-          'Mã voucher chỉ gồm chữ, số, dấu gạch ngang hoặc gạch dưới.',
-        );
-      await savePricing(catalog, input);
-      setForm(null);
-      setMessage('Đã lưu cấu hình. Booking đã tạo giữ nguyên giá đã chốt.');
-      await load();
+        throw new Error('Mã voucher chỉ gồm chữ, số, dấu gạch ngang hoặc gạch dưới.')
+      await savePricing(catalog, input)
+      setForm(null)
+      setMessage('Đã lưu cấu hình. Booking đã tạo giữ nguyên giá đã chốt.')
+      await load()
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
   const numberField = (key, label, min = 0, max, step = '1') => (
@@ -256,24 +217,18 @@ function PricingEditor({ catalog }) {
         onChange={(event) => update(key, event.target.value)}
       />
     </label>
-  );
+  )
   const dateField = (key, label) => (
     <label>
       {labelUi(label)}
-      <DateInput
-        name={key}
-        value={form[key] || ''}
-        onChange={(value) => update(key, value)}
-      />
+      <DateInput name={key} value={form[key] || ''} onChange={(value) => update(key, value)} />
     </label>
-  );
+  )
   return (
     <div className="pms-domain-page pms-rates-page">
       <header className="domain-toolbar rates-page-heading">
         <div>
-          <span className="rates-kicker">
-            {labelUi('Giá &amp; Phòng trống')}
-          </span>
+          <span className="rates-kicker">{labelUi('Giá &amp; Phòng trống')}</span>
           <h1>{titles[catalog]}</h1>
           <p>{descriptions[catalog]}</p>
         </div>
@@ -284,8 +239,7 @@ function PricingEditor({ catalog }) {
             disabled={!writable || loading || busy}
             onClick={() => edit(null)}
           >
-            <Plus size={16} aria-hidden="true" /> {labelUi('Thêm')}{' '}
-            {labels[catalog]}
+            <Plus size={16} aria-hidden="true" /> {labelUi('Thêm')} {labels[catalog]}
           </button>
         </div>
       </header>
@@ -304,9 +258,7 @@ function PricingEditor({ catalog }) {
       )}
       {!writable && (
         <p className="rates-notice">
-          {labelUi(
-            'Bạn có quyền xem cấu hình. Cần quyền quản lý để thêm hoặc chỉnh sửa.',
-          )}
+          {labelUi('Bạn có quyền xem cấu hình. Cần quyền quản lý để thêm hoặc chỉnh sửa.')}
         </p>
       )}
       <p className="rates-notice">
@@ -336,8 +288,7 @@ function PricingEditor({ catalog }) {
           </div>
           {!loading && (
             <span className="rates-summary">
-              {rows.length} cấu hình · {rows.filter((row) => row.active).length}{' '}
-              đang bật
+              {rows.length} cấu hình · {rows.filter((row) => row.active).length} đang bật
             </span>
           )}
         </div>
@@ -347,9 +298,7 @@ function PricingEditor({ catalog }) {
             <p>{labelUi('Danh sách giá và ưu đãi sẽ xuất hiện tại đây.')}</p>
           </div>
         ) : error && !rows.length ? (
-          <div className="rates-empty">
-            {labelUi('Chưa tải được danh sách. Vui lòng thử lại.')}
-          </div>
+          <div className="rates-empty">{labelUi('Chưa tải được danh sách. Vui lòng thử lại.')}</div>
         ) : !rows.length ? (
           <div className="rates-empty">
             <strong>Chưa có {labels[catalog]}</strong>
@@ -370,15 +319,11 @@ function PricingEditor({ catalog }) {
               <thead>
                 <tr>
                   <th scope="col">
-                    {catalog === 'vouchers'
-                      ? 'Voucher'
-                      : labelUi('Tên cấu hình')}
+                    {catalog === 'vouchers' ? 'Voucher' : labelUi('Tên cấu hình')}
                   </th>
                   <th scope="col">{labelUi('Điều kiện áp dụng')}</th>
                   <th scope="col">
-                    {catalog === 'rules'
-                      ? labelUi('Điều chỉnh giá')
-                      : labelUi('Mức ưu đãi')}
+                    {catalog === 'rules' ? labelUi('Điều chỉnh giá') : labelUi('Mức ưu đãi')}
                   </th>
                   <th scope="col">{tUi('common.status')}</th>
                   <th scope="col">{tUi('common.actions')}</th>
@@ -389,39 +334,31 @@ function PricingEditor({ catalog }) {
                   <tr key={row.id}>
                     <td>
                       <strong>{row.name}</strong>
-                      <div className="rates-muted">
-                        {row.code || kinds[row.kind]}
-                      </div>
+                      <div className="rates-muted">{row.code || kinds[row.kind]}</div>
                     </td>
                     <td>
                       {catalog === 'rules' ? (
                         <>
                           <span>
                             {row.roomTypeId
-                              ? roomTypes.find(
-                                  (type) => type.id === row.roomTypeId,
-                                )?.name ||
+                              ? roomTypes.find((type) => type.id === row.roomTypeId)?.name ||
                                 labelUi('Loại phòng đã ngừng sử dụng')
                               : tUi('common.allRoomTypes')}
                           </span>
                           <div className="rates-muted">
                             {row.kind === 'weekend' && (
                               <>
-                                {(row.weekdays || [])
-                                  .map((day) => weekdays[day - 1])
-                                  .join(', ')}
+                                {(row.weekdays || []).map((day) => weekdays[day - 1]).join(', ')}
                                 <br />
                               </>
                             )}
-                            Từ {row.minNights} đến{' '}
-                            {row.maxNights ?? labelUi('không giới hạn')} đêm
+                            Từ {row.minNights} đến {row.maxNights ?? labelUi('không giới hạn')} đêm
                           </div>
                         </>
                       ) : catalog === 'vouchers' ? (
                         <>
                           <span>
-                            Tối thiểu {row.minNights} đêm ·{' '}
-                            {money(row.minTotal, settings.currency)}
+                            Tối thiểu {row.minNights} đêm · {money(row.minTotal, settings.currency)}
                           </span>
                           <div className="rates-muted">
                             Đã dùng {row.usedCount || 0}/
@@ -433,10 +370,7 @@ function PricingEditor({ catalog }) {
                                 {row.validFrom
                                   ? formatDate(row.validFrom)
                                   : tUi('usage.unlimited')}{' '}
-                                →{' '}
-                                {row.validTo
-                                  ? formatDate(row.validTo)
-                                  : tUi('usage.unlimited')}
+                                → {row.validTo ? formatDate(row.validTo) : tUi('usage.unlimited')}
                               </>
                             )}
                           </div>
@@ -455,10 +389,7 @@ function PricingEditor({ catalog }) {
                                 {row.startDate
                                   ? formatDate(row.startDate)
                                   : tUi('usage.unlimited')}{' '}
-                                →{' '}
-                                {row.endDate
-                                  ? formatDate(row.endDate)
-                                  : tUi('usage.unlimited')}
+                                → {row.endDate ? formatDate(row.endDate) : tUi('usage.unlimited')}
                               </>
                             )}
                           </div>
@@ -476,15 +407,11 @@ function PricingEditor({ catalog }) {
                               : `${Number(row.value ?? row.percent)}%`}
                       </strong>
                       {catalog === 'rules' && (
-                        <div className="rates-muted">
-                          Ưu tiên {row.priority}
-                        </div>
+                        <div className="rates-muted">Ưu tiên {row.priority}</div>
                       )}
                     </td>
                     <td>
-                      <span
-                        className={`rates-badge ${row.active ? 'is-active' : 'is-paused'}`}
-                      >
+                      <span className={`rates-badge ${row.active ? 'is-active' : 'is-paused'}`}>
                         {row.active ? labelUi('Đang bật') : labelUi('Đã tắt')}
                       </span>
                     </td>
@@ -496,8 +423,7 @@ function PricingEditor({ catalog }) {
                         aria-label={`Sửa ${labels[catalog]} ${row.name}`}
                         onClick={() => edit(row)}
                       >
-                        <Pencil size={15} aria-hidden="true" />{' '}
-                        {tUi('common.edit')}
+                        <Pencil size={15} aria-hidden="true" /> {tUi('common.edit')}
                       </button>
                     </td>
                   </tr>
@@ -517,8 +443,7 @@ function PricingEditor({ catalog }) {
               <div>
                 <span className="rates-kicker">{titles[catalog]}</span>
                 <h2>
-                  {form.id ? tUi('common.edit') : labelUi('Thêm')}{' '}
-                  {labels[catalog]}
+                  {form.id ? tUi('common.edit') : labelUi('Thêm')} {labels[catalog]}
                 </h2>
               </div>
               <button
@@ -550,9 +475,7 @@ function PricingEditor({ catalog }) {
                           pattern=".*\S.*"
                           maxLength="160"
                           value={form.name}
-                          onChange={(event) =>
-                            update('name', event.target.value)
-                          }
+                          onChange={(event) => update('name', event.target.value)}
                         />
                       </label>
                       {catalog === 'vouchers' ? (
@@ -564,9 +487,7 @@ function PricingEditor({ catalog }) {
                             pattern="[A-Z0-9_\-]{1,40}"
                             maxLength="40"
                             value={form.code}
-                            onChange={(event) =>
-                              update('code', event.target.value.toUpperCase())
-                            }
+                            onChange={(event) => update('code', event.target.value.toUpperCase())}
                           />
                         </label>
                       ) : (
@@ -576,30 +497,24 @@ function PricingEditor({ catalog }) {
                             name="kind"
                             value={form.kind}
                             onChange={(event) => {
-                              const kind = event.target.value;
+                              const kind = event.target.value
                               setForm((old) => ({
                                 ...old,
                                 kind,
                                 ...(catalog === 'promotions'
                                   ? {
-                                      minDaysBefore:
-                                        kind === 'earlybird' ? 7 : 0,
-                                      maxDaysBefore:
-                                        kind === 'lastminute' ? 2 : '',
+                                      minDaysBefore: kind === 'earlybird' ? 7 : 0,
+                                      maxDaysBefore: kind === 'lastminute' ? 2 : '',
                                     }
                                   : {}),
-                              }));
+                              }))
                             }}
                           >
                             {Object.entries(kinds)
                               .filter(([key]) =>
                                 catalog === 'rules'
                                   ? ['weekend', 'los'].includes(key)
-                                  : [
-                                      'earlybird',
-                                      'lastminute',
-                                      'staypay',
-                                    ].includes(key),
+                                  : ['earlybird', 'lastminute', 'staypay'].includes(key),
                               )
                               .map(([key, label]) => (
                                 <option key={key} value={key}>
@@ -614,9 +529,7 @@ function PricingEditor({ catalog }) {
                         <select
                           name="active"
                           value={String(form.active)}
-                          onChange={(event) =>
-                            update('active', event.target.value === 'true')
-                          }
+                          onChange={(event) => update('active', event.target.value === 'true')}
                         >
                           <option value="true">{labelUi('Đang bật')}</option>
                           <option value="false">{labelUi('Đã tắt')}</option>
@@ -626,9 +539,7 @@ function PricingEditor({ catalog }) {
                   </section>
                   <section className="rates-form-section">
                     <h3>
-                      {catalog === 'rules'
-                        ? labelUi('Điều chỉnh giá')
-                        : labelUi('Mức ưu đãi')}
+                      {catalog === 'rules' ? labelUi('Điều chỉnh giá') : labelUi('Mức ưu đãi')}
                     </h3>
                     <div className="rates-form-grid">
                       {catalog === 'rules' && (
@@ -638,36 +549,20 @@ function PricingEditor({ catalog }) {
                             <select
                               name="roomTypeId"
                               value={form.roomTypeId}
-                              onChange={(event) =>
-                                update('roomTypeId', event.target.value)
-                              }
+                              onChange={(event) => update('roomTypeId', event.target.value)}
                             >
-                              <option value="">
-                                {tUi('common.allRoomTypes')}
-                              </option>
+                              <option value="">{tUi('common.allRoomTypes')}</option>
                               {roomTypes
-                                .filter(
-                                  (row) =>
-                                    row.active !== false ||
-                                    row.id === form.roomTypeId,
-                                )
+                                .filter((row) => row.active !== false || row.id === form.roomTypeId)
                                 .map((row) => (
                                   <option key={row.id} value={row.id}>
                                     {row.name}
-                                    {row.active === false
-                                      ? ' ' + labelUi('(ngừng sử dụng)')
-                                      : ''}
+                                    {row.active === false ? ' ' + labelUi('(ngừng sử dụng)') : ''}
                                   </option>
                                 ))}
                             </select>
                           </label>
-                          {numberField(
-                            'adjustmentPercent',
-                            'Điều chỉnh (%)',
-                            -100,
-                            1000,
-                            '0.0001',
-                          )}
+                          {numberField('adjustmentPercent', 'Điều chỉnh (%)', -100, 1000, '0.0001')}
                           {numberField('priority', 'Độ ưu tiên', 0, 1000)}
                         </>
                       )}
@@ -678,16 +573,10 @@ function PricingEditor({ catalog }) {
                             <select
                               name="discountType"
                               value={form.discountType}
-                              onChange={(event) =>
-                                update('discountType', event.target.value)
-                              }
+                              onChange={(event) => update('discountType', event.target.value)}
                             >
-                              <option value="percent">
-                                {labelUi('Phần trăm (%)')}
-                              </option>
-                              <option value="fixed">
-                                Số tiền ({settings.currency})
-                              </option>
+                              <option value="percent">{labelUi('Phần trăm (%)')}</option>
+                              <option value="fixed">Số tiền ({settings.currency})</option>
                             </select>
                           </label>
                           {numberField(
@@ -708,13 +597,7 @@ function PricingEditor({ catalog }) {
                             {numberField('payM', 'Trả M đêm', 1, 365)}
                           </>
                         ) : (
-                          numberField(
-                            'percent',
-                            'Mức giảm (%)',
-                            0,
-                            100,
-                            '0.0001',
-                          )
+                          numberField('percent', 'Mức giảm (%)', 0, 100, '0.0001')
                         ))}
                     </div>
                     {catalog === 'rules' && (
@@ -766,9 +649,7 @@ function PricingEditor({ catalog }) {
                             maxLength={3}
                             placeholder={tUi('usage.unlimited')}
                             value={form.maxNights}
-                            onChange={(event) =>
-                              update('maxNights', event.target.value)
-                            }
+                            onChange={(event) => update('maxNights', event.target.value)}
                           />
                         </label>
                       )}
@@ -791,20 +672,14 @@ function PricingEditor({ catalog }) {
                               maxLength={10}
                               placeholder={tUi('usage.unlimited')}
                               value={form.usageLimit}
-                              onChange={(event) =>
-                                update('usageLimit', event.target.value)
-                              }
+                              onChange={(event) => update('usageLimit', event.target.value)}
                             />
                           </label>
                         </>
                       )}
                       {catalog === 'promotions' && form.kind !== 'staypay' && (
                         <>
-                          {numberField(
-                            'minDaysBefore',
-                            'Đặt trước ít nhất (ngày)',
-                            0,
-                          )}
+                          {numberField('minDaysBefore', 'Đặt trước ít nhất (ngày)', 0)}
                           <label>
                             {labelUi('Đặt trước nhiều nhất (ngày)')}
                             <input
@@ -815,9 +690,7 @@ function PricingEditor({ catalog }) {
                               maxLength={4}
                               placeholder={tUi('usage.unlimited')}
                               value={form.maxDaysBefore}
-                              onChange={(event) =>
-                                update('maxDaysBefore', event.target.value)
-                              }
+                              onChange={(event) => update('maxDaysBefore', event.target.value)}
                             />
                           </label>
                         </>
@@ -827,10 +700,7 @@ function PricingEditor({ catalog }) {
                       <div className="rates-form-grid">
                         {catalog === 'vouchers' ? (
                           <>
-                            {dateField(
-                              'validFrom',
-                              'Ngày đặt bắt đầu hiệu lực',
-                            )}
+                            {dateField('validFrom', 'Ngày đặt bắt đầu hiệu lực')}
                             {dateField('validTo', 'Ngày hết hiệu lực')}
                           </>
                         ) : (
@@ -852,18 +722,12 @@ function PricingEditor({ catalog }) {
                 </fieldset>
               </div>
               <footer className="rates-dialog-footer">
-                <p className="rates-muted">
-                  {labelUi('Chỉ áp dụng cho báo giá và booking mới.')}
-                </p>
+                <p className="rates-muted">{labelUi('Chỉ áp dụng cho báo giá và booking mới.')}</p>
                 <div className="rates-form-actions">
                   <button type="button" disabled={busy} onClick={close}>
                     {tUi('common.cancel')}
                   </button>
-                  <button
-                    className="primary"
-                    type="submit"
-                    disabled={busy || !writable}
-                  >
+                  <button className="primary" type="submit" disabled={busy || !writable}>
                     {busy ? tUi('common.saving') : labelUi('Lưu cấu hình')}
                   </button>
                 </div>
@@ -873,5 +737,5 @@ function PricingEditor({ catalog }) {
         </LegacyOverlay>
       )}
     </div>
-  );
+  )
 }

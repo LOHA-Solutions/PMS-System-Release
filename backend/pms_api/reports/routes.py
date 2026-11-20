@@ -184,14 +184,22 @@ def financial_data(tenant_id, start, end, currency, *, basis="original"):
 
     from ..reconciliation.models import RevenueRecognition
 
-    for business_day, amount in db.session.execute(select(
-        RevenueRecognition.business_date,
-        func.sum(RevenueRecognition.base_amount if basis == "base" else RevenueRecognition.amount),
-    ).where(
-        RevenueRecognition.tenant_id == tenant_id,
-        RevenueRecognition.business_date >= start, RevenueRecognition.business_date < end,
-        (RevenueRecognition.base_currency if basis == "base" else RevenueRecognition.currency) == currency,
-    ).group_by(RevenueRecognition.business_date)):
+    for business_day, amount in db.session.execute(
+        select(
+            RevenueRecognition.business_date,
+            func.sum(
+                RevenueRecognition.base_amount if basis == "base" else RevenueRecognition.amount
+            ),
+        )
+        .where(
+            RevenueRecognition.tenant_id == tenant_id,
+            RevenueRecognition.business_date >= start,
+            RevenueRecognition.business_date < end,
+            (RevenueRecognition.base_currency if basis == "base" else RevenueRecognition.currency)
+            == currency,
+        )
+        .group_by(RevenueRecognition.business_date)
+    ):
         days[business_day]["recognizedRevenue"] += amount
 
     closed = list(
@@ -718,7 +726,8 @@ class BusinessReportView(CommonMethodView):
             definitions["cancellations"] = report_definition("cancellations")
         elif report == "nationality":
             nationality = func.coalesce(
-                func.nullif(func.trim(Guest.nationality), ""), report_definition("unknownNationality")
+                func.nullif(func.trim(Guest.nationality), ""),
+                report_definition("unknownNationality"),
             )
             overlap = func.least(Reservation.check_out, end) - func.greatest(
                 Reservation.check_in, start

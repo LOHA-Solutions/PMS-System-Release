@@ -1,12 +1,12 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate, formatDateTime } from '../../../../shared/lib/date.js';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate, formatDateTime } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useReducer, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+  workflowReturnState,
+  workflowReturnTarget,
+} from '../../reconciliation/workflowNavigation.js'
 import {
   AlertCircle,
   CheckCircle2,
@@ -18,15 +18,15 @@ import {
   RefreshCw,
   RotateCcw,
   Upload,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { useChannels } from '../useChannels';
+} from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { useChannels } from '../useChannels'
 import {
   channelHistoryFilters,
   channelHistoryPath,
   channelHistoryReducer,
   createChannelHistory,
-} from '../jobHistory';
+} from '../jobHistory'
 import {
   bookingReviewAmount,
   bookingReviewStay,
@@ -35,12 +35,12 @@ import {
   channelJobStatuses,
   channelJobSuccessMessage,
   syncBlockReason,
-} from '../presentation';
-import { BookingReviewResolver, ChannelIncidents } from './OTAExceptions';
-import { channelCompletionAccess } from '../integration';
-import '../ChannelManager.css';
+} from '../presentation'
+import { BookingReviewResolver, ChannelIncidents } from './OTAExceptions'
+import { channelCompletionAccess } from '../integration'
+import '../ChannelManager.css'
 
-const statuses = channelJobStatuses;
+const statuses = channelJobStatuses
 const jobIcons = {
   push_ari: Upload,
   pull_bookings: Download,
@@ -48,7 +48,7 @@ const jobIcons = {
   ack_revision: CheckCircle2,
   setup_webhook: Link2,
   pause_mapping: Link2,
-};
+}
 const jobKinds = {
   push_ari: 'Cập nhật giá & phòng trống',
   pull_bookings: 'Nhận & xử lý cập nhật đặt phòng',
@@ -56,19 +56,21 @@ const jobKinds = {
   ack_revision: 'Xác nhận đã nhận đặt phòng',
   setup_webhook: 'Thiết lập webhook',
   pause_mapping: 'Đóng bán & tạm dừng ghép nối',
-};
+}
 export default function OTAHistory() {
-  const pms = usePms();
-  return <HistoryWorkspace key={`${pms.tenantId}:${pms.user?.id}`} pms={pms} />;
+  const pms = usePms()
+  return (
+    <HistoryWorkspace key={`${pms.tenantId}:${pms.user?.id}:${pms.authGeneration}`} pms={pms} />
+  )
 }
 export function HistoryWorkspace({ pms, ...props }) {
   return (
     <HistoryContent
-      key={`${pms.tenantId}:${pms.user?.id}`}
+      key={`${pms.tenantId}:${pms.user?.id}:${pms.authGeneration}`}
       pms={pms}
       {...props}
     />
-  );
+  )
 }
 function HistoryContent({
   pms,
@@ -77,176 +79,202 @@ function HistoryContent({
   embedded = false,
   query: sharedQuery,
 }) {
-  useI18n();
-  const localQuery = useChannels(
-    pms.requestTenant,
-    pms.tenantId,
-    '/channels',
-    !sharedQuery,
-  );
-  const query = sharedQuery || localQuery;
+  useI18n()
+  const location = useLocation(),
+    navigate = useNavigate(),
+    [params, setParams] = useSearchParams()
+  const localQuery = useChannels(pms.requestTenant, pms.tenantId, '/channels', !sharedQuery)
+  const query = sharedQuery || localQuery
   const [historyState, changeHistory] = useReducer(
     channelHistoryReducer,
     undefined,
     createChannelHistory,
-  );
-  const sharedRevision = sharedQuery?.revision;
-  const observedSharedRevision = useRef(sharedRevision);
-  const [filters, setFilters] = useState({ ...channelHistoryFilters });
+  )
+  const sharedRevision = sharedQuery?.revision
+  const observedSharedRevision = useRef(sharedRevision)
+  const [filters, setFilters] = useState({ ...channelHistoryFilters })
   const [retryingId, setRetryingId] = useState(null),
-    [selectedId, setSelectedId] = useState(null);
-  const viewAccess = pms.access('channels.view', 'OTA_SYNC', false);
+    [selectedId, setSelectedId] = useState(null)
+  const viewAccess = pms.access('channels.view', 'OTA_SYNC', false)
   const history = useChannels(
     pms.requestTenant,
     pms.tenantId,
     channelHistoryPath(historyState),
     viewAccess.allowed,
     historyState.revision,
-  );
+  )
   const jobDetails = useChannels(
     pms.requestTenant,
     pms.tenantId,
     `/channels/jobs/${encodeURIComponent(selectedId || '')}`,
     Boolean(selectedId) && viewAccess.allowed,
     historyState.revision,
-  );
-  const historyPagination = history.data?.pagination;
-  const [reviewPage, setReviewPage] = useState(1);
-  const [resolvingReview, setResolvingReview] = useState(null);
+  )
+  const historyPagination = history.data?.pagination
+  const requestedPage = Number(params.get('reviewPage') || 1)
+  const reviewPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
+  const reviewId = params.get('reviewId') || ''
+  const validReviewId =
+    params.getAll('reviewId').length === 1 &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)
+  const focusedReview = useChannels(
+    pms.requestTenant,
+    pms.tenantId,
+    '/channels/booking-reviews?' + new URLSearchParams({ reviewId }),
+    validReviewId && channelCompletionAccess(pms, viewAccess),
+    query.revision,
+  )
   const reviews = useChannels(
     pms.requestTenant,
     pms.tenantId,
     `/channels/booking-reviews?page=${reviewPage}&pageSize=25`,
     true,
     query.revision,
-  );
-  const reviewRows = reviews.data?.items || [];
-  const pagination = reviews.data?.pagination;
+  )
+  const reviewRows = reviews.data?.items || []
+  const pagination = reviews.data?.pagination
   const [error, setError] = useState(''),
-    [message, setMessage] = useState('');
+    [message, setMessage] = useState('')
   const active = useRef(true),
     inFlight = useRef(false),
     errorNotice = useRef(null),
     successNotice = useRef(null),
-    detailsTrigger = useRef(null);
-  const writeAccess = pms.access('channels.write', 'OTA_SYNC', true);
-  const canResolveReview = channelCompletionAccess(pms, writeAccess);
+    detailsTrigger = useRef(null)
+  const writeAccess = pms.access('channels.write', 'OTA_SYNC', true)
+  const canResolveReview = channelCompletionAccess(pms, writeAccess)
+  const resolvingReview =
+    canResolveReview &&
+    !['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(pms.user?.globalRole) &&
+    !focusedReview.error
+      ? focusedReview.data?.items.find(
+          (row) =>
+            row.id.toLowerCase() === reviewId.toLowerCase() &&
+            !['queued', 'processing'].includes(row.jobStatus),
+        )
+      : null
+  const returnTo = workflowReturnTarget(location, reviewId, pms)
   const accessMessage =
     writeAccess.reason === 'role'
       ? 'Bạn đang ở chế độ chỉ xem. Chủ khách sạn có thể cấu hình và đồng bộ OTA.'
-      : writeAccess.message;
-  const rows = history.data?.items || [];
-  const hasFilters = Object.values(historyState.filters).some(Boolean);
-  const busy = retryingId !== null;
-  const displayTime = (value) =>
-    value ? formatDateTime(value, pms.settings.timezone) : '—';
-  const displayDate = (value) => formatDate(value);
+      : writeAccess.message
+  const rows = history.data?.items || []
+  const hasFilters = Object.values(historyState.filters).some(Boolean)
+  const busy = retryingId !== null
+  const displayTime = (value) => (value ? formatDateTime(value, pms.settings.timezone) : '—')
+  const displayDate = (value) => formatDate(value)
   useEffect(() => {
-    active.current = true;
+    active.current = true
     return () => {
-      active.current = false;
-    };
-  }, []);
+      active.current = false
+    }
+  }, [])
   useEffect(() => {
-    if (error) errorNotice.current?.focus();
-    else if (message) successNotice.current?.focus();
-  }, [error, message]);
+    if (error) errorNotice.current?.focus()
+    else if (message) successNotice.current?.focus()
+  }, [error, message])
   useEffect(() => {
-    if (
-      sharedRevision === undefined ||
-      observedSharedRevision.current === sharedRevision
-    )
-      return;
-    observedSharedRevision.current = sharedRevision;
-    changeHistory({ type: 'refresh' });
-  }, [sharedRevision]);
+    if (sharedRevision === undefined || observedSharedRevision.current === sharedRevision) return
+    observedSharedRevision.current = sharedRevision
+    changeHistory({ type: 'refresh' })
+  }, [sharedRevision])
   function refreshQueries() {
-    if (!sharedQuery) changeHistory({ type: 'refresh' });
-    query.refresh();
-    reviews.refresh();
+    if (!sharedQuery) changeHistory({ type: 'refresh' })
+    query.refresh()
+    reviews.refresh()
+    focusedReview.refresh()
+  }
+  function selectReview(id) {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous)
+        if (id) next.set('reviewId', id)
+        else next.delete('reviewId')
+        return next
+      },
+      { state: location.state },
+    )
+  }
+  function closeReview() {
+    if (returnTo) navigate(returnTo, { state: workflowReturnState(location, reviewId, pms) })
+    else selectReview('')
+  }
+  function setReviewPage(update) {
+    setParams((previous) => {
+      const next = new URLSearchParams(previous)
+      next.set('reviewPage', update(reviewPage))
+      next.delete('reviewId')
+      return next
+    })
   }
   function refresh() {
-    setError('');
-    setMessage('');
-    refreshQueries();
+    setError('')
+    setMessage('')
+    refreshQueries()
   }
   function applyFilters(event) {
-    event.preventDefault();
-    setSelectedId(null);
-    changeHistory({ type: 'filter', filters });
+    event.preventDefault()
+    setSelectedId(null)
+    changeHistory({ type: 'filter', filters })
   }
   function clearFilters() {
-    setFilters({ ...channelHistoryFilters });
-    setSelectedId(null);
-    changeHistory({ type: 'filter', filters: channelHistoryFilters });
+    setFilters({ ...channelHistoryFilters })
+    setSelectedId(null)
+    changeHistory({ type: 'filter', filters: channelHistoryFilters })
   }
   function setFilter(key, value) {
-    setFilters((previous) => ({ ...previous, [key]: value }));
+    setFilters((previous) => ({ ...previous, [key]: value }))
   }
   function closeDetails() {
-    setSelectedId(null);
-    detailsTrigger.current?.focus();
+    setSelectedId(null)
+    detailsTrigger.current?.focus()
   }
   async function retry(row) {
     if (
       inFlight.current ||
       !writeAccess.allowed ||
-      syncBlockReason(
-        query.data?.connection,
-        query.data?.mappings || [],
-        row.kind,
-      )
+      syncBlockReason(query.data?.connection, query.data?.mappings || [], row.kind)
     )
-      return;
-    inFlight.current = true;
-    setRetryingId(row.id);
-    setError('');
-    setMessage('');
+      return
+    inFlight.current = true
+    setRetryingId(row.id)
+    setError('')
+    setMessage('')
     try {
-      await pms.requestTenant(
-        '/channels/jobs/' + encodeURIComponent(row.id) + '/retry',
-        { method: 'POST', body: {} },
-      );
+      await pms.requestTenant('/channels/jobs/' + encodeURIComponent(row.id) + '/retry', {
+        method: 'POST',
+        body: {},
+      })
       if (active.current) {
         setMessage(
           'Đã xếp hàng thử lại. Tải lại lịch sử để xem kết quả sau khi yêu cầu được xử lý.',
-        );
-        refreshQueries();
+        )
+        refreshQueries()
       }
     } catch (err) {
-      if (active.current) setError(err.message);
+      if (active.current) setError(err.message)
     } finally {
-      inFlight.current = false;
-      if (active.current) setRetryingId(null);
+      inFlight.current = false
+      if (active.current) setRetryingId(null)
     }
   }
   return (
-    <div
-      className={`ota-page ota-history${embedded ? ' ota-page--embedded' : ''}`}
-    >
+    <div className={`ota-page ota-history${embedded ? ' ota-page--embedded' : ''}`}>
+      {returnTo && !resolvingReview && (
+        <Link to={returnTo} state={workflowReturnState(location, reviewId, pms)}>
+          {labelUi('Quay lại đối soát')}
+        </Link>
+      )}
       <header className="ota-page-header">
         <div>
-          {!embedded && (
-            <p className="ota-eyebrow">{labelUi('PHÂN PHỐI & BÁN PHÒNG')}</p>
-          )}
-          {embedded ? (
-            <h2>{labelUi('Lịch sử đồng bộ')}</h2>
-          ) : (
-            <h1>{labelUi('Lịch sử đồng bộ')}</h1>
-          )}
-          <p>
-            {labelUi(
-              'Theo dõi yêu cầu trao đổi giá, phòng trống và đặt phòng với Channex.',
-            )}
-          </p>
+          {!embedded && <p className="ota-eyebrow">{labelUi('PHÂN PHỐI & BÁN PHÒNG')}</p>}
+          {embedded ? <h2>{labelUi('Lịch sử đồng bộ')}</h2> : <h1>{labelUi('Lịch sử đồng bộ')}</h1>}
+          <p>{labelUi('Theo dõi yêu cầu trao đổi giá, phòng trống và đặt phòng với Channex.')}</p>
         </div>
         <div className="ota-page-actions">
           <button
             type="button"
             className="ota-button ota-button--secondary"
-            disabled={
-              busy || query.loading || history.loading || reviews.loading
-            }
+            disabled={busy || query.loading || history.loading || reviews.loading}
             onClick={refresh}
           >
             <RefreshCw size={16} aria-hidden="true" />
@@ -260,27 +288,16 @@ function HistoryContent({
         <nav className="ota-tabs" aria-label={tUi('nav.channelManagement')}>
           <Link className="ota-tab" to={connectionPath}>
             <Link2 size={16} aria-hidden="true" />
-            {connectionPath === '/id/ota'
-              ? labelUi('Kênh OTA')
-              : labelUi('Kết nối Channex')}
+            {connectionPath === '/id/ota' ? labelUi('Kênh OTA') : labelUi('Kết nối Channex')}
           </Link>
-          <Link
-            className="ota-tab is-active"
-            to={historyPath}
-            aria-current="page"
-          >
+          <Link className="ota-tab is-active" to={historyPath} aria-current="page">
             <Clock3 size={16} aria-hidden="true" />
             {labelUi('Lịch sử đồng bộ')}
           </Link>
         </nav>
       )}
       {error && (
-        <div
-          ref={errorNotice}
-          tabIndex={-1}
-          className="ota-notice ota-notice--error"
-          role="alert"
-        >
+        <div ref={errorNotice} tabIndex={-1} className="ota-notice ota-notice--error" role="alert">
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>{labelUi('Chưa thể thử lại yêu cầu')}</strong>
@@ -306,18 +323,36 @@ function HistoryContent({
         </div>
       )}
       <ChannelIncidents pms={pms} refreshKey={query.revision} />
+      {reviewId && !validReviewId && <p role="alert">Mã hồ sơ đối soát không hợp lệ.</p>}
+      {validReviewId && focusedReview.loading && (
+        <p role="status">Đang tải hồ sơ đối soát đã chọn…</p>
+      )}
+      {focusedReview.error && (
+        <div role="alert">
+          <p>{focusedReview.error}</p>
+          <button type="button" onClick={focusedReview.refresh}>
+            Tải lại hồ sơ đối soát
+          </button>
+        </div>
+      )}
+      {validReviewId && !focusedReview.loading && !focusedReview.error && !resolvingReview && (
+        <p role="status">
+          Hồ sơ đã chọn không còn cần xử lý hoặc hiện chưa thể đối soát. Kiểm tra danh sách và quyền
+          thao tác trước khi tiếp tục.
+        </p>
+      )}
       {resolvingReview && (
         <BookingReviewResolver
           key={resolvingReview.id}
           pms={pms}
           review={resolvingReview}
-          onClose={() => setResolvingReview(null)}
+          closeLabel={returnTo ? 'Quay lại đối soát' : undefined}
+          onClose={closeReview}
           onResolved={() => {
-            setResolvingReview(null);
-            setMessage(
-              'Đã lưu đối soát. Xác nhận sẽ gửi sau khi transaction hoàn tất.',
-            );
-            refreshQueries();
+            if (returnTo) closeReview()
+            else selectReview('')
+            setMessage('Đã lưu đối soát. Xác nhận sẽ gửi sau khi transaction hoàn tất.')
+            refreshQueries()
           }}
         />
       )}
@@ -331,9 +366,7 @@ function HistoryContent({
               )}
             </p>
             {reviewRows.length > 0 && (
-              <p className="ota-review-scroll-hint">
-                {tUi('channels.review.scrollHint')}
-              </p>
+              <p className="ota-review-scroll-hint">{tUi('channels.review.scrollHint')}</p>
             )}
           </div>
           {pagination && (
@@ -364,9 +397,7 @@ function HistoryContent({
             <CheckCircle2 size={24} aria-hidden="true" />
             <p>
               {reviewPage > 1
-                ? labelUi(
-                    'Trang này không còn đặt phòng cần xử lý. Chọn trang trước để tiếp tục.',
-                  )
+                ? labelUi('Trang này không còn đặt phòng cần xử lý. Chọn trang trước để tiếp tục.')
                 : labelUi('Không có đặt phòng đang chờ đối soát.')}
             </p>
           </div>
@@ -379,9 +410,7 @@ function HistoryContent({
           >
             <table
               className="ota-table ota-review-table"
-              aria-label={labelUi(
-                'Đặt phòng Channex chưa được áp dụng vào PMS',
-              )}
+              aria-label={labelUi('Đặt phòng Channex chưa được áp dụng vào PMS')}
             >
               <thead>
                 <tr>
@@ -393,55 +422,44 @@ function HistoryContent({
               </thead>
               <tbody>
                 {reviewRows.map((row) => {
-                  const details = row.details || {};
+                  const details = row.details || {}
                   const blocked = syncBlockReason(
                     query.data?.connection,
                     query.data?.mappings || [],
                     'pull_bookings',
-                  );
-                  const pending = ['queued', 'processing'].includes(
-                    row.jobStatus,
-                  );
+                  )
+                  const pending = ['queued', 'processing'].includes(row.jobStatus)
                   return (
                     <tr key={row.id}>
                       <td>
                         <strong>
-                          {details.bookingCode ||
-                            row.bookingId ||
-                            labelUi('Chưa có mã đặt phòng')}
+                          {details.bookingCode || row.bookingId || labelUi('Chưa có mã đặt phòng')}
                         </strong>
                         {details.source && (
-                          <small className="ota-cell-meta">
-                            Kênh: {details.source}
-                          </small>
+                          <small className="ota-cell-meta">Kênh: {details.source}</small>
                         )}
-                        <small className="ota-cell-meta">
-                          Mã Channex: {row.bookingId || '—'}
-                        </small>
-                        <small className="ota-cell-meta">
-                          Mã cập nhật: {row.revisionId}
-                        </small>
                         <small className="ota-cell-meta">
                           {{
                             new: 'Đặt phòng mới',
                             modified: 'Thay đổi đặt phòng',
                             cancelled: 'Hủy đặt phòng',
-                          }[row.providerStatus] ||
-                            labelUi('Cập nhật đặt phòng')}{' '}
+                          }[row.providerStatus] || labelUi('Cập nhật đặt phòng')}{' '}
                           · {displayTime(row.revisionAt || row.createdAt)}
                         </small>
+                        <SupportIds
+                          ids={[
+                            ['Mã Channex', row.bookingId],
+                            ['Mã cập nhật', row.revisionId],
+                          ]}
+                        />
                       </td>
                       <td>
                         <span>{bookingReviewStay(details)}</span>
-                        <small className="ota-cell-meta">
-                          {bookingReviewAmount(details)}
-                        </small>
+                        <small className="ota-cell-meta">{bookingReviewAmount(details)}</small>
                         {details.rooms?.length > 0 && (
                           <details className="ota-review-rooms">
                             <summary>
-                              {tUi('channels.review.rooms', {
-                                count: details.rooms.length,
-                              })}
+                              {tUi('channels.review.rooms', { count: details.rooms.length })}
                             </summary>
                             <ul>
                               {details.rooms.map((room, index) => (
@@ -460,8 +478,7 @@ function HistoryContent({
                                     <span>
                                       {tUi('channels.review.occupancy', {
                                         adults: room.occupancy.adults ?? '—',
-                                        children:
-                                          room.occupancy.children ?? '—',
+                                        children: room.occupancy.children ?? '—',
                                         infants: room.occupancy.infants ?? '—',
                                       })}
                                     </span>
@@ -490,20 +507,9 @@ function HistoryContent({
                             <button
                               type="button"
                               className="ota-button ota-button--secondary ota-button--small"
-                              disabled={
-                                busy ||
-                                pending ||
-                                Boolean(blocked) ||
-                                query.loading
-                              }
-                              aria-describedby={
-                                blocked
-                                  ? `ota-review-retry-${row.id}`
-                                  : undefined
-                              }
-                              onClick={() =>
-                                retry({ id: row.jobId, kind: 'pull_bookings' })
-                              }
+                              disabled={busy || pending || Boolean(blocked) || query.loading}
+                              aria-describedby={blocked ? `ota-review-retry-${row.id}` : undefined}
+                              onClick={() => retry({ id: row.jobId, kind: 'pull_bookings' })}
                             >
                               <RotateCcw size={14} aria-hidden="true" />
                               {retryingId === row.jobId
@@ -513,10 +519,7 @@ function HistoryContent({
                                   : labelUi('Thử lại sau khi xử lý')}
                             </button>
                             {blocked && (
-                              <small
-                                className="ota-cell-meta"
-                                id={`ota-review-retry-${row.id}`}
-                              >
+                              <small className="ota-cell-meta" id={`ota-review-retry-${row.id}`}>
                                 {blocked}
                               </small>
                             )}
@@ -524,28 +527,24 @@ function HistoryContent({
                         ) : (
                           <span className="ota-cell-meta">
                             {writeAccess.allowed
-                              ? labelUi(
-                                  'Nhờ quản trị viên kiểm tra tác vụ gốc.',
-                                )
+                              ? labelUi('Nhờ quản trị viên kiểm tra tác vụ gốc.')
                               : labelUi('Chỉ xem')}
                           </span>
                         )}
                         {canResolveReview &&
-                          !['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(
-                            pms.user?.globalRole,
-                          ) && (
+                          !['SUPER_ADMIN', 'SYSTEM_MANAGER'].includes(pms.user?.globalRole) && (
                             <button
                               type="button"
                               className="ota-button ota-button--secondary ota-button--small"
                               disabled={busy || pending}
-                              onClick={() => setResolvingReview(row)}
+                              onClick={() => selectReview(row.id)}
                             >
                               Đối soát với booking PMS
                             </button>
                           )}
                       </td>
                     </tr>
-                  );
+                  )
                 })}
               </tbody>
             </table>
@@ -572,9 +571,7 @@ function HistoryContent({
               <button
                 type="button"
                 className="ota-button ota-button--secondary ota-button--small"
-                disabled={
-                  busy || reviews.loading || reviewPage >= pagination.totalPages
-                }
+                disabled={busy || reviews.loading || reviewPage >= pagination.totalPages}
                 onClick={() => setReviewPage((page) => page + 1)}
               >
                 {labelUi('Trang sau')}
@@ -588,9 +585,7 @@ function HistoryContent({
           <div>
             <h2 id="ota-history-title">{labelUi('Lịch sử yêu cầu đồng bộ')}</h2>
             <p>
-              {labelUi(
-                'Tìm trong toàn bộ lịch sử của khách sạn. Ngày tạo theo múi giờ',
-              )}{' '}
+              {labelUi('Tìm trong toàn bộ lịch sử của khách sạn. Ngày tạo theo múi giờ')}{' '}
               {pms.settings.timezone}.
             </p>
           </div>
@@ -683,10 +678,7 @@ function HistoryContent({
         {!viewAccess.allowed ? (
           <div className="ota-state" role="status">
             <Info size={24} aria-hidden="true" />
-            <p>
-              {viewAccess.message ||
-                labelUi('Bạn chưa có quyền xem lịch sử đồng bộ.')}
-            </p>
+            <p>{viewAccess.message || labelUi('Bạn chưa có quyền xem lịch sử đồng bộ.')}</p>
           </div>
         ) : history.loading ? (
           <div className="ota-state ota-state--loading" role="status">
@@ -703,11 +695,7 @@ function HistoryContent({
             </span>
             <h3>{labelUi('Chưa tải được lịch sử')}</h3>
             <p>{history.error}</p>
-            <button
-              type="button"
-              className="ota-button ota-button--secondary"
-              onClick={refresh}
-            >
+            <button type="button" className="ota-button ota-button--secondary" onClick={refresh}>
               {labelUi('Thử tải lại')}
             </button>
           </div>
@@ -723,9 +711,7 @@ function HistoryContent({
             </h3>
             <p>
               {hasFilters
-                ? labelUi(
-                    'Thay đổi ngày, trạng thái, loại yêu cầu hoặc mã cập nhật để tìm lại.',
-                  )
+                ? labelUi('Thay đổi ngày, trạng thái, loại yêu cầu hoặc mã cập nhật để tìm lại.')
                 : labelUi(
                     'Gửi yêu cầu từ trang kết nối Channex. Quá trình xử lý và kết quả sẽ xuất hiện tại đây.',
                   )}
@@ -739,10 +725,7 @@ function HistoryContent({
                 {labelUi('Xóa bộ lọc')}
               </button>
             ) : (
-              <Link
-                className="ota-button ota-button--secondary"
-                to={connectionPath}
-              >
+              <Link className="ota-button ota-button--secondary" to={connectionPath}>
                 {labelUi('Mở kết nối Channex')}
               </Link>
             )}
@@ -754,10 +737,7 @@ function HistoryContent({
             role="region"
             aria-label={labelUi('Bảng lịch sử đồng bộ, có thể cuộn ngang')}
           >
-            <table
-              className="ota-table"
-              aria-label={labelUi('Danh sách yêu cầu đồng bộ')}
-            >
+            <table className="ota-table" aria-label={labelUi('Danh sách yêu cầu đồng bộ')}>
               <thead>
                 <tr>
                   <th scope="col">{labelUi('Yêu cầu đồng bộ')}</th>
@@ -771,12 +751,12 @@ function HistoryContent({
               </thead>
               <tbody>
                 {rows.map((row) => {
-                  const Icon = jobIcons[row.kind] || RefreshCw;
+                  const Icon = jobIcons[row.kind] || RefreshCw
                   const blocked = syncBlockReason(
                     query.data?.connection,
                     query.data?.mappings || [],
                     row.kind,
-                  );
+                  )
                   return (
                     <tr key={row.id}>
                       <td>
@@ -786,16 +766,10 @@ function HistoryContent({
                           </span>
                           <strong>{channelJobLabel(row)}</strong>
                         </div>
-                        {row.revisionId && (
-                          <small className="ota-cell-meta">
-                            Mã cập nhật: {row.revisionId}
-                          </small>
-                        )}
+                        {row.revisionId && <SupportIds ids={[['Mã cập nhật', row.revisionId]]} />}
                       </td>
                       <td>
-                        <time dateTime={row.createdAt}>
-                          {displayTime(row.createdAt)}
-                        </time>
+                        <time dateTime={row.createdAt}>{displayTime(row.createdAt)}</time>
                       </td>
                       <td>
                         {row.start && row.end ? (
@@ -818,8 +792,7 @@ function HistoryContent({
                           className={`ota-status ota-status--${Object.hasOwn(statuses, row.status) ? row.status : 'queued'}`}
                         >
                           <span className="ota-status-dot" aria-hidden="true" />
-                          {statuses[row.status] ||
-                            labelUi('Chưa rõ trạng thái')}
+                          {statuses[row.status] || labelUi('Chưa rõ trạng thái')}
                         </span>
                       </td>
                       <td>{row.attempts} lần</td>
@@ -863,10 +836,8 @@ function HistoryContent({
                             aria-expanded={selectedId === row.id}
                             aria-controls="ota-job-details"
                             onClick={(event) => {
-                              detailsTrigger.current = event.currentTarget;
-                              setSelectedId(
-                                selectedId === row.id ? null : row.id,
-                              );
+                              detailsTrigger.current = event.currentTarget
+                              setSelectedId(selectedId === row.id ? null : row.id)
                             }}
                           >
                             {labelUi('Chi tiết')}
@@ -876,24 +847,15 @@ function HistoryContent({
                               <button
                                 type="button"
                                 className="ota-button ota-button--secondary ota-button--small"
-                                disabled={
-                                  busy || query.loading || Boolean(blocked)
-                                }
-                                aria-describedby={
-                                  blocked ? `ota-retry-${row.id}` : undefined
-                                }
+                                disabled={busy || query.loading || Boolean(blocked)}
+                                aria-describedby={blocked ? `ota-retry-${row.id}` : undefined}
                                 onClick={() => retry(row)}
                               >
                                 <RotateCcw size={14} aria-hidden="true" />
-                                {retryingId === row.id
-                                  ? labelUi('Đang gửi…')
-                                  : tUi('common.retry')}
+                                {retryingId === row.id ? labelUi('Đang gửi…') : tUi('common.retry')}
                               </button>
                               {blocked && (
-                                <small
-                                  className="ota-cell-meta"
-                                  id={`ota-retry-${row.id}`}
-                                >
+                                <small className="ota-cell-meta" id={`ota-retry-${row.id}`}>
                                   {blocked}
                                 </small>
                               )}
@@ -902,7 +864,7 @@ function HistoryContent({
                         </div>
                       </td>
                     </tr>
-                  );
+                  )
                 })}
               </tbody>
             </table>
@@ -919,8 +881,7 @@ function HistoryContent({
         {historyPagination && (
           <footer className="ota-history-footer ota-review-pagination">
             <span role="status">
-              Trang {historyPagination.page} /{' '}
-              {Math.max(1, historyPagination.totalPages)} ·{' '}
+              Trang {historyPagination.page} / {Math.max(1, historyPagination.totalPages)} ·{' '}
               {historyPagination.totalItems} yêu cầu
             </span>
             <nav aria-label="Phân trang lịch sử đồng bộ">
@@ -929,8 +890,8 @@ function HistoryContent({
                 className="ota-button ota-button--secondary ota-button--small"
                 disabled={busy || history.loading || historyState.index <= 0}
                 onClick={() => {
-                  setSelectedId(null);
-                  changeHistory({ type: 'previous' });
+                  setSelectedId(null)
+                  changeHistory({ type: 'previous' })
                 }}
               >
                 Trang trước
@@ -945,13 +906,13 @@ function HistoryContent({
                   !historyPagination.currentCursor
                 }
                 onClick={() => {
-                  setSelectedId(null);
+                  setSelectedId(null)
                   changeHistory({
                     type: 'next',
                     index: historyState.index,
                     currentCursor: historyPagination.currentCursor,
                     nextCursor: historyPagination.nextCursor,
-                  });
+                  })
                 }}
               >
                 Trang sau
@@ -963,22 +924,68 @@ function HistoryContent({
           <footer className="ota-history-footer">
             <Info size={15} aria-hidden="true" />
             <p>
-              Yêu cầu mới xuất hiện khi tải lại lịch sử. Các yêu cầu đang chờ sẽ
-              được xử lý lần lượt. {tUi('channels.refreshHint')}
+              Yêu cầu mới xuất hiện khi tải lại lịch sử. Các yêu cầu đang chờ sẽ được xử lý lần
+              lượt. {tUi('channels.refreshHint')}
             </p>
           </footer>
         )}
       </section>
     </div>
-  );
+  )
+}
+
+// Full provider identifiers for support, behind a native disclosure. Copying is
+// explicit; when the clipboard is unavailable the codes stay selectable here.
+function SupportIds({ ids }) {
+  const [copyState, setCopyState] = useState('')
+  const text = ids.map(([label, value]) => `${label}: ${value || '—'}`).join('\n')
+  async function copy() {
+    setCopyState('')
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(text)
+      setCopyState('copied')
+    } catch {
+      setCopyState('failed')
+    }
+  }
+  return (
+    <details className="ota-support-ids">
+      <summary className="ota-cell-meta">{labelUi('Mã hỗ trợ kỹ thuật')}</summary>
+      <dl style={{ margin: '4px 0' }}>
+        {ids.map(([label, value]) => (
+          <div key={label}>
+            <dt className="ota-cell-meta">{labelUi(label)}</dt>
+            <dd style={{ margin: 0, overflowWrap: 'anywhere' }}>
+              <code>{value || '—'}</code>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <button
+        type="button"
+        className="ota-button ota-button--secondary ota-button--small"
+        onClick={copy}
+      >
+        {labelUi('Sao chép mã hỗ trợ')}
+      </button>
+      {copyState && (
+        <small className="ota-cell-meta" role="status">
+          {copyState === 'copied'
+            ? labelUi('Đã sao chép mã hỗ trợ.')
+            : labelUi('Không thể sao chép tự động. Hãy chọn và sao chép mã ở trên.')}
+        </small>
+      )}
+    </details>
+  )
 }
 
 function JobHistoryDetails({ query, displayTime, onClose }) {
-  const row = query.data;
-  const heading = useRef(null);
+  const row = query.data
+  const heading = useRef(null)
   useEffect(() => {
-    heading.current?.focus();
-  }, []);
+    heading.current?.focus()
+  }, [])
   return (
     <section
       id="ota-job-details"
@@ -1063,5 +1070,5 @@ function JobHistoryDetails({ query, displayTime, onClose }) {
         )
       )}
     </section>
-  );
+  )
 }

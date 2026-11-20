@@ -22,18 +22,18 @@ keys and named parameters in all three files. Missing translations fall back to
 Vietnamese; unknown keys display the key so missing entries remain visible.
 
 ```jsx
-import { useI18n } from './useI18n.js';
+import { useI18n } from './useI18n.js'
 
 function SaveButton() {
-  const { t } = useI18n();
-  return <button type="submit">{t('common.save')}</button>;
+  const { t } = useI18n()
+  return <button type="submit">{t('common.save')}</button>
 }
 ```
 
 Use named parameters for complete sentences:
 
 ```jsx
-t('hk.taskTitle', { room: '101' });
+t('hk.taskTitle', { room: '101' })
 ```
 
 Components migrated from existing UI use `useI18n()` to subscribe and the stable
@@ -81,4 +81,5 @@ settings are unaffected. Changing the language does not remount pages or discard
 form drafts or current selections.
 
 Run `npm run i18n:audit` to find Vietnamese source literals not covered by either
-catalog layer.
+catalog layer. Run `npm test` to verify catalog completeness, parameters,
+persistence, fallback, tab synchronization, formatting and key references.

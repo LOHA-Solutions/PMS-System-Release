@@ -1,5 +1,6 @@
 """Atomic POS and cashbook operations over the shared append-only tenant ledger."""
 
+import unicodedata
 from datetime import date
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -1065,11 +1066,54 @@ def finance_snapshot(tenant_id):
     }
 
 
+CASHBOOK_SEARCH_LIMIT = 160
+CASHBOOK_SEARCH_FIELDS = (
+    "description",
+    "id",
+    "cash_document_id",
+    "reservation_id",
+    "pos_invoice_id",
+    "payment_id",
+    "refund_id",
+    "pos_payment_id",
+    "pos_refund_id",
+    "reversal_of_id",
+)
+
+
+def cashbook_search_key(value):
+    """Literal caseless key: NFC before and after casefold so composed forms compare equal."""
+    return unicodedata.normalize("NFC", unicodedata.normalize("NFC", value).casefold())
+
+
+def cashbook_search_query():
+    """Validate the raw ``q`` argument without touching the database."""
+    values = request.args.getlist("q")
+    if len(values) > 1:
+        raise ApiError(422, "invalid_filter", "Chỉ được gửi một từ khóa tìm kiếm.")
+    raw = values[0] if values else ""
+    if any(unicodedata.category(character) == "Cc" for character in raw):
+        raise ApiError(422, "invalid_filter", "Từ khóa tìm kiếm chứa ký tự điều khiển.")
+    query = unicodedata.normalize("NFC", raw.strip())
+    if len(query) > CASHBOOK_SEARCH_LIMIT:
+        raise ApiError(422, "invalid_filter", "Từ khóa tìm kiếm tối đa 160 ký tự.")
+    return query
+
+
+def cashbook_search_match(row, needle):
+    return any(
+        needle in cashbook_search_key(value)
+        for value in (getattr(row, field) for field in CASHBOOK_SEARCH_FIELDS)
+        if value
+    )
+
+
 class CashbookView(CommonMethodView):
     @staticmethod
     @require_tenant("cashbook.view")
     def dispatch_request(tenant_id):
         page, size = pagination()
+        search = cashbook_search_query()
         currency = request.args.get("currency", (g.tenant.settings or {}).get("currency", "VND"))
         if not is_hotel_currency(currency):
             raise ApiError(422, "invalid_currency", "Loại tiền tệ không hợp lệ.")
@@ -1168,6 +1212,11 @@ class CashbookView(CommonMethodView):
         income = sum((row.amount for row in period if row.amount > 0), Decimal(0))
         outflow = -sum((row.amount for row in period if row.amount < 0), Decimal(0))
         funds = list(db.session.scalars(select(Master).where(*fund_conditions).order_by(Master.id)))
+        period_items = len(period)
+        if search:
+            # Search narrows the listed rows over the whole period; totals above stay period-wide.
+            needle = cashbook_search_key(search)
+            period = [row for row in period if cashbook_search_match(row, needle)]
         period.reverse()
         page_rows = period[(page - 1) * size : page * size]
         document_ids = {row.cash_document_id for row in page_rows if row.cash_document_id}
@@ -1185,7 +1234,7 @@ class CashbookView(CommonMethodView):
                 .order_by(CashDocument.created_at.desc(), CashDocument.id)
             )
         )
-        return {
+        result = {
             "ledger": [ledger_json(row) for row in page_rows],
             "cashDocuments": [document_json(row) for row in documents],
             "summary": {
@@ -1208,6 +1257,14 @@ class CashbookView(CommonMethodView):
             ],
             "pagination": {"page": page, "pageSize": size, "totalItems": len(period)},
         }
+        if search:
+            result["search"] = {
+                "q": search,
+                "scope": "ledger_entries",
+                "summaryFiltered": False,
+                "totalPeriodItems": period_items,
+            }
+        return result
 
 
 def __getattr__(name):

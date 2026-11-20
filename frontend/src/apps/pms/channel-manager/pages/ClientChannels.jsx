@@ -1,37 +1,26 @@
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import {
-  CheckCircle2,
-  Clock3,
-  Info,
-  Link2,
-  Settings2,
-  ShieldCheck,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import ChannelsView from '../../../manager/channex/components/ChannelsView';
-import { airbnbReturn } from '../../../manager/channex/airbnbReturn';
-import { useChannels } from '../useChannels';
-import { clientChannelOperations } from '../clientChannelOperations';
-import { connectionStatus } from '../presentation';
-import '../../../manager/channex/pages/ManagerChannex.css';
-import '../ChannelManager.css';
-import './ClientChannels.css';
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { CheckCircle2, Clock3, Info, Link2, Settings2, ShieldCheck } from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import ChannelsView from '../../../manager/channex/components/ChannelsView'
+import { airbnbReturn } from '../../../manager/channex/airbnbReturn'
+import { useChannels } from '../useChannels'
+import { clientChannelOperations } from '../clientChannelOperations'
+import { connectionStatus } from '../presentation'
+import '../../../manager/channex/pages/ManagerChannex.css'
+import '../ChannelManager.css'
+import './ClientChannels.css'
 
 export default function ClientChannels({ embedded = false }) {
-  const pms = usePms();
+  const pms = usePms()
   return (
     <ClientChannelWorkspace
       key={`${pms.tenantId}:${pms.authGeneration}`}
       pms={pms}
       embedded={embedded}
     />
-  );
+  )
 }
 
 export function ClientChannelWorkspace({
@@ -41,40 +30,32 @@ export function ClientChannelWorkspace({
   settingsPath = '/id/settings?section=channels&tab=connection',
   historyPath = '/id/settings?section=channels&tab=history',
 }) {
-  useI18n();
-  const { requestTenant, tenantId } = pms;
-  const localQuery = useChannels(
-    requestTenant,
-    tenantId,
-    '/channels',
-    !sharedQuery,
-  );
-  const query = sharedQuery || localQuery;
-  const operations = useMemo(
-    () => clientChannelOperations(requestTenant),
-    [requestTenant],
-  );
-  const [callback] = useState(() => airbnbReturn(window.location.search));
-  const [, setParams] = useSearchParams();
-  const callbackCleaned = useRef(false);
+  useI18n()
+  const { requestTenant, tenantId } = pms
+  const localQuery = useChannels(requestTenant, tenantId, '/channels', !sharedQuery)
+  const query = sharedQuery || localQuery
+  const operations = useMemo(() => clientChannelOperations(requestTenant), [requestTenant])
+  const [callback] = useState(() => airbnbReturn(window.location.search))
+  const [, setParams] = useSearchParams()
+  const callbackCleaned = useRef(false)
   const [oauth, setOauth] = useState(null),
-    [retry, setRetry] = useState(0);
-  const [channelMessage, setChannelMessage] = useState('');
+    [retry, setRetry] = useState(0)
+  const [channelMessage, setChannelMessage] = useState('')
   const access = pms.access('channels.write', 'OTA_SYNC', true),
-    canWrite = access.allowed;
-  const canOpenSettings = embedded || pms.routeAccess?.('/id/settings').allowed;
+    canWrite = access.allowed
+  const canOpenSettings = embedded || pms.routeAccess?.('/id/settings').allowed
   const connection = query.data?.connection,
-    status = connectionStatus(connection);
+    status = connectionStatus(connection)
   useEffect(() => {
-    if (!callback || callbackCleaned.current) return;
-    callbackCleaned.current = true;
-    const clean = new URLSearchParams(callback.cleanSearch);
-    clean.set('tab', 'channels');
-    setParams(clean, { replace: true });
-  }, [callback, setParams]);
+    if (!callback || callbackCleaned.current) return
+    callbackCleaned.current = true
+    const clean = new URLSearchParams(callback.cleanSearch)
+    clean.set('tab', 'channels')
+    setParams(clean, { replace: true })
+  }, [callback, setParams])
   useEffect(() => {
-    if (callback?.kind !== 'success' || !canWrite) return;
-    let current = true;
+    if (callback?.kind !== 'success' || !canWrite) return
+    let current = true
     requestTenant('/channels/remote/airbnb-confirm', {
       method: 'POST',
       body: { channelId: callback.channelId, token: callback.token },
@@ -83,17 +64,17 @@ export function ClientChannelWorkspace({
         if (result.channel?.id !== callback.channelId)
           throw new Error(
             'Thông tin xác nhận Airbnb chưa hợp lệ. Tải lại danh sách kênh để kiểm tra.',
-          );
-        if (current) setOauth({ confirmed: true });
+          )
+        if (current) setOauth({ confirmed: true })
       })
       .catch((error) => {
-        if (current) setOauth({ error });
-      });
+        if (current) setOauth({ error })
+      })
     return () => {
-      current = false;
-    };
-  }, [callback, canWrite, requestTenant, retry]);
-  const oauthPending = callback?.kind === 'success' && canWrite && !oauth;
+      current = false
+    }
+  }, [callback, canWrite, requestTenant, retry])
+  const oauthPending = callback?.kind === 'success' && canWrite && !oauth
   return (
     <div className="ota-page client-channels">
       <header className="ota-page-header">
@@ -113,10 +94,7 @@ export function ClientChannelWorkspace({
         </div>
         {!embedded && canOpenSettings && (
           <div className="ota-page-actions">
-            <Link
-              className="ota-button ota-button--secondary"
-              to={settingsPath}
-            >
+            <Link className="ota-button ota-button--secondary" to={settingsPath}>
               <Settings2 size={16} aria-hidden="true" />
               {labelUi('Cài đặt kết nối')}
             </Link>
@@ -144,27 +122,20 @@ export function ClientChannelWorkspace({
           <Info size={18} aria-hidden="true" />
           <span>
             {callback.kind === 'failure'
-              ? labelUi(
-                  'Chưa hoàn tất cấp quyền Airbnb. Mở lại kết nối để thử lại.',
-                )
-              : labelUi(
-                  'Thông tin quay về từ Airbnb chưa hợp lệ. Bắt đầu lại luồng liên kết.',
-                )}
+              ? labelUi('Chưa hoàn tất cấp quyền Airbnb. Mở lại kết nối để thử lại.')
+              : labelUi('Thông tin quay về từ Airbnb chưa hợp lệ. Bắt đầu lại luồng liên kết.')}
           </span>
         </div>
       )}
       {oauth?.error && (
         <div className="ota-notice ota-notice--error" role="alert">
           <Info size={18} aria-hidden="true" />
-          <span>
-            {oauth.error.message ||
-              labelUi('Chưa xác nhận được cấp quyền Airbnb.')}
-          </span>
+          <span>{oauth.error.message || labelUi('Chưa xác nhận được cấp quyền Airbnb.')}</span>
           <button
             className="ota-button ota-button--small"
             onClick={() => {
-              setOauth(null);
-              setRetry((value) => value + 1);
+              setOauth(null)
+              setRetry((value) => value + 1)
             }}
           >
             {labelUi('Xác nhận lại')}
@@ -191,10 +162,7 @@ export function ClientChannelWorkspace({
         <div className="ota-notice ota-notice--error" role="alert">
           <Info size={18} aria-hidden="true" />
           <span>{query.error}</span>
-          <button
-            className="ota-button ota-button--small"
-            onClick={query.refresh}
-          >
+          <button className="ota-button ota-button--small" onClick={query.refresh}>
             {tUi('common.retry')}
           </button>
         </div>
@@ -218,9 +186,7 @@ export function ClientChannelWorkspace({
                   </span>
                   <div>
                     <div className="ota-title-line">
-                      <h2>
-                        {pms.tenant?.name || labelUi('Khách sạn đang chọn')}
-                      </h2>
+                      <h2>{pms.tenant?.name || labelUi('Khách sạn đang chọn')}</h2>
                       <span className={`ota-status ota-status--${status.tone}`}>
                         <span className="ota-status-dot" />
                         {status.label}
@@ -239,19 +205,14 @@ export function ClientChannelWorkspace({
               {!connection?.credentialsConfigured ? (
                 <div className="ota-onboarding">
                   <div>
-                    <h3>
-                      {labelUi('Thiết lập Channex trước khi liên kết OTA')}
-                    </h3>
+                    <h3>{labelUi('Thiết lập Channex trước khi liên kết OTA')}</h3>
                     <p>
                       {labelUi(
                         'Mở Kết nối & ghép phòng để liên kết khách sạn, sau đó thêm các kênh bán phòng tại đây.',
                       )}
                     </p>
                     {canOpenSettings && (
-                      <Link
-                        className="ota-button ota-button--primary"
-                        to={settingsPath}
-                      >
+                      <Link className="ota-button ota-button--primary" to={settingsPath}>
                         {labelUi('Thiết lập kết nối')}
                       </Link>
                     )}
@@ -259,10 +220,7 @@ export function ClientChannelWorkspace({
                 </div>
               ) : (
                 <ChannelsView
-                  account={{
-                    id: tenantId,
-                    environment: connection.environment,
-                  }}
+                  account={{ id: tenantId, environment: connection.environment }}
                   property={{
                     id: connection.propertyId,
                     name: pms.tenant?.name || 'Khách sạn đang chọn',
@@ -270,8 +228,8 @@ export function ClientChannelWorkspace({
                   operations={operations}
                   canWrite={canWrite}
                   onChanged={(text) => {
-                    setChannelMessage(text || '');
-                    query.refresh();
+                    setChannelMessage(text || '')
+                    query.refresh()
                   }}
                 />
               )}
@@ -280,5 +238,5 @@ export function ClientChannelWorkspace({
         )
       )}
     </div>
-  );
+  )
 }

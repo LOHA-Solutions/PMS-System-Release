@@ -116,7 +116,9 @@ def customer_directory_filters(args):
     raw_search = args.get("search", "")
     search = raw_search.strip()
     if len(search) > 254 or any(ord(char) < 32 or ord(char) == 127 for char in raw_search):
-        raise ApiError(422, "invalid_search", "Từ khóa tối đa 254 ký tự, không chứa ký tự điều khiển.")
+        raise ApiError(
+            422, "invalid_search", "Từ khóa tối đa 254 ký tự, không chứa ký tự điều khiển."
+        )
     tenant_id = args.get("tenantId")
     if tenant_id is not None and (not tenant_id or len(tenant_id) > 40):
         raise ApiError(422, "invalid_tenant", "Khách sạn không hợp lệ.")

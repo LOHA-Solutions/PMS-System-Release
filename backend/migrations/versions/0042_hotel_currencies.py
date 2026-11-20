@@ -9,13 +9,39 @@ depends_on = None
 
 # Keep historical migration behavior independent of future application catalogs.
 CURRENCIES = (
-    "VND", "USD", "EUR", "GBP", "JPY", "KRW", "CNY", "HKD", "SGD", "THB",
-    "AUD", "CAD", "CHF", "NZD", "MYR", "IDR", "PHP", "INR", "AED", "TWD",
+    "VND",
+    "USD",
+    "EUR",
+    "GBP",
+    "JPY",
+    "KRW",
+    "CNY",
+    "HKD",
+    "SGD",
+    "THB",
+    "AUD",
+    "CAD",
+    "CHF",
+    "NZD",
+    "MYR",
+    "IDR",
+    "PHP",
+    "INR",
+    "AED",
+    "TWD",
 )
 MONEY_TABLES = (
-    "reservations", "reservation_nights", "charges", "payments", "refunds",
-    "ledger_entries", "pos_invoices", "pos_invoice_items", "pos_payments",
-    "pos_refunds", "cash_documents",
+    "reservations",
+    "reservation_nights",
+    "charges",
+    "payments",
+    "refunds",
+    "ledger_entries",
+    "pos_invoices",
+    "pos_invoice_items",
+    "pos_payments",
+    "pos_refunds",
+    "cash_documents",
 )
 
 
@@ -32,15 +58,19 @@ def replace_constraints(codes):
         )
     op.drop_constraint(op.f("ck_exchange_rates_currencies"), "exchange_rates", type_="check")
     op.create_check_constraint(
-        op.f("ck_exchange_rates_currencies"), "exchange_rates",
+        op.f("ck_exchange_rates_currencies"),
+        "exchange_rates",
         allowed("currency", codes) + " AND " + allowed("base_currency", codes),
     )
     op.drop_constraint(
         op.f("ck_commission_settlements_currency_snapshot"), "commission_settlements", type_="check"
     )
     op.create_check_constraint(
-        op.f("ck_commission_settlements_currency_snapshot"), "commission_settlements",
-        allowed("currency", codes) + " AND " + allowed("base_currency", codes)
+        op.f("ck_commission_settlements_currency_snapshot"),
+        "commission_settlements",
+        allowed("currency", codes)
+        + " AND "
+        + allowed("base_currency", codes)
         + " AND exchange_rate > 0",
     )
 
@@ -58,14 +88,17 @@ def downgrade():
         "EXISTS (SELECT 1 FROM masters WHERE catalog='funds' "
         "AND data->>'currency' NOT IN ('VND','USD'))",
     ]
-    for table in (*MONEY_TABLES, "commission_settlements", "exchange_rates", "revenue_recognitions"):
+    for table in (
+        *MONEY_TABLES,
+        "commission_settlements",
+        "exchange_rates",
+        "revenue_recognitions",
+    ):
         predicate = "base_currency NOT IN ('VND','USD')"
         if table not in {"reservation_nights", "pos_invoice_items"}:
             predicate += " OR currency NOT IN ('VND','USD')"
         checks.append(f"EXISTS (SELECT 1 FROM {table} WHERE {predicate})")
-    checks.append(
-        "EXISTS (SELECT 1 FROM inventory_documents WHERE currency NOT IN ('VND','USD'))"
-    )
+    checks.append("EXISTS (SELECT 1 FROM inventory_documents WHERE currency NOT IN ('VND','USD'))")
     op.execute(
         "DO $$ BEGIN IF " + " OR ".join(checks) + " THEN "
         "RAISE EXCEPTION 'Extended hotel currencies exist; downgrade refused'; "

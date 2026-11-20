@@ -679,8 +679,7 @@
   }
 }
 @media (pointer: coarse) {
-  .manager-shell
-    :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  .manager-shell :is(input:not([type='checkbox']):not([type='radio']), select, textarea) {
     min-height: 44px;
     font-size: 16px;
   }

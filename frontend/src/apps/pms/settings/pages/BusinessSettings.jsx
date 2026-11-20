@@ -1,19 +1,13 @@
-import { phonePattern } from '../../../../shared/lib/phone.js';
-import {
-  emailPattern,
-  taxIdPattern,
-} from '../../../../shared/lib/validation.js';
-import { useMemo, useRef, useState } from 'react';
-import { Building2, CheckCircle2, Globe2, Save } from 'lucide-react';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { usePms } from '../../data/usePms';
-import './BusinessSettings.css';
-import { businessProfileInput } from './businessProfileForm.js';
-import { hotelTimezoneOptions } from './hotelTimezones.js';
+import { phonePattern } from '../../../../shared/lib/phone.js'
+import { emailPattern, taxIdPattern } from '../../../../shared/lib/validation.js'
+import { useMemo, useRef, useState } from 'react'
+import { Building2, CheckCircle2, Globe2, Save } from 'lucide-react'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { usePms } from '../../data/usePms'
+import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider.jsx'
+import './BusinessSettings.css'
+import { businessProfileInput } from './businessProfileForm.js'
+import { hotelTimezoneOptions } from './hotelTimezones.js'
 
 const PROFILE_FIELDS = [
   ['phone', 'Số điện thoại liên hệ', 'tel', 40],
@@ -24,7 +18,7 @@ const PROFILE_FIELDS = [
   ['bankName', 'Ngân hàng', 'text', 160],
   ['bankAccount', 'Số tài khoản ngân hàng', 'text', 80],
   ['bankAccountName', 'Tên chủ tài khoản', 'text', 160],
-];
+]
 
 function ProfileSection({ icon: Icon, title, children }) {
   return (
@@ -37,7 +31,7 @@ function ProfileSection({ icon: Icon, title, children }) {
       </div>
       {children}
     </section>
-  );
+  )
 }
 
 function FormNotice({ error, message }) {
@@ -55,78 +49,68 @@ function FormNotice({ error, message }) {
         </p>
       )}
     </>
-  );
+  )
 }
 
 export function BusinessProfile() {
-  useI18n();
-  const { settings, saveSettings, access } = usePms();
+  useI18n()
+  const { settings, saveSettings, access } = usePms()
   const [draft, setDraft] = useState(() => ({
-    ...Object.fromEntries(
-      PROFILE_FIELDS.map(([key]) => [key, settings[key] || '']),
-    ),
+    ...Object.fromEntries(PROFILE_FIELDS.map(([key]) => [key, settings[key] || ''])),
     name: settings.name || '',
     address: settings.address || '',
     timezone: settings.timezone || 'Asia/Ho_Chi_Minh',
     defaultLanguage: settings.defaultLanguage || 'vi',
-  }));
-  const timezones = useMemo(
-    () => hotelTimezoneOptions(draft.timezone),
-    [draft.timezone],
-  );
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [logoError, setLogoError] = useState('');
-  const saving = useRef(false);
-  const canWrite = access('settings.write').allowed;
+  }))
+  const timezones = useMemo(() => hotelTimezoneOptions(draft.timezone), [draft.timezone])
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [logoError, setLogoError] = useState('')
+  const saving = useRef(false)
+  const canWrite = access('settings.write').allowed
   const change = (key, value) => {
-    setDraft((current) => ({ ...current, [key]: value }));
-    setMessage('');
-    setError('');
-  };
+    setDraft((current) => ({ ...current, [key]: value }))
+    setMessage('')
+    setError('')
+  }
   const save = async (event) => {
-    event.preventDefault();
-    if (saving.current || !canWrite) return;
-    saving.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (saving.current || !canWrite) return
+    saving.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      const result = await saveSettings(businessProfileInput(draft));
+      const result = await saveSettings(businessProfileInput(draft))
       setDraft((current) =>
-        Object.fromEntries(
-          Object.keys(current).map((key) => [key, result[key] ?? current[key]]),
-        ),
-      );
-      setMessage('Đã lưu hồ sơ khách sạn.');
+        Object.fromEntries(Object.keys(current).map((key) => [key, result[key] ?? current[key]])),
+      )
+      setMessage('Đã lưu hồ sơ khách sạn.')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      saving.current = false;
-      setBusy(false);
+      saving.current = false
+      setBusy(false)
     }
-  };
-  let logoUrl = '';
+  }
+  let logoUrl = ''
   try {
-    const value = draft.logoUrl.trim();
-    const url = new URL(value);
+    const value = draft.logoUrl.trim()
+    const url = new URL(value)
     if (
       value.length <= 2048 &&
       /^https:\/\//i.test(value) &&
       ![...value].some(
         (char) =>
-          /\s/.test(char) ||
-          char === '\\' ||
-          char.charCodeAt(0) < 32 ||
-          char.charCodeAt(0) === 127,
+          /\s/.test(char) || char === '\\' || char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
       ) &&
       !/^https:\/\/[^/?#]*@/i.test(value) &&
       url.protocol === 'https:' &&
       !url.username &&
       !url.password
     )
-      logoUrl = value;
+      logoUrl = value
   } catch {
     /* Preview appears only for a valid HTTPS URL. */
   }
@@ -150,12 +134,12 @@ export function BusinessProfile() {
           value={draft[key]}
           onChange={(event) => {
             if (key !== 'phone' || !/[^0-9+ .()-]/.test(event.target.value))
-              change(key, event.target.value);
+              change(key, event.target.value)
           }}
           placeholder={key === 'logoUrl' ? 'https://...' : undefined}
         />
       </label>
-    ));
+    ))
 
   return (
     <form className="pms-business-settings" onSubmit={save} aria-busy={busy}>
@@ -216,13 +200,8 @@ export function BusinessProfile() {
           </div>
         </ProfileSection>
 
-        <ProfileSection
-          icon={Globe2}
-          title={tUi('inventorySettings.contactInfo')}
-        >
-          <div className="pms-business-form-grid">
-            {renderFields(PROFILE_FIELDS.slice(0, 4))}
-          </div>
+        <ProfileSection icon={Globe2} title={tUi('inventorySettings.contactInfo')}>
+          <div className="pms-business-form-grid">{renderFields(PROFILE_FIELDS.slice(0, 4))}</div>
           {logoUrl &&
             (logoError === logoUrl ? (
               <p className="pms-business-hint" role="status">
@@ -259,53 +238,64 @@ export function BusinessProfile() {
         </p>
       )}
     </form>
-  );
+  )
 }
 
 export function BusinessPolicies() {
-  useI18n();
-  const { settings, saveSettings, access } = usePms();
+  useI18n()
+  const { settings, saveSettings, access } = usePms()
+  // Baseline is the initial or last successfully saved policy; dirty compares against it.
   const [draft, setDraft] = useState(() => ({
     checkInTime: settings.checkInTime,
     checkOutTime: settings.checkOutTime,
     policies: settings.policies || '',
-  }));
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const working = useRef(false);
-  const canWrite = access('settings.write').allowed;
+  }))
+  const baseline = useRef(draft)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const working = useRef(false)
+  const canWrite = access('settings.write').allowed
+  useDraftGuard({
+    dirty: () =>
+      ['checkInTime', 'checkOutTime', 'policies'].some(
+        (key) => draft[key] !== baseline.current[key],
+      ),
+    pending: () => working.current,
+    onDiscard: () => {
+      setDraft(baseline.current)
+      setMessage('')
+      setError('')
+    },
+  })
   const save = async (event) => {
-    event.preventDefault();
-    if (working.current || !canWrite) return;
-    working.current = true;
-    setBusy(true);
-    setMessage('');
-    setError('');
+    event.preventDefault()
+    if (working.current || !canWrite) return
+    working.current = true
+    setBusy(true)
+    setMessage('')
+    setError('')
+    const submitted = { ...draft }
     try {
       if (
-        ![draft.checkInTime, draft.checkOutTime].every((value) =>
+        ![submitted.checkInTime, submitted.checkOutTime].every((value) =>
           /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(value),
         )
       )
-        throw new Error('Giờ cần dạng HH:mm, từ 00:00 đến 23:59.');
-      await saveSettings(draft);
-      setMessage('Đã lưu chính sách nhận/trả phòng.');
+        throw new Error('Giờ cần dạng HH:mm, từ 00:00 đến 23:59.')
+      await saveSettings(submitted)
+      baseline.current = submitted
+      setMessage('Đã lưu chính sách nhận/trả phòng.')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      working.current = false;
-      setBusy(false);
+      working.current = false
+      setBusy(false)
     }
-  };
+  }
 
   return (
-    <form
-      className="pms-business-settings"
-      onSubmit={save}
-      aria-busy={busy}
-      data-workspace-draft
-    >
+    <form className="pms-business-settings" onSubmit={save} aria-busy={busy} data-workspace-draft>
       <header className="pms-business-heading">
         <h2>{tUi('settings.checkInPolicy')}</h2>
       </header>
@@ -329,10 +319,7 @@ export function BusinessPolicies() {
                 required
                 value={draft.checkInTime}
                 onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    checkInTime: event.target.value,
-                  }))
+                  setDraft((current) => ({ ...current, checkInTime: event.target.value }))
                 }
               />
             </label>
@@ -353,10 +340,7 @@ export function BusinessPolicies() {
                 required
                 value={draft.checkOutTime}
                 onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    checkOutTime: event.target.value,
-                  }))
+                  setDraft((current) => ({ ...current, checkOutTime: event.target.value }))
                 }
               />
             </label>
@@ -371,10 +355,7 @@ export function BusinessPolicies() {
               maxLength={4000}
               value={draft.policies || ''}
               onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  policies: event.target.value,
-                }))
+                setDraft((current) => ({ ...current, policies: event.target.value }))
               }
               aria-describedby="policy-content-hint"
             />
@@ -397,5 +378,5 @@ export function BusinessPolicies() {
         </p>
       )}
     </form>
-  );
+  )
 }

@@ -1,9 +1,5 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../shared/i18n/useI18n.js';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { t as tUi, tr as labelUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { NavLink, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Building2,
@@ -16,7 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
-} from 'lucide-react';
+} from 'lucide-react'
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Tổng quan', path: 'dashboard' },
@@ -25,13 +21,8 @@ const NAV_ITEMS = [
   { icon: CreditCard, label: 'Gói cước & hóa đơn', path: 'billing' },
   { icon: SlidersHorizontal, label: 'Tính năng', path: 'features' },
   { icon: Users, label: 'Nhân sự nội bộ', path: 'users', superOnly: true },
-  {
-    icon: ScrollText,
-    label: 'Nhật ký hệ thống',
-    path: 'logs',
-    superOnly: true,
-  },
-];
+  { icon: ScrollText, label: 'Nhật ký hệ thống', path: 'logs', superOnly: true },
+]
 
 export default function ManagerSidebar({
   isCollapsed = false,
@@ -39,13 +30,11 @@ export default function ManagerSidebar({
   currentRole,
   onClose,
 }) {
-  useI18n();
-  const isSuperAdmin = currentRole === 'SUPER_ADMIN';
-  const { pathname } = useLocation();
-  const hotelOta = /^\/manager\/tenants\/[^/]+\/ota(?:-history)?\/?$/.test(
-    pathname,
-  );
-  const collapsed = isCollapsed && !onClose;
+  useI18n()
+  const isSuperAdmin = currentRole === 'SUPER_ADMIN'
+  const { pathname } = useLocation()
+  const hotelOta = /^\/manager\/tenants\/[^/]+\/ota(?:-history)?\/?$/.test(pathname)
+  const collapsed = isCollapsed && !onClose
   return (
     <aside
       className={`manager-sidebar${collapsed ? ' is-collapsed' : ''}`}
@@ -100,9 +89,7 @@ export default function ManagerSidebar({
                   key={path}
                   to={`/manager/${path}`}
                   end={path === 'tenants'}
-                  className={({ isActive }) =>
-                    `manager-nav-link${isActive ? ' is-active' : ''}`
-                  }
+                  className={({ isActive }) => `manager-nav-link${isActive ? ' is-active' : ''}`}
                   title={collapsed ? labelUi(label) : undefined}
                   aria-label={labelUi(label)}
                   onClick={onClose}
@@ -117,9 +104,7 @@ export default function ManagerSidebar({
       <div className="manager-sidebar-footer">
         <NavLink
           to="/manager/profile"
-          className={({ isActive }) =>
-            `manager-nav-link${isActive ? ' is-active' : ''}`
-          }
+          className={({ isActive }) => `manager-nav-link${isActive ? ' is-active' : ''}`}
           aria-label={tUi('nav.profile')}
           title={collapsed ? tUi('nav.profile') : undefined}
           onClick={onClose}
@@ -136,15 +121,11 @@ export default function ManagerSidebar({
             aria-expanded={!collapsed}
             title={collapsed ? tUi('nav.expand') : undefined}
           >
-            {collapsed ? (
-              <PanelLeftOpen size={19} />
-            ) : (
-              <PanelLeftClose size={19} />
-            )}
+            {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
             <span>{tUi('nav.collapseMenu')}</span>
           </button>
         )}
       </div>
     </aside>
-  );
+  )
 }

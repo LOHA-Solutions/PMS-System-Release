@@ -1,50 +1,50 @@
-import { t as tUi, useI18n } from '../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { usePms } from '../../pms/data/usePms';
-import ManagerSidebar from '../components/ManagerSidebar';
-import ManagerHeader from '../components/ManagerHeader';
-import RequestActivity from '../../../shared/components/RequestActivity';
-import { getThemeTokens } from '../theme';
-import './ManagerLayout.css';
+import { t as tUi, useI18n } from '../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import { usePms } from '../../pms/data/usePms'
+import ManagerSidebar from '../components/ManagerSidebar'
+import ManagerHeader from '../components/ManagerHeader'
+import RequestActivity from '../../../shared/components/RequestActivity'
+import { getThemeTokens } from '../theme'
+import './ManagerLayout.css'
 
 export default function ManagerLayout() {
-  useI18n();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useI18n()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(() => {
     try {
-      return localStorage.getItem('pms_manager_theme') === 'dark';
+      return localStorage.getItem('pms_manager_theme') === 'dark'
     } catch {
-      return false;
+      return false
     }
-  });
-  const { user } = usePms();
-  const currentRole = user?.globalRole;
-  const mobileNav = useRef(null);
-  const theme = getThemeTokens(isDarkMode);
+  })
+  const { user } = usePms()
+  const currentRole = user?.globalRole
+  const mobileNav = useRef(null)
+  const theme = getThemeTokens(isDarkMode)
   useEffect(() => {
-    if (mobileNavOpen) mobileNav.current?.showModal();
-    else mobileNav.current?.close();
-  }, [mobileNavOpen]);
+    if (mobileNavOpen) mobileNav.current?.showModal()
+    else mobileNav.current?.close()
+  }, [mobileNavOpen])
   useEffect(() => {
-    const desktop = window.matchMedia('(min-width: 901px)');
+    const desktop = window.matchMedia('(min-width: 901px)')
     const closeOnDesktop = (event) => {
-      if (event.matches) setMobileNavOpen(false);
-    };
-    desktop.addEventListener('change', closeOnDesktop);
-    return () => desktop.removeEventListener('change', closeOnDesktop);
-  }, []);
+      if (event.matches) setMobileNavOpen(false)
+    }
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => desktop.removeEventListener('change', closeOnDesktop)
+  }, [])
   const toggleDarkMode = () => {
-    const next = !isDarkMode;
-    setIsDarkMode(next);
+    const next = !isDarkMode
+    setIsDarkMode(next)
     try {
-      localStorage.setItem('pms_manager_theme', next ? 'dark' : 'light');
+      localStorage.setItem('pms_manager_theme', next ? 'dark' : 'light')
     } catch {
       /* Theme remains available in memory. */
     }
-  };
+  }
 
   return (
     <div
@@ -82,15 +82,12 @@ export default function ManagerLayout() {
         className="manager-mobile-dialog"
         aria-label={tUi('manager.menu')}
         onClick={(event) => {
-          if (event.target === event.currentTarget) setMobileNavOpen(false);
+          if (event.target === event.currentTarget) setMobileNavOpen(false)
         }}
         onCancel={() => setMobileNavOpen(false)}
         onClose={() => setMobileNavOpen(false)}
       >
-        <ManagerSidebar
-          currentRole={currentRole}
-          onClose={() => setMobileNavOpen(false)}
-        />
+        <ManagerSidebar currentRole={currentRole} onClose={() => setMobileNavOpen(false)} />
       </dialog>
       <div className="manager-workspace">
         <RequestActivity />
@@ -119,5 +116,5 @@ export default function ManagerLayout() {
         </main>
       </div>
     </div>
-  );
+  )
 }

@@ -1,5 +1,5 @@
-import { tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { Link } from 'react-router-dom';
+import { tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { Link } from 'react-router-dom'
 import {
   AlertCircle,
   ArrowUpRight,
@@ -8,15 +8,15 @@ import {
   Inbox,
   Link2,
   Unlink,
-} from 'lucide-react';
+} from 'lucide-react'
 import {
   errorScreens,
   errorStatus,
   readableErrorMessage,
-} from '../../../../shared/components/errorStatus';
+} from '../../../../shared/components/errorStatus'
 
 export function EmptyState({ title, children }) {
-  useI18n();
+  useI18n()
   return (
     <div className="channex-state" role="status">
       <span className="channex-state-icon">
@@ -25,23 +25,19 @@ export function EmptyState({ title, children }) {
       <h3>{labelUi(title)}</h3>
       {children && <p>{children}</p>}
     </div>
-  );
+  )
 }
 
 export function DataState({ query, label, children }) {
-  useI18n();
+  useI18n()
   if (query.loading)
     return (
-      <div
-        className="channex-loading"
-        role="status"
-        aria-label={`Đang tải ${label}`}
-      >
+      <div className="channex-loading" role="status" aria-label={`Đang tải ${label}`}>
         <span />
         <span />
         <span />
       </div>
-    );
+    )
   if (query.error)
     return (
       <div className="channex-state channex-error" role="alert">
@@ -52,20 +48,15 @@ export function DataState({ query, label, children }) {
         <p>
           {readableErrorMessage(
             query.error.message,
-            errorScreens[errorStatus(query.error)]?.description ||
-              'Vui lòng thử lại sau.',
+            errorScreens[errorStatus(query.error)]?.description || 'Vui lòng thử lại sau.',
           )}
         </p>
-        <button
-          type="button"
-          className="manager-button"
-          onClick={query.refresh}
-        >
+        <button type="button" className="manager-button" onClick={query.refresh}>
           {labelUi('Thử tải lại')}
         </button>
       </div>
-    );
-  return children;
+    )
+  return children
 }
 
 export function TableWrap({ label, children }) {
@@ -78,11 +69,11 @@ export function TableWrap({ label, children }) {
     >
       {children}
     </div>
-  );
+  )
 }
 
 export function Pagination({ pagination, page, setPage, count, loading }) {
-  const totalPages = Math.max(page, pagination?.totalPages || 1);
+  const totalPages = Math.max(page, pagination?.totalPages || 1)
   return (
     <div className="channex-pagination">
       <span role="status">
@@ -112,7 +103,7 @@ export function Pagination({ pagination, page, setPage, count, loading }) {
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 export function RemoteId({ id }) {
@@ -121,7 +112,7 @@ export function RemoteId({ id }) {
       <summary>{labelUi('Mã Channex')}</summary>
       <code>{id}</code>
     </details>
-  );
+  )
 }
 
 export function LocalHotelLinks({ hotel }) {
@@ -131,8 +122,8 @@ export function LocalHotelLinks({ hotel }) {
         <Unlink size={14} aria-hidden="true" />
         {labelUi('Chưa liên kết LOHA')}
       </span>
-    );
-  const path = `/manager/channex?hotel=${encodeURIComponent(hotel.tenantId)}`;
+    )
+  const path = `/manager/channex?hotel=${encodeURIComponent(hotel.tenantId)}`
   return (
     <div className="channex-local-link">
       <span className="channex-local-status channex-local-status--linked">
@@ -150,5 +141,5 @@ export function LocalHotelLinks({ hotel }) {
         </Link>
       </div>
     </div>
-  );
+  )
 }

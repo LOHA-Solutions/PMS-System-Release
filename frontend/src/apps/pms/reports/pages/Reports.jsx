@@ -1,99 +1,80 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate, formatDateTime } from '../../../../shared/lib/date.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import {
-  BarChart3,
-  BedDouble,
-  CalendarDays,
-  CircleDollarSign,
-  Info,
-  Moon,
-} from 'lucide-react';
-import { usePms } from '../../data/usePms';
-import { today, addDays, nights, money as formatMoney } from '../../data/model';
-import './Reports.css';
-import { AccessLink as Link } from '../../../../shared/components/AccessControl';
-import BusinessReports from './BusinessReports';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate, formatDateTime } from '../../../../shared/lib/date.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
+import { BarChart3, BedDouble, CalendarDays, CircleDollarSign, Info, Moon } from 'lucide-react'
+import { usePms } from '../../data/usePms'
+import { addDays, nights, money as formatMoney } from '../../data/model'
+import './Reports.css'
+import { AccessLink as Link } from '../../../../shared/components/AccessControl'
+import BusinessReports from './BusinessReports'
+import { useReportPeriod } from './reportPeriod.js'
+
+const reportSegment = (pathname) => pathname.replace(/\/+$/, '').split('/').at(-1)
 
 export default function Reports() {
-  const report = useLocation().pathname.split('/').at(-1);
-  return [
-    'source',
-    'room',
-    'roomType',
-    'cancellations',
-    'nationality',
-    'discounts',
-  ].includes(report) ? (
-    <BusinessReports report={report} />
-  ) : (
+  const report = reportSegment(useLocation().pathname)
+  // Only the root and the two basic reports render BasicReports; every other key is
+  // resolved (or rejected as unsupported) by BusinessReports instead of faking revenue.
+  return ['reports', 'revenue', 'occupancy'].includes(report) ? (
     <BasicReports />
-  );
+  ) : (
+    <BusinessReports report={report} />
+  )
 }
 
 function BasicReports() {
-  const { apiText } = useI18n();
+  const { apiText } = useI18n()
+  const { rooms, roomTypes, settings, getRevenueReport, getFinancialReport, workspaceRevision } =
+    usePms()
+  const occupancy = reportSegment(useLocation().pathname) === 'occupancy'
+  const tableRegion = useRef(null)
+  const currency = settings.currency
+  const money = (value) => formatMoney(value, currency)
+  const activeRooms = rooms.filter((r) => r.active !== false)
   const {
-    rooms,
-    roomTypes,
-    settings,
-    getRevenueReport,
-    getFinancialReport,
-    workspaceRevision,
-  } = usePms();
-  const occupancy = useLocation().pathname.endsWith('/occupancy');
-  const currency = settings.currency;
-  const money = (value) => formatMoney(value, currency);
-  const activeRooms = rooms.filter((r) => r.active !== false);
-  const [start, setStart] = useState(today(settings.timezone));
-  const [end, setEnd] = useState(addDays(today(settings.timezone), 7));
-  const [startValid, setStartValid] = useState(true),
-    [endValid, setEndValid] = useState(true);
-  const valid =
-    startValid &&
-    endValid &&
-    start &&
-    end &&
-    nights(start, end) > 0 &&
-    nights(start, end) <= 366;
-  const dates = valid
-    ? Array.from({ length: nights(start, end) }, (_, i) => addDays(start, i))
-    : [];
+    start,
+    end,
+    valid,
+    minEnd,
+    setStart,
+    setEnd,
+    setStartValid,
+    setEndValid,
+    target,
+    preventInvalid,
+  } = useReportPeriod(settings.timezone)
+  const dates = valid ? Array.from({ length: nights(start, end) }, (_, i) => addDays(start, i)) : []
 
   const [data, setData] = useState(null),
     [loading, setLoading] = useState(false),
     [error, setError] = useState(''),
-    [revision, setRevision] = useState(0);
+    [revision, setRevision] = useState(0)
 
   useEffect(() => {
-    let mounted = true;
-    setData(null);
-    setError('');
-    setLoading(Boolean(valid));
+    let mounted = true
+    setData(null)
+    setError('')
+    setLoading(Boolean(valid))
     if (valid) {
       Promise.all([
         getRevenueReport(start, end, currency, 'base'),
         getFinancialReport(start, end, currency, 'base'),
       ])
         .then(([forecast, financial]) => {
-          if (mounted) setData({ forecast: forecast.rows, financial });
+          if (mounted) setData({ forecast: forecast.rows, financial })
         })
         .catch((err) => {
-          if (mounted) setError(err.message);
+          if (mounted) setError(err.message)
         })
         .finally(() => {
-          if (mounted) setLoading(false);
-        });
+          if (mounted) setLoading(false)
+        })
     }
     return () => {
-      mounted = false;
-    };
+      mounted = false
+    }
   }, [
     valid,
     start,
@@ -103,44 +84,135 @@ function BasicReports() {
     getFinancialReport,
     revision,
     workspaceRevision,
-  ]);
+  ])
 
   const rows = dates.map((date) => {
-    const row = data?.forecast.find((r) => r.date.split('T')[0] === date);
-    return (
-      row || {
-        date,
-        reserved: 0,
-        reservedRooms: 0,
-        nights: 0,
-        amount: '0.0000',
-      }
-    );
-  });
-  const totalAmount = data?.financial.summary.forecastRoomRevenue;
-  const financialRows = new Map(
-    data?.financial.rows.map((row) => [row.date, row]) || [],
-  );
-  const totalNights = rows.reduce((sum, row) => sum + row.nights, 0);
+    const row = data?.forecast.find((r) => r.date.split('T')[0] === date)
+    return row || { date, reserved: 0, reservedRooms: 0, nights: 0, amount: '0.0000' }
+  })
+  const totalAmount = data?.financial.summary.forecastRoomRevenue
+  const financialRows = new Map(data?.financial.rows.map((row) => [row.date, row]) || [])
+  const totalNights = rows.reduce((sum, row) => sum + row.nights, 0)
   const averageOccupancy =
     valid && activeRooms.length
       ? `${((rows.reduce((sum, row) => sum + row.reservedRooms, 0) / (activeRooms.length * rows.length)) * 100).toFixed(1)}%`
-      : '—';
+      : '—'
+  const emptyText = !valid
+    ? labelUi('Chọn khoảng ngày hợp lệ để xem báo cáo.')
+    : loading
+      ? tUi('dashboard.loading')
+      : tUi('dashboard.failed')
+  const jumpToTable = () => {
+    const region = tableRegion.current
+    if (!region) return
+    region.scrollIntoView({ block: 'start' })
+    region.focus({ preventScroll: true })
+  }
+
+  const financialCards = data && (
+    <div
+      className="pms-reports-summary pms-reports-financial"
+      aria-label={labelUi('Chỉ số tài chính')}
+    >
+      <SummaryCard
+        icon={<CircleDollarSign size={20} />}
+        label={tUi('nightAudit.revenue')}
+        value={money(data.financial.summary.recognizedRevenue || 0)}
+        description={tUi('nightAudit.reportDefinition')}
+      />
+      <SummaryCard
+        icon={<CircleDollarSign size={20} />}
+        label={tUi('dashboard.revenue')}
+        value={money(data.financial.summary.realizedRevenue)}
+        description="Hóa đơn lưu trú/POS đã chốt trong kỳ"
+      />
+      <SummaryCard
+        icon={<CircleDollarSign size={20} />}
+        label="Thực thu từ khách"
+        value={money(data.financial.summary.netReceipts)}
+        description="Tiền khách thanh toán trừ hoàn tiền trong kỳ"
+      />
+      <SummaryCard
+        icon={<BedDouble size={20} />}
+        label="Giá phòng trung bình (ADR)"
+        value={money(data.financial.summary.adr)}
+        description={`${data.financial.summary.servedNights} đêm đã phục vụ, trước ngày kinh doanh hiện tại`}
+      />
+      <SummaryCard
+        icon={<CircleDollarSign size={20} />}
+        label="Tiền cọc hiện tại"
+        value={money(data.financial.snapshot.deposits)}
+        description="Đã thu cho các booking chưa nhận phòng"
+      />
+      <SummaryCard
+        icon={<CircleDollarSign size={20} />}
+        label="Công nợ hiện tại"
+        value={money(data.financial.snapshot.debt)}
+        description="Số tiền còn phải thu của booking/POS đang có dư nợ"
+      />
+      <SummaryCard
+        icon={<CalendarDays size={20} />}
+        label="Thời điểm số dư hiện tại"
+        value={formatDateTime(data.financial.snapshot.asOf, settings.timezone).slice(11)}
+        description={formatDateTime(data.financial.snapshot.asOf, settings.timezone).slice(0, 10)}
+      />
+    </div>
+  )
+  const ledgerCards = data && (
+    <section
+      className="pms-reports-summary pms-reports-ledger"
+      aria-label={labelUi('Đối soát sổ quỹ')}
+      style={{ marginTop: 16 }}
+    >
+      <SummaryCard
+        label="Số dư đầu kỳ"
+        value={money(data.financial.summary.opening)}
+        description="Tổng số dư ledger trước ngày bắt đầu"
+      />
+      <SummaryCard
+        label="Thu vào quỹ"
+        value={money(data.financial.summary.income)}
+        description="Các bút toán tăng quỹ trong kỳ"
+      />
+      <SummaryCard
+        label="Chi ra quỹ"
+        value={money(data.financial.summary.outflow)}
+        description="Các bút toán giảm quỹ trong kỳ"
+      />
+      <SummaryCard
+        label="Số dư cuối kỳ"
+        value={money(data.financial.summary.closing)}
+        description="Đầu kỳ + thu − chi; chuyển quỹ được đối ứng"
+      />
+    </section>
+  )
+  const basisNote = (
+    <p className="pms-reports-note pms-reports-basis">
+      <Info size={16} aria-hidden="true" />
+      <span>
+        {labelUi(
+          'Doanh thu phòng dự kiến theo giá từng đêm đã chốt; chưa gồm dịch vụ, thuế và thanh toán. Số tiền hiển thị theo tiền tệ của khách sạn, dùng tỷ giá đã lưu trên từng giao dịch.',
+        )}
+      </span>
+    </p>
+  )
+  const definitionsNote = data && (
+    <div className="pms-reports-note pms-reports-definitions">
+      <Info size={16} aria-hidden="true" />
+      <span>
+        {Object.values(data.financial.definitions || {})
+          .map(apiText)
+          .join(' ')}
+      </span>
+    </div>
+  )
 
   return (
     <div className="pms-original pms-reports">
       <header className="pms-reports-header">
         <div>
-          <h1>
-            {occupancy
-              ? tUi('nav.occupancy')
-              : labelUi('Báo cáo doanh thu phòng')}
-          </h1>
-          <p>
-            {labelUi(
-              'Theo dõi doanh thu và công suất phòng theo khoảng thời gian.',
-            )}
-          </p>
+          <h1>{occupancy ? tUi('nav.occupancy') : labelUi('Báo cáo doanh thu phòng')}</h1>
+          <p>{labelUi('Theo dõi doanh thu và công suất phòng theo khoảng thời gian.')}</p>
         </div>
         <span className="pms-reports-demo" role="status">
           <Info size={14} aria-hidden="true" />{' '}
@@ -154,31 +226,29 @@ function BasicReports() {
 
       <nav className="pms-reports-tabs" aria-label={labelUi('Loại báo cáo')}>
         <Link
-          to="/id/reports/revenue"
+          to={target('/id/reports/revenue')}
+          onClick={preventInvalid}
+          aria-disabled={!valid}
           aria-current={!occupancy ? 'page' : undefined}
         >
-          <CircleDollarSign size={18} aria-hidden="true" />{' '}
-          {labelUi('Doanh thu phòng')}
+          <CircleDollarSign size={18} aria-hidden="true" /> {labelUi('Doanh thu phòng')}
         </Link>
         <Link
-          to="/id/reports/occupancy"
+          to={target('/id/reports/occupancy')}
+          onClick={preventInvalid}
+          aria-disabled={!valid}
           aria-current={occupancy ? 'page' : undefined}
         >
           <BarChart3 size={18} aria-hidden="true" /> {tUi('nav.occupancy')}
         </Link>
-        <Link to="/id/reports/source">
-          <BarChart3 size={18} aria-hidden="true" />{' '}
-          {tUi('nav.advancedReports')}
+        <Link to={target('/id/reports/source')} onClick={preventInvalid} aria-disabled={!valid}>
+          <BarChart3 size={18} aria-hidden="true" /> {tUi('nav.advancedReports')}
         </Link>
       </nav>
 
-      <section
-        className="pms-reports-filter"
-        aria-label={labelUi('Bộ lọc thời gian')}
-      >
+      <section className="pms-reports-filter" aria-label={labelUi('Bộ lọc thời gian')}>
         <div className="pms-reports-filter-title">
-          <CalendarDays size={18} aria-hidden="true" />{' '}
-          {labelUi('Khoảng thời gian')}
+          <CalendarDays size={18} aria-hidden="true" /> {labelUi('Khoảng thời gian')}
         </div>
         <div className="pms-reports-date-fields">
           <label htmlFor="report-start">
@@ -196,23 +266,17 @@ function BasicReports() {
             {labelUi('Đến ngày')}
             <DateInput
               id="report-end"
-              min={start ? addDays(start, 1) : undefined}
+              min={minEnd}
               value={end}
               onChange={setEnd}
               onValidityChange={setEndValid}
               aria-invalid={!valid}
-              aria-describedby={
-                !valid
-                  ? 'report-date-error report-date-note'
-                  : 'report-date-note'
-              }
+              aria-describedby={!valid ? 'report-date-error report-date-note' : 'report-date-note'}
             />
           </label>
         </div>
         <p id="report-date-note" className="pms-reports-filter-note">
-          {labelUi(
-            'Không bao gồm ngày kết thúc. Số liệu cập nhật khi đổi ngày.',
-          )}
+          {labelUi('Không bao gồm ngày kết thúc. Số liệu cập nhật khi đổi ngày.')}
         </p>
       </section>
 
@@ -223,10 +287,7 @@ function BasicReports() {
       )}
       {error && (
         <p role="alert" className="pms-reports-error">
-          {error}{' '}
-          <button onClick={() => setRevision((v) => v + 1)}>
-            {tUi('common.retry')}
-          </button>
+          {error} <button onClick={() => setRevision((v) => v + 1)}>{tUi('common.retry')}</button>
         </p>
       )}
 
@@ -240,14 +301,8 @@ function BasicReports() {
             )
           }
           label={occupancy ? 'Tổng số phòng' : 'Tiền phòng dự kiến'}
-          value={
-            occupancy ? activeRooms.length : data ? money(totalAmount) : '—'
-          }
-          description={
-            occupancy
-              ? 'Tại khách sạn đang chọn'
-              : 'Trong khoảng thời gian đã chọn'
-          }
+          value={occupancy ? activeRooms.length : data ? money(totalAmount) : '—'}
+          description={occupancy ? 'Tại khách sạn đang chọn' : 'Trong khoảng thời gian đã chọn'}
         />
         <SummaryCard
           icon={
@@ -257,9 +312,7 @@ function BasicReports() {
               <Moon size={20} aria-hidden="true" />
             )
           }
-          label={
-            occupancy ? 'Công suất đặt phòng trung bình' : 'Tổng số đêm phòng'
-          }
+          label={occupancy ? 'Công suất đặt phòng trung bình' : 'Tổng số đêm phòng'}
           value={data ? (occupancy ? averageOccupancy : totalNights) : '—'}
           description={
             occupancy
@@ -279,73 +332,28 @@ function BasicReports() {
         />
       </div>
 
-      {data && (
-        <div
-          className="pms-reports-summary"
-          aria-label={labelUi('Chỉ số tài chính')}
+      {occupancy ? (
+        <button
+          type="button"
+          className="pms-reports-jump"
+          aria-controls="report-table-region"
+          onClick={jumpToTable}
         >
-          <SummaryCard
-            icon={<CircleDollarSign size={20} />}
-            label={tUi('nightAudit.revenue')}
-            value={money(data.financial.summary.recognizedRevenue || 0)}
-            description={tUi('nightAudit.reportDefinition')}
-          />
-          <SummaryCard
-            icon={<CircleDollarSign size={20} />}
-            label={tUi('dashboard.revenue')}
-            value={money(data.financial.summary.realizedRevenue)}
-            description="Hóa đơn lưu trú/POS đã chốt trong kỳ"
-          />
-          <SummaryCard
-            icon={<CircleDollarSign size={20} />}
-            label="Thực thu từ khách"
-            value={money(data.financial.summary.netReceipts)}
-            description="Tiền khách thanh toán trừ hoàn tiền trong kỳ"
-          />
-          <SummaryCard
-            icon={<BedDouble size={20} />}
-            label="Giá phòng trung bình (ADR)"
-            value={money(data.financial.summary.adr)}
-            description={`${data.financial.summary.servedNights} đêm đã phục vụ, trước ngày kinh doanh hiện tại`}
-          />
-          <SummaryCard
-            icon={<CircleDollarSign size={20} />}
-            label="Tiền cọc hiện tại"
-            value={money(data.financial.snapshot.deposits)}
-            description="Đã thu cho các booking chưa nhận phòng"
-          />
-          <SummaryCard
-            icon={<CircleDollarSign size={20} />}
-            label="Công nợ hiện tại"
-            value={money(data.financial.snapshot.debt)}
-            description="Số tiền còn phải thu của booking/POS đang có dư nợ"
-          />
-          <SummaryCard
-            icon={<CalendarDays size={20} />}
-            label="Thời điểm số dư hiện tại"
-            value={formatDateTime(
-              data.financial.snapshot.asOf,
-              settings.timezone,
-            ).slice(11)}
-            description={formatDateTime(
-              data.financial.snapshot.asOf,
-              settings.timezone,
-            ).slice(0, 10)}
-          />
-        </div>
+          <CalendarDays size={16} aria-hidden="true" />
+          {labelUi('Đi tới bảng chi tiết theo ngày')}
+        </button>
+      ) : (
+        financialCards
       )}
 
-      <section
-        className="pms-reports-table-card"
-        aria-labelledby="report-table-title"
-      >
+      <section className="pms-reports-table-card" aria-labelledby="report-table-title">
         <div className="pms-reports-table-heading">
           <h2 id="report-table-title">{labelUi('Chi tiết theo ngày')}</h2>
-          {valid && (
-            <span className="pms-reports-count">{rows.length} ngày</span>
-          )}
+          {valid && <span className="pms-reports-count">{rows.length} ngày</span>}
         </div>
         <div
+          ref={tableRegion}
+          id="report-table-region"
           className="pms-reports-table-scroll"
           tabIndex={0}
           role="region"
@@ -356,14 +364,10 @@ function BasicReports() {
               <tr>
                 <th scope="col">{tUi('common.date')}</th>
                 <th scope="col" className="pms-reports-number">
-                  {occupancy
-                    ? labelUi('Phòng đã đặt / đang ở')
-                    : labelUi('Số đêm phòng')}
+                  {occupancy ? labelUi('Phòng đã đặt / đang ở') : labelUi('Số đêm phòng')}
                 </th>
                 <th scope="col" className="pms-reports-number">
-                  {occupancy
-                    ? labelUi('Công suất đặt phòng')
-                    : labelUi('Tiền phòng dự kiến')}
+                  {occupancy ? labelUi('Công suất đặt phòng') : labelUi('Tiền phòng dự kiến')}
                 </th>
                 {!occupancy && (
                   <>
@@ -385,9 +389,7 @@ function BasicReports() {
                       <time dateTime={row.date}>{formatDate(row.date)}</time>
                     </td>
                     <td className="pms-reports-number">
-                      {occupancy
-                        ? `${row.reservedRooms} / ${activeRooms.length}`
-                        : row.nights}
+                      {occupancy ? `${row.reservedRooms} / ${activeRooms.length}` : row.nights}
                     </td>
                     <td className="pms-reports-number pms-reports-value">
                       {occupancy ? (
@@ -403,14 +405,10 @@ function BasicReports() {
                     {!occupancy && (
                       <>
                         <td className="pms-reports-number">
-                          {money(
-                            financialRows.get(row.date)?.realizedRevenue || '0',
-                          )}
+                          {money(financialRows.get(row.date)?.realizedRevenue || '0')}
                         </td>
                         <td className="pms-reports-number">
-                          {money(
-                            financialRows.get(row.date)?.netReceipts || '0',
-                          )}
+                          {money(financialRows.get(row.date)?.netReceipts || '0')}
                         </td>
                       </>
                     )}
@@ -419,11 +417,7 @@ function BasicReports() {
               {!data && (
                 <tr>
                   <td colSpan={occupancy ? 3 : 5} className="pms-reports-empty">
-                    {!valid
-                      ? labelUi('Chọn khoảng ngày hợp lệ để xem báo cáo.')
-                      : loading
-                        ? tUi('dashboard.loading')
-                        : tUi('dashboard.failed')}
+                    {emptyText}
                   </td>
                 </tr>
               )}
@@ -432,9 +426,7 @@ function BasicReports() {
               <tfoot>
                 <tr>
                   <th scope="row">
-                    {occupancy
-                      ? labelUi('Trung bình trong kỳ')
-                      : labelUi('Tổng cộng')}
+                    {occupancy ? labelUi('Trung bình trong kỳ') : labelUi('Tổng cộng')}
                   </th>
                   <td className="pms-reports-number">
                     {occupancy ? `${activeRooms.length} phòng` : totalNights}
@@ -459,76 +451,52 @@ function BasicReports() {
         </div>
       </section>
 
-      {data && (
-        <section
-          className="pms-reports-summary"
-          aria-label={labelUi('Đối soát sổ quỹ')}
-          style={{ marginTop: 16 }}
-        >
-          <SummaryCard
-            label="Số dư đầu kỳ"
-            value={money(data.financial.summary.opening)}
-            description="Tổng số dư ledger trước ngày bắt đầu"
-          />
-          <SummaryCard
-            label="Thu vào quỹ"
-            value={money(data.financial.summary.income)}
-            description="Các bút toán tăng quỹ trong kỳ"
-          />
-          <SummaryCard
-            label="Chi ra quỹ"
-            value={money(data.financial.summary.outflow)}
-            description="Các bút toán giảm quỹ trong kỳ"
-          />
-          <SummaryCard
-            label="Số dư cuối kỳ"
-            value={money(data.financial.summary.closing)}
-            description="Đầu kỳ + thu − chi; chuyển quỹ được đối ứng"
-          />
-        </section>
-      )}
+      {!occupancy && ledgerCards}
 
       {occupancy && (
-        <section
-          className="pms-reports-room-types"
-          aria-label={labelUi('Hạng phòng')}
-        >
+        <section className="pms-reports-room-types" aria-label={labelUi('Hạng phòng')}>
           <span>{labelUi('Hạng phòng')}</span>
           {roomTypes.map((type) => (
             <span className="pms-reports-room-type" key={type.id}>
-              {type.name}{' '}
-              <strong>
-                {rooms.filter((room) => room.typeId === type.id).length}
-              </strong>
+              {type.name} <strong>{rooms.filter((room) => room.typeId === type.id).length}</strong>
             </span>
           ))}
         </section>
       )}
 
-      <p className="pms-reports-note">
-        <Info size={16} aria-hidden="true" />
-        <span>
-          {labelUi(
-            'Doanh thu phòng dự kiến theo giá từng đêm đã chốt; chưa gồm dịch vụ, thuế và thanh toán. Số tiền hiển thị theo tiền tệ của khách sạn, dùng tỷ giá đã lưu trên từng giao dịch.',
-          )}
-        </span>
-      </p>
-      {data && (
-        <div className="pms-reports-note">
-          <Info size={16} aria-hidden="true" />
-          <span>
-            {Object.values(data.financial.definitions || {})
-              .map(apiText)
-              .join(' ')}
-          </span>
-        </div>
+      {occupancy ? (
+        // Native, uncontrolled disclosure: React never sets `open`, so it stays open across refresh/retry.
+        <details className="pms-reports-details">
+          <summary>{labelUi('Chi tiết tài chính')}</summary>
+          <div className="pms-reports-details-body">
+            {data ? (
+              <>
+                <h3 className="pms-reports-details-heading">{labelUi('Chỉ số tài chính')}</h3>
+                {financialCards}
+                <h3 className="pms-reports-details-heading">{labelUi('Đối soát sổ quỹ')}</h3>
+                {ledgerCards}
+              </>
+            ) : (
+              <p role="status" className="pms-reports-details-status">
+                {emptyText}
+              </p>
+            )}
+            {basisNote}
+            {definitionsNote}
+          </div>
+        </details>
+      ) : (
+        <>
+          {basisNote}
+          {definitionsNote}
+        </>
       )}
     </div>
-  );
+  )
 }
 
 function SummaryCard({ icon, label, value, description }) {
-  useI18n();
+  useI18n()
   return (
     <div className="pms-reports-summary-card">
       <div className="pms-reports-summary-top">
@@ -538,5 +506,5 @@ function SummaryCard({ icon, label, value, description }) {
       <strong className="pms-reports-summary-value">{value}</strong>
       <p>{description}</p>
     </div>
-  );
+  )
 }

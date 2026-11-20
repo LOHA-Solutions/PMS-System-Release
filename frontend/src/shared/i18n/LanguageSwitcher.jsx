@@ -1,70 +1,65 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { Check, ChevronDown, Languages } from 'lucide-react';
-import { languages } from './core.js';
-import { useI18n } from './useI18n.js';
-import './LanguageSwitcher.css';
+import { useEffect, useId, useRef, useState } from 'react'
+import { Check, ChevronDown, Languages } from 'lucide-react'
+import { languages } from './core.js'
+import { useI18n } from './useI18n.js'
+import './LanguageSwitcher.css'
 
 export default function LanguageSwitcher({ compact = false }) {
-  const { locale, setLocale, t } = useI18n();
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef(null);
-  const triggerRef = useRef(null);
-  const openingIndex = useRef(0);
-  const selected =
-    languages.find((language) => language.code === locale) || languages[0];
+  const { locale, setLocale, t } = useI18n()
+  const id = useId()
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef(null)
+  const triggerRef = useRef(null)
+  const openingIndex = useRef(0)
+  const selected = languages.find((language) => language.code === locale) || languages[0]
 
   useEffect(() => {
-    if (!open) return undefined;
-    rootRef.current
-      ?.querySelectorAll('[role="menuitemradio"]')
-      [openingIndex.current]?.focus();
+    if (!open) return undefined
+    rootRef.current?.querySelectorAll('[role="menuitemradio"]')[openingIndex.current]?.focus()
     const closeOutside = (event) => {
-      if (!rootRef.current?.contains(event.target)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', closeOutside);
-    return () => document.removeEventListener('pointerdown', closeOutside);
-  }, [open]);
+      if (!rootRef.current?.contains(event.target)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOutside)
+    return () => document.removeEventListener('pointerdown', closeOutside)
+  }, [open])
 
   function openOnArrow(event) {
-    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    openingIndex.current = event.key === 'ArrowUp' ? languages.length - 1 : 0;
-    setOpen(true);
+    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return
+    event.preventDefault()
+    event.stopPropagation()
+    openingIndex.current = event.key === 'ArrowUp' ? languages.length - 1 : 0
+    setOpen(true)
   }
 
   function handleMenuKey(event) {
-    if (!open) return;
+    if (!open) return
     if (event.key === 'Escape' || event.key === 'Tab') {
       if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
+        event.preventDefault()
+        event.stopPropagation()
       }
       // Anchor native Tab navigation before the focused menu item is removed.
-      triggerRef.current?.focus();
-      setOpen(false);
-      return;
+      triggerRef.current?.focus()
+      setOpen(false)
+      return
     }
-    const items = [
-      ...rootRef.current.querySelectorAll('[role="menuitemradio"]'),
-    ];
-    const index = items.indexOf(document.activeElement);
+    const items = [...rootRef.current.querySelectorAll('[role="menuitemradio"]')]
+    const index = items.indexOf(document.activeElement)
     const destination = {
       ArrowDown: (index + 1) % items.length,
       ArrowUp: (index + items.length - 1) % items.length,
       Home: 0,
       End: items.length - 1,
-    }[event.key];
-    if (destination === undefined) return;
-    event.preventDefault();
-    items[destination]?.focus();
+    }[event.key]
+    if (destination === undefined) return
+    event.preventDefault()
+    items[destination]?.focus()
   }
 
   function chooseLanguage(code) {
-    setLocale(code);
-    setOpen(false);
-    triggerRef.current?.focus();
+    setLocale(code)
+    setOpen(false)
+    triggerRef.current?.focus()
   }
 
   return (
@@ -74,7 +69,7 @@ export default function LanguageSwitcher({ compact = false }) {
       data-i18n-ignore
       onKeyDown={handleMenuKey}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
       }}
     >
       <button
@@ -88,8 +83,8 @@ export default function LanguageSwitcher({ compact = false }) {
         aria-controls={open ? id : undefined}
         onKeyDown={openOnArrow}
         onClick={() => {
-          openingIndex.current = 0;
-          setOpen((value) => !value);
+          openingIndex.current = 0
+          setOpen((value) => !value)
         }}
       >
         <span className="loha-language-icon">
@@ -98,22 +93,11 @@ export default function LanguageSwitcher({ compact = false }) {
         <span className="loha-language-current" lang={selected.code}>
           {compact ? selected.shortName : selected.nativeName}
         </span>
-        <ChevronDown
-          className="loha-language-chevron"
-          size={15}
-          aria-hidden="true"
-        />
+        <ChevronDown className="loha-language-chevron" size={15} aria-hidden="true" />
       </button>
       {open && (
-        <div
-          id={id}
-          className="loha-language-menu"
-          role="menu"
-          aria-label={t('language.label')}
-        >
-          <span className="loha-language-menu-title">
-            {t('language.label')}
-          </span>
+        <div id={id} className="loha-language-menu" role="menu" aria-label={t('language.label')}>
+          <span className="loha-language-menu-title">{t('language.label')}</span>
           {languages.map((language) => (
             <button
               key={language.code}
@@ -133,5 +117,5 @@ export default function LanguageSwitcher({ compact = false }) {
         </div>
       )}
     </div>
-  );
+  )
 }

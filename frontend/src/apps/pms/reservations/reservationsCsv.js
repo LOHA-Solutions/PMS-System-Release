@@ -1,4 +1,4 @@
-import { bookingRooms, statusLabels } from '../data/model.js';
+import { bookingRooms, statusLabels } from '../data/model.js'
 
 export const reservationCsvHeaders = [
   'Mã booking',
@@ -10,7 +10,7 @@ export const reservationCsvHeaders = [
   'Nguồn',
   'Tổng tiền',
   'Tiền tệ',
-];
+]
 
 export function reservationCsvRows(bookings) {
   return bookings.map((booking) => [
@@ -23,5 +23,5 @@ export function reservationCsvRows(bookings) {
     booking.source,
     booking.total,
     booking.currency,
-  ]);
+  ])
 }

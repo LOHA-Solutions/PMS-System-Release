@@ -103,11 +103,14 @@ def stage_ari(client, availability, restrictions):
             verified = (
                 isinstance(actual, dict)
                 and actual.get("stop_sell") is expected["stop_sell"]
-                and ("rate" not in expected or (
-                    not isinstance(actual.get("rate"), bool)
-                    and Decimal(str(actual.get("rate"))).is_finite()
-                    and Decimal(str(actual.get("rate"))) == Decimal(expected["rate"])
-                ))
+                and (
+                    "rate" not in expected
+                    or (
+                        not isinstance(actual.get("rate"), bool)
+                        and Decimal(str(actual.get("rate"))).is_finite()
+                        and Decimal(str(actual.get("rate"))) == Decimal(expected["rate"])
+                    )
+                )
             )
         except (InvalidOperation, ValueError, TypeError):
             verified = False
@@ -162,10 +165,12 @@ def publish_ari(tenant_id, job, connection, client):
     db.session.commit()
 
     stage_ari(client, availability, restrictions)
-    catalogs = CachedCatalog({
-        resource: client.catalog(resource, property_id)
-        for resource in ("room_types", "rate_plans")
-    })
+    catalogs = CachedCatalog(
+        {
+            resource: client.catalog(resource, property_id)
+            for resource in ("room_types", "rate_plans")
+        }
+    )
 
     set_context(tenant_id=tenant_id)
     g.tenant = lock_tenant(tenant_id)
@@ -175,8 +180,11 @@ def publish_ari(tenant_id, job, connection, client):
     )
     job = db.session.get(ChannelJob, job_id)
     if (
-        not connection or not connection.active or target_identity(connection) != identity
-        or job.status != "processing" or job.attempts != attempt
+        not connection
+        or not connection.active
+        or target_identity(connection) != identity
+        or job.status != "processing"
+        or job.attempts != attempt
     ):
         raise ProviderError("channel_configuration_changed", retryable=True)
     if ari_snapshot(tenant_id, connection, catalogs, details) != (availability, restrictions):

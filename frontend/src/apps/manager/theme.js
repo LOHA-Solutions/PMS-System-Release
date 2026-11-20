@@ -1,12 +1,12 @@
-const fontFamily = 'var(--font-sans)';
+const fontFamily = 'var(--font-sans)'
 
 // LOHA colors; aliases keep existing manager pages on the shared palette.
 export const getThemeTokens = (isDark = false) => {
-  const primary = '#086ab4';
-  const surface = isDark ? '#152538' : '#ffffff';
-  const border = isDark ? '#2b4056' : '#dce5ed';
-  const accentBg = isDark ? '#183c57' : '#eaf4fc';
-  const accentText = isDark ? '#91ceff' : primary;
+  const primary = '#086ab4'
+  const surface = isDark ? '#152538' : '#ffffff'
+  const border = isDark ? '#2b4056' : '#dce5ed'
+  const accentBg = isDark ? '#183c57' : '#eaf4fc'
+  const accentText = isDark ? '#91ceff' : primary
   return {
     isDark,
     bgMain: isDark ? '#0d1b2a' : '#f3f7fa',
@@ -55,5 +55,5 @@ export const getThemeTokens = (isDark = false) => {
     chartBarFill: '#0c7cd5',
     chartGridLine: border,
     fontFamily,
-  };
-};
+  }
+}

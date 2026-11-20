@@ -30,11 +30,23 @@ def upgrade():
         sa.Column("user_id", sa.String(40), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("tenant_id", "id"),
-        sa.ForeignKeyConstraint(["tenant_id", "commission_id"], ["commission_settlements.tenant_id", "commission_settlements.id"]),
-        sa.CheckConstraint("room_net >= 0 AND base_room_net >= 0 AND amount >= 0 AND base_amount >= 0 AND amount <= room_net", name="valid_amounts"),
-        sa.CheckConstraint("exchange_rate > 0 AND length(btrim(reason)) > 0", name="review_details"),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "commission_id"],
+            ["commission_settlements.tenant_id", "commission_settlements.id"],
+        ),
+        sa.CheckConstraint(
+            "room_net >= 0 AND base_room_net >= 0 AND amount >= 0 AND base_amount >= 0 AND amount <= room_net",
+            name="valid_amounts",
+        ),
+        sa.CheckConstraint(
+            "exchange_rate > 0 AND length(btrim(reason)) > 0", name="review_details"
+        ),
     )
-    op.create_index("ix_commission_reviews_latest", "commission_reviews", ["tenant_id", "commission_id", "created_at", "id"])
+    op.create_index(
+        "ix_commission_reviews_latest",
+        "commission_reviews",
+        ["tenant_id", "commission_id", "created_at", "id"],
+    )
     op.create_table(
         "commission_recoveries",
         sa.Column("id", sa.String(40), primary_key=True),
@@ -44,8 +56,13 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("tenant_id", "id"),
         sa.UniqueConstraint("tenant_id", "cash_document_id"),
-        sa.ForeignKeyConstraint(["tenant_id", "commission_id"], ["commission_settlements.tenant_id", "commission_settlements.id"]),
-        sa.ForeignKeyConstraint(["tenant_id", "cash_document_id"], ["cash_documents.tenant_id", "cash_documents.id"]),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "commission_id"],
+            ["commission_settlements.tenant_id", "commission_settlements.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["tenant_id", "cash_document_id"], ["cash_documents.tenant_id", "cash_documents.id"]
+        ),
     )
     for table in ("commission_reviews", "commission_recoveries"):
         scope = pms_scope(table)

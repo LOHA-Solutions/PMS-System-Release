@@ -15,8 +15,20 @@ class URL(CommonURL):
 reconciliation = Blueprint(
     "reconciliation", __name__, url_prefix="/api/tenants/<tenant_id>/reconciliation"
 )
-URL.register(reconciliation, URL.NIGHT_AUDIT, "pms_api.reconciliation.night_audit:NightAuditPreviewView", endpoint="night_audit_preview", methods=["GET"])
-URL.register(reconciliation, URL.NIGHT_AUDIT, "pms_api.reconciliation.night_audit:CloseNightAuditView", endpoint="close_night_audit", methods=["POST"])
+URL.register(
+    reconciliation,
+    URL.NIGHT_AUDIT,
+    "pms_api.reconciliation.night_audit:NightAuditPreviewView",
+    endpoint="night_audit_preview",
+    methods=["GET"],
+)
+URL.register(
+    reconciliation,
+    URL.NIGHT_AUDIT,
+    "pms_api.reconciliation.night_audit:CloseNightAuditView",
+    endpoint="close_night_audit",
+    methods=["POST"],
+)
 URL.register(
     reconciliation,
     URL.PREVIEW,

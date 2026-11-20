@@ -18,9 +18,7 @@
 }
 .pms-inventory .inventory-line {
   display: grid;
-  grid-template-columns:
-    minmax(160px, 2fr) minmax(110px, 1fr) minmax(120px, 1fr)
-    auto;
+  grid-template-columns: minmax(160px, 2fr) minmax(110px, 1fr) minmax(120px, 1fr) auto;
   gap: 12px;
   align-items: end;
   padding: 12px;
@@ -36,8 +34,8 @@
 }
 .pms-inventory .inventory-line.inventory-opening-line {
   grid-template-columns:
-    minmax(140px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr)
-    minmax(120px, 1fr) auto;
+    minmax(140px, 1fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(120px, 1fr)
+    auto;
 }
 .pms-inventory .inventory-dialog {
   width: min(960px, calc(100vw - 32px));
@@ -144,7 +142,80 @@
   white-space: normal;
   min-width: 160px;
 }
+.pms-inventory .inventory-scroll:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.pms-inventory .inventory-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+}
+.pms-inventory .inventory-tabs [role='tab'] {
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pms-inventory .inventory-tabs [role='tab'][aria-selected='true'] {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  background: var(--bg-surface);
+}
+.pms-inventory .inventory-tabs [role='tab']:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+.pms-inventory [role='tabpanel']:not([hidden]) {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.pms-inventory .inventory-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.pms-inventory .inventory-pager {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pms-inventory .inventory-pager > div {
+  display: flex;
+  gap: 8px;
+}
+.pms-inventory .inventory-context-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-main);
+}
+.pms-inventory .inventory-context-notice p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 640px) {
+  .pms-inventory .inventory-tabs [role='tab'] {
+    flex: 1 1 0;
+    padding: 8px;
+  }
+  .pms-inventory .inventory-context-notice > button {
+    flex: 1 1 100%;
+  }
   .pms-inventory .inventory-line,
   .pms-inventory .inventory-line.inventory-quantity-line,
   .pms-inventory .inventory-line.inventory-opening-line {
@@ -171,4 +242,30 @@
     min-width: 0;
     flex-basis: 100%;
   }
+}
+.inventory-dialog .inventory-form-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 12px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-color, #dbe3ea);
+  gap: 8px;
+}
+.inventory-line-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #dbe3ea;
+  border-radius: 6px;
+}
+.inventory-line-summary > span {
+  flex: 1;
+  min-width: 140px;
+  overflow-wrap: anywhere;
+}
+.inventory-line > label:has(input[type='search']) {
+  grid-column: 1/-1;
 }

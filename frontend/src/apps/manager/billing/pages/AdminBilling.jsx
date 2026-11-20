@@ -1,13 +1,9 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate, formatDateTime } from '../../../../shared/lib/date.js';
-import { getIntlLocale } from '../../../../shared/i18n/store.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate, formatDateTime } from '../../../../shared/lib/date.js'
+import { getIntlLocale } from '../../../../shared/i18n/store.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import {
   Check,
   Search,
@@ -19,73 +15,56 @@ import {
   Plus,
   Trash2,
   Calculator,
-} from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import { FEATURES } from '../../../pms/data/access';
-import { money as formatCurrency } from '../../../pms/data/model';
-import { getThemeTokens } from '../../theme';
-import LegacyOverlay from '../../../pms/components/LegacyOverlay';
+} from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import { FEATURES } from '../../../pms/data/access'
+import { money as formatCurrency } from '../../../pms/data/model'
+import { getThemeTokens } from '../../theme'
+import LegacyOverlay from '../../../pms/components/LegacyOverlay'
 import {
   matchesSubscriptionState,
   subscriptionState,
   subscriptionStatusLabels,
-} from '../subscriptionStatus';
-import { dateFilterRange, positiveMoneyInput } from './saasBillingForm';
-import { planFormInput, registeredRoomCount } from './planForm';
-import {
-  enabledPlanFeatures,
-  planRoomLabel,
-} from '../../../../shared/config/pricingPlans';
+} from '../subscriptionStatus'
+import { dateFilterRange, positiveMoneyInput } from './saasBillingForm'
+import { planFormInput, registeredRoomCount } from './planForm'
+import { enabledPlanFeatures, planRoomLabel } from '../../../../shared/config/pricingPlans'
 import {
   calculatePlanPrice,
   defaultPricingRules,
   defaultRegisteredRooms,
   normalizePricingRules,
-} from '../../../../shared/lib/planPricing.js';
-import PlanPricingModal, {
-  planPricePreview,
-  PlanPriceBreakdown,
-} from './PlanPricingModal.jsx';
-import './AdminBilling.css';
-import OperationalAccess from './OperationalAccess.jsx';
+} from '../../../../shared/lib/planPricing.js'
+import PlanPricingModal, { planPricePreview, PlanPriceBreakdown } from './PlanPricingModal.jsx'
+import './AdminBilling.css'
+import OperationalAccess from './OperationalAccess.jsx'
 
-const statusLabels = {
-  active: 'Đang hiệu lực',
-  expired: 'Hết hạn',
-  cancelled: 'Đã hủy',
-};
-const EMPTY_ITEMS = [];
+const statusLabels = { active: 'Đang hiệu lực', expired: 'Hết hạn', cancelled: 'Đã hủy' }
+const EMPTY_ITEMS = []
 const actionLabels = {
   created: 'Cấp gói',
   changed_plan: 'Đổi gói',
   renewed: 'Gia hạn',
   updated: 'Cập nhật thuê bao',
   changed_status: 'Đổi trạng thái',
-};
-const displayDate = (value) =>
-  value ? formatDateTime(value) : 'Không thời hạn';
+}
+const displayDate = (value) => (value ? formatDateTime(value) : 'Không thời hạn')
 const localDateTime = (value) => {
-  if (!value) return '';
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return '';
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
-};
+  if (!value) return ''
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
 
 export default function AdminBilling() {
-  const { authGeneration } = usePms();
-  return <BillingWorkspace key={authGeneration} />;
+  const { authGeneration } = usePms()
+  return <BillingWorkspace key={authGeneration} />
 }
 
 function BillingWorkspace() {
-  const { apiText } = useI18n();
-  const {
-    searchQuery: globalSearch,
-    isDarkMode,
-    theme,
-  } = useOutletContext() || {};
-  const t = theme || getThemeTokens(isDarkMode);
+  const { apiText } = useI18n()
+  const { searchQuery: globalSearch, isDarkMode, theme } = useOutletContext() || {}
+  const t = theme || getThemeTokens(isDarkMode)
   const {
     user,
     tenants,
@@ -94,63 +73,56 @@ function BillingWorkspace() {
     deletePlan,
     getTenantSubscription,
     saveTenantSubscription,
-  } = usePms();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedId = searchParams.get('tenant');
-  const openedSubscriptionId = useRef(null);
+  } = usePms()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedId = searchParams.get('tenant')
+  const openedSubscriptionId = useRef(null)
   const [data, setData] = useState({
     tenants: null,
     revision: -1,
     plans: [],
     subscriptions: [],
     error: '',
-  });
-  const [busy, setBusy] = useState(false);
+  })
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState(''),
-    [message, setMessage] = useState('');
-  const [revision, setRevision] = useState(0);
+    [message, setMessage] = useState('')
+  const [revision, setRevision] = useState(0)
   const [billingCycle, setBillingCycle] = useState('month'),
     [search, setSearch] = useState(''),
-    [statusFilter, setStatusFilter] = useState('ALL');
+    [statusFilter, setStatusFilter] = useState('ALL')
   const [editingPlan, setEditingPlan] = useState(null),
     [editingTenant, setEditingTenant] = useState(null),
-    [draft, setDraft] = useState(null);
-  const [deletingPlan, setDeletingPlan] = useState(null);
-  const [pricingEditor, setPricingEditor] = useState(null);
-  const [operationalTenant, setOperationalTenant] = useState(null);
-  const canManagePlans = user?.globalRole === 'SUPER_ADMIN';
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    [draft, setDraft] = useState(null)
+  const [deletingPlan, setDeletingPlan] = useState(null)
+  const [pricingEditor, setPricingEditor] = useState(null)
+  const [operationalTenant, setOperationalTenant] = useState(null)
+  const canManagePlans = user?.globalRole === 'SUPER_ADMIN'
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const current =
     data.tenants === tenants &&
     data.revision === revision &&
     data.listPlans === listPlans &&
-    data.getTenantSubscription === getTenantSubscription;
-  const loading = !current;
-  const loadError = current ? data.error : '';
-  const plans = current && !loadError ? data.plans : EMPTY_ITEMS;
-  const subscriptions =
-    current && !loadError ? data.subscriptions : EMPTY_ITEMS;
+    data.getTenantSubscription === getTenantSubscription
+  const loading = !current
+  const loadError = current ? data.error : ''
+  const plans = current && !loadError ? data.plans : EMPTY_ITEMS
+  const subscriptions = current && !loadError ? data.subscriptions : EMPTY_ITEMS
   const featureLabels = Object.fromEntries(
-    Object.entries(data.featureLabels || {}).map(([code, label]) => [
-      code,
-      apiText(label),
-    ]),
-  );
+    Object.entries(data.featureLabels || {}).map(([code, label]) => [code, apiText(label)]),
+  )
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
     Promise.all([
       listPlans(),
       Promise.all(
-        tenants.map(async (tenant) => ({
-          tenant,
-          ...(await getTenantSubscription(tenant.id)),
-        })),
+        tenants.map(async (tenant) => ({ tenant, ...(await getTenantSubscription(tenant.id)) })),
       ),
     ])
       .then(([result, rows]) => {
         if (!cancelled) {
-          setError('');
+          setError('')
           setData({
             tenants,
             revision,
@@ -160,12 +132,12 @@ function BillingWorkspace() {
             featureLabels: result.featureLabels || {},
             subscriptions: rows,
             error: '',
-          });
+          })
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          setError('');
+          setError('')
           setData({
             tenants,
             revision,
@@ -174,25 +146,23 @@ function BillingWorkspace() {
             plans: [],
             subscriptions: [],
             error: err.message,
-          });
+          })
         }
-      });
+      })
     return () => {
-      cancelled = true;
-    };
-  }, [listPlans, getTenantSubscription, tenants, revision]);
+      cancelled = true
+    }
+  }, [listPlans, getTenantSubscription, tenants, revision])
 
-  const selectedRow = subscriptions.find((row) => row.tenant.id === selectedId);
+  const selectedRow = subscriptions.find((row) => row.tenant.id === selectedId)
   const openSubscription = useCallback(
     (row) => {
-      setError('');
-      setMessage('');
-      setEditingTenant(row.tenant);
+      setError('')
+      setMessage('')
+      setEditingTenant(row.tenant)
       const plan =
         plans.find((item) => item.id === row.subscription?.planId) ||
-        plans.find(
-          (item) => item.code === 'FREE' && !item.deleted && item.active,
-        );
+        plans.find((item) => item.code === 'FREE' && !item.deleted && item.active)
       setDraft({
         planId: plan?.id || '',
         roomCount: row.subscription?.roomCount ?? defaultRegisteredRooms(plan),
@@ -203,59 +173,42 @@ function BillingWorkspace() {
         originalEndDate: row.subscription?.endDate || null,
         currency: plan?.currency || 'VND',
         cycle: 'monthly',
-      });
+      })
     },
     [plans],
-  );
+  )
   useEffect(() => {
     if (!selectedId) {
-      openedSubscriptionId.current = null;
-      return;
+      openedSubscriptionId.current = null
+      return
     }
-    if (
-      loading ||
-      loadError ||
-      busy ||
-      !selectedRow ||
-      openedSubscriptionId.current === selectedId
-    )
-      return;
-    openedSubscriptionId.current = selectedId;
-    if (editingTenant?.id !== selectedId) openSubscription(selectedRow);
-  }, [
-    selectedId,
-    loading,
-    loadError,
-    busy,
-    selectedRow,
-    editingTenant,
-    openSubscription,
-  ]);
+    if (loading || loadError || busy || !selectedRow || openedSubscriptionId.current === selectedId)
+      return
+    openedSubscriptionId.current = selectedId
+    if (editingTenant?.id !== selectedId) openSubscription(selectedRow)
+  }, [selectedId, loading, loadError, busy, selectedRow, editingTenant, openSubscription])
   const closeSubscription = () => {
     if (!busy) {
-      setEditingTenant(null);
-      setDraft(null);
-      setSearchParams({});
+      setEditingTenant(null)
+      setDraft(null)
+      setSearchParams({})
     }
-  };
+  }
 
   const handleSavePlan = async (event) => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      await savePlan(planFormInput(editingPlan));
+      await savePlan(planFormInput(editingPlan))
       const [result, rows] = await Promise.all([
         listPlans(),
         Promise.all(
-          tenants.map(async (tenant) => ({
-            tenant,
-            ...(await getTenantSubscription(tenant.id)),
-          })),
+          tenants.map(async (tenant) => ({ tenant, ...(await getTenantSubscription(tenant.id)) })),
         ),
-      ]);
+      ])
       setData({
         tenants,
         revision,
@@ -265,84 +218,75 @@ function BillingWorkspace() {
         featureLabels: result.featureLabels || {},
         subscriptions: rows,
         error: '',
-      });
-      setEditingPlan(null);
-      setMessage(
-        'Đã lưu gói cước. Trang bảng giá sẽ lấy tên, giá và tính năng mới.',
-      );
+      })
+      setEditingPlan(null)
+      setMessage('Đã lưu gói cước. Trang bảng giá sẽ lấy tên, giá và tính năng mới.')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
   const handleArchivePlan = async () => {
-    if (busy || !deletingPlan) return;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    if (busy || !deletingPlan) return
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      await deletePlan(deletingPlan.id);
-      setDeletingPlan(null);
-      setRevision((value) => value + 1);
+      await deletePlan(deletingPlan.id)
+      setDeletingPlan(null)
+      setRevision((value) => value + 1)
       setMessage(
         'Đã xóa gói khỏi danh sách bán và bảng giá. Thuê bao, hóa đơn và lịch sử hiện có được giữ lại.',
-      );
+      )
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
   const handleSavePricing = async (rules) => {
     if (pricingEditor.local) {
-      setEditingPlan((plan) => ({ ...plan, pricingRules: rules }));
+      setEditingPlan((plan) => ({ ...plan, pricingRules: rules }))
     } else {
-      await savePlan({ id: pricingEditor.plan.id, pricingRules: rules });
-      const result = await listPlans();
+      await savePlan({ id: pricingEditor.plan.id, pricingRules: rules })
+      const result = await listPlans()
       setData((value) => ({
         ...value,
         plans: result.plans || [],
         featureLabels: result.featureLabels || value.featureLabels,
-      }));
-      setMessage(
-        'Đã lưu điều kiện tính giá. Tiền gia hạn được tính theo cấu hình mới.',
-      );
+      }))
+      setMessage('Đã lưu điều kiện tính giá. Tiền gia hạn được tính theo cấu hình mới.')
     }
-    setPricingEditor(null);
-  };
+    setPricingEditor(null)
+  }
   const handleRestorePlan = async (plan) => {
-    if (busy) return;
+    if (busy) return
     if (!plan.code) {
-      setError('');
-      setMessage('');
-      setEditingPlan({
-        ...plan,
-        originalCode: null,
-        code: '',
-        restoring: true,
-      });
-      return;
+      setError('')
+      setMessage('')
+      setEditingPlan({ ...plan, originalCode: null, code: '', restoring: true })
+      return
     }
-    setBusy(true);
-    setError('');
-    setMessage('');
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      await savePlan({ id: plan.id, deleted: false });
-      setRevision((value) => value + 1);
-      setMessage('Đã khôi phục gói.');
+      await savePlan({ id: plan.id, deleted: false })
+      setRevision((value) => value + 1)
+      setMessage('Đã khôi phục gói.')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
   const handleSaveSubscription = async (event) => {
-    event.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
       const input = {
         planId: draft.planId,
@@ -359,43 +303,38 @@ function BillingWorkspace() {
               : null,
         currency: draft.currency,
         cycle: draft.cycle,
-      };
-      if (plans.find((plan) => plan.id === draft.planId)?.code === 'FREE')
-        input.endDate = null;
+      }
+      if (plans.find((plan) => plan.id === draft.planId)?.code === 'FREE') input.endDate = null
       if (draft.startDate)
         input.startDate =
           draft.startDate === localDateTime(draft.originalStartDate)
             ? draft.originalStartDate
-            : new Date(draft.startDate).toISOString();
+            : new Date(draft.startDate).toISOString()
       input.amount = calculatePlanPrice(
         plans.find((plan) => plan.id === draft.planId),
         input.roomCount,
         draft.cycle,
-      ).amount;
+      ).amount
       if (
         input.endDate &&
         Date.parse(input.endDate) <=
-          Date.parse(
-            input.startDate ||
-              draft.originalStartDate ||
-              new Date().toISOString(),
-          )
+          Date.parse(input.startDate || draft.originalStartDate || new Date().toISOString())
       )
-        throw new Error('Hạn gói phải sau ngày bắt đầu.');
+        throw new Error('Hạn gói phải sau ngày bắt đầu.')
       if (
         input.status === 'active' &&
         plans.find((plan) => plan.id === draft.planId)?.code !== 'FREE' &&
         (!input.endDate || Date.parse(input.endDate) <= Date.now())
       )
-        throw new Error('Gói đang hoạt động cần hạn trong tương lai.');
-      await saveTenantSubscription(editingTenant.id, input);
-      const result = await getTenantSubscription(editingTenant.id);
+        throw new Error('Gói đang hoạt động cần hạn trong tương lai.')
+      await saveTenantSubscription(editingTenant.id, input)
+      const result = await getTenantSubscription(editingTenant.id)
       setData((value) => ({
         ...value,
         subscriptions: value.subscriptions.map((row) =>
           row.tenant.id === editingTenant.id ? { ...row, ...result } : row,
         ),
-      }));
+      }))
       setDraft((value) => ({
         ...value,
         roomCount: result.subscription?.roomCount ?? value.roomCount,
@@ -403,29 +342,28 @@ function BillingWorkspace() {
         endDate: localDateTime(result.subscription?.endDate),
         originalStartDate: result.subscription?.startDate || null,
         originalEndDate: result.subscription?.endDate || null,
-      }));
-      setMessage('Đã lưu thuê bao và lịch sử trên máy chủ.');
+      }))
+      setMessage('Đã lưu thuê bao và lịch sử trên máy chủ.')
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
-  const effectiveSearch = (search || globalSearch || '').toLowerCase();
+  }
+  const effectiveSearch = (search || globalSearch || '').toLowerCase()
   const renewalPreview = draft
     ? planPricePreview(
         plans.find((plan) => plan.id === draft.planId),
         draft.roomCount,
         draft.cycle,
       )
-    : null;
+    : null
   const filteredSubscriptions = subscriptions.filter(
     (row) =>
       (row.tenant.name + ' ' + (row.subscription?.planName || ''))
         .toLowerCase()
-        .includes(effectiveSearch) &&
-      matchesSubscriptionState(row.subscription, statusFilter),
-  );
+        .includes(effectiveSearch) && matchesSubscriptionState(row.subscription, statusFilter),
+  )
   const inputStyle = {
     width: '100%',
     padding: '10px 12px',
@@ -434,7 +372,7 @@ function BillingWorkspace() {
     backgroundColor: t.bgInput,
     color: t.textPrimary,
     fontSize: '14px',
-  };
+  }
   const buttonStyle = {
     padding: '9px 14px',
     borderRadius: '10px',
@@ -448,18 +386,13 @@ function BillingWorkspace() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-  };
-  const primaryButton = {
-    ...buttonStyle,
-    backgroundColor: t.primary,
-    color: '#fff',
-    border: 0,
-  };
+  }
+  const primaryButton = { ...buttonStyle, backgroundColor: t.primary, color: '#fff', border: 0 }
   const cell = {
     padding: '14px 16px',
     borderBottom: `1px solid ${t.borderSubtle}`,
     color: t.textPrimary,
-  };
+  }
   const modalStyle = {
     position: 'fixed',
     inset: 0,
@@ -470,7 +403,7 @@ function BillingWorkspace() {
     backgroundColor: t.bgModalBackdrop,
     backdropFilter: 'blur(5px)',
     padding: '20px',
-  };
+  }
   const modalCard = {
     backgroundColor: t.bgSurface,
     borderRadius: '16px',
@@ -481,7 +414,7 @@ function BillingWorkspace() {
     padding: '24px',
     boxShadow: t.cardShadow,
     border: `1px solid ${t.border}`,
-  };
+  }
   const notice = (
     <>
       {(error || loadError) && (
@@ -495,23 +428,14 @@ function BillingWorkspace() {
         </p>
       )}
     </>
-  );
+  )
   return (
-    <div
-      className="manager-page manager-billing"
-      style={{ fontFamily: t.fontFamily }}
-    >
+    <div className="manager-page manager-billing" style={{ fontFamily: t.fontFamily }}>
       <header className="manager-page-heading">
         <div>
-          <span className="manager-eyebrow">
-            {labelUi('Dịch vụ & thanh toán')}
-          </span>
+          <span className="manager-eyebrow">{labelUi('Dịch vụ & thanh toán')}</span>
           <h1>{labelUi('Gói cước & thanh toán')}</h1>
-          <p>
-            {labelUi(
-              'Quản lý hóa đơn dịch vụ, thu tiền và thuê bao của từng khách sạn.',
-            )}
-          </p>
+          <p>{labelUi('Quản lý hóa đơn dịch vụ, thu tiền và thuê bao của từng khách sạn.')}</p>
         </div>
         <span className="manager-billing-page-badge">
           {loading || loadError
@@ -519,11 +443,7 @@ function BillingWorkspace() {
             : `${plans.filter((plan) => !plan.deleted).length} gói dịch vụ`}
         </span>
       </header>
-      {!editingPlan &&
-        !editingTenant &&
-        !deletingPlan &&
-        !pricingEditor &&
-        notice}
+      {!editingPlan && !editingTenant && !deletingPlan && !pricingEditor && notice}
       {!editingPlan &&
         !editingTenant &&
         !deletingPlan &&
@@ -537,9 +457,7 @@ function BillingWorkspace() {
             {tUi('system.reloadData')}
           </button>
         )}
-      {loading && (
-        <p role="status">{labelUi('Đang tải gói cước và thuê bao…')}</p>
-      )}
+      {loading && <p role="status">{labelUi('Đang tải gói cước và thuê bao…')}</p>}
       <SaasInvoices tenants={tenants} theme={t} />
       <div>
         <div className="manager-billing-section-heading">
@@ -555,15 +473,9 @@ function BillingWorkspace() {
             >
               Gói cước dịch vụ
             </h2>
-            <p
-              style={{
-                fontSize: '13px',
-                color: t.textSecondary,
-                margin: '4px 0 0 0',
-              }}
-            >
-              Tạo gói, chỉnh giá và tính năng; bảng giá công khai sử dụng cùng
-              cấu hình. Mỗi khách sạn đăng ký số phòng riêng.
+            <p style={{ fontSize: '13px', color: t.textSecondary, margin: '4px 0 0 0' }}>
+              Tạo gói, chỉnh giá và tính năng; bảng giá công khai sử dụng cùng cấu hình. Mỗi khách
+              sạn đăng ký số phòng riêng.
             </p>
           </div>
 
@@ -594,8 +506,8 @@ function BillingWorkspace() {
                 className="manager-button manager-button-primary"
                 disabled={busy || loading || Boolean(loadError)}
                 onClick={() => {
-                  setError('');
-                  setMessage('');
+                  setError('')
+                  setMessage('')
                   setEditingPlan({
                     code: '',
                     name: '',
@@ -605,11 +517,9 @@ function BillingWorkspace() {
                     maxRooms: '',
                     maxUsers: '',
                     pricingRules: defaultPricingRules(),
-                    features: Object.fromEntries(
-                      FEATURES.map((feature) => [feature.code, false]),
-                    ),
+                    features: Object.fromEntries(FEATURES.map((feature) => [feature.code, false])),
                     active: true,
-                  });
+                  })
                 }}
               >
                 <Plus size={16} aria-hidden="true" /> {labelUi('Tạo gói mới')}
@@ -625,10 +535,9 @@ function BillingWorkspace() {
         )}
         <div className="manager-billing-plans">
           {plans.map((plan) => {
-            const isPro = plan.code === 'PRO';
-            const currentPrice =
-              billingCycle === 'month' ? plan.price : plan.priceYear;
-            const cycleSuffix = billingCycle === 'month' ? '/ tháng' : '/ năm';
+            const isPro = plan.code === 'PRO'
+            const currentPrice = billingCycle === 'month' ? plan.price : plan.priceYear
+            const cycleSuffix = billingCycle === 'month' ? '/ tháng' : '/ năm'
 
             return (
               <div
@@ -656,26 +565,14 @@ function BillingWorkspace() {
                         fontWeight: '800',
                         backgroundColor: isPro ? t.aquaBg : t.bgInput,
                         color: isPro ? t.aquaText : t.textSecondary,
-                        border: isPro
-                          ? `1px solid ${t.aquaBorder}`
-                          : `1px solid ${t.border}`,
+                        border: isPro ? `1px solid ${t.aquaBorder}` : `1px solid ${t.border}`,
                       }}
                     >
                       {plan.code || tUi('common.unsetCode')}
                     </span>
 
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: t.textSecondary,
-                        fontWeight: '700',
-                      }}
-                    >
-                      {
-                        subscriptions.filter(
-                          (row) => row.subscription?.planId === plan.id,
-                        ).length
-                      }{' '}
+                    <div style={{ fontSize: '12px', color: t.textSecondary, fontWeight: '700' }}>
+                      {subscriptions.filter((row) => row.subscription?.planId === plan.id).length}{' '}
                       cơ sở được cấp gói
                     </div>
                   </div>
@@ -722,40 +619,19 @@ function BillingWorkspace() {
                       >
                         {formatCurrency(currentPrice, plan.currency)}
                       </span>
-                      <span
-                        style={{
-                          fontSize: '13px',
-                          color: t.textSecondary,
-                          fontWeight: '600',
-                        }}
-                      >
-                        {Number(currentPrice) > 0
-                          ? cycleSuffix
-                          : labelUi('(Miễn phí)')}
+                      <span style={{ fontSize: '13px', color: t.textSecondary, fontWeight: '600' }}>
+                        {Number(currentPrice) > 0 ? cycleSuffix : labelUi('(Miễn phí)')}
                       </span>
                     </div>
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: t.textMuted,
-                        marginTop: '4px',
-                      }}
-                    >
+                    <div style={{ fontSize: '12px', color: t.textMuted, marginTop: '4px' }}>
                       {planRoomLabel(plan)} •{' '}
                       {plan.maxUsers === null
                         ? labelUi('Không giới hạn tài khoản')
                         : `Tối đa ${plan.maxUsers} tài khoản`}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: t.textSecondary,
-                        marginTop: 8,
-                      }}
-                    >
+                    <div style={{ fontSize: 12, color: t.textSecondary, marginTop: 8 }}>
                       {labelUi('Giá cơ bản cho')}{' '}
-                      {normalizePricingRules(plan.pricingRules).baseRooms}{' '}
-                      {labelUi('phòng')}
+                      {normalizePricingRules(plan.pricingRules).baseRooms} {labelUi('phòng')}
                     </div>
                   </div>
 
@@ -774,45 +650,39 @@ function BillingWorkspace() {
                       Tính năng bao gồm:
                     </div>
 
-                    {enabledPlanFeatures(plan, featureLabels).map(
-                      ({ code, name }) => (
+                    {enabledPlanFeatures(plan, featureLabels).map(({ code, name }) => (
+                      <div
+                        key={code}
+                        style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}
+                      >
                         <div
-                          key={code}
                           style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            backgroundColor: isPro ? '#EFF6FF' : '#F1F5F9',
+                            color: isPro ? t.primary : '#64748B',
                             display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '10px',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            marginTop: '2px',
                           }}
                         >
-                          <div
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              borderRadius: '50%',
-                              backgroundColor: isPro ? '#EFF6FF' : '#F1F5F9',
-                              color: isPro ? t.primary : '#64748B',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              marginTop: '2px',
-                            }}
-                          >
-                            <Check size={12} strokeWidth={3} />
-                          </div>
-                          <span
-                            style={{
-                              fontSize: '13px',
-                              color: t.textPrimary,
-                              fontWeight: '500',
-                              lineHeight: '1.4',
-                            }}
-                          >
-                            {name}
-                          </span>
+                          <Check size={12} strokeWidth={3} />
                         </div>
-                      ),
-                    )}
+                        <span
+                          style={{
+                            fontSize: '13px',
+                            color: t.textPrimary,
+                            fontWeight: '500',
+                            lineHeight: '1.4',
+                          }}
+                        >
+                          {name}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -847,12 +717,8 @@ function BillingWorkspace() {
                     className={`manager-button${isPro ? ' manager-button-primary' : ''}`}
                     disabled={busy || !canManagePlans || plan.deleted}
                     onClick={() => {
-                      setError('');
-                      setEditingPlan({
-                        ...plan,
-                        originalCode: plan.code,
-                        code: plan.code || '',
-                      });
+                      setError('')
+                      setEditingPlan({ ...plan, originalCode: plan.code, code: plan.code || '' })
                     }}
                     style={{
                       display: 'flex',
@@ -879,13 +745,12 @@ function BillingWorkspace() {
                       className="manager-button"
                       disabled={busy || plan.deleted}
                       onClick={() => {
-                        setError('');
-                        setMessage('');
-                        setPricingEditor({ plan, local: false });
+                        setError('')
+                        setMessage('')
+                        setPricingEditor({ plan, local: false })
                       }}
                     >
-                      <Calculator size={14} aria-hidden="true" />{' '}
-                      {labelUi('Điều kiện tính giá')}
+                      <Calculator size={14} aria-hidden="true" /> {labelUi('Điều kiện tính giá')}
                     </button>
                   )}
                   {canManagePlans &&
@@ -896,8 +761,7 @@ function BillingWorkspace() {
                         disabled={busy}
                         onClick={() => handleRestorePlan(plan)}
                       >
-                        <RefreshCw size={14} aria-hidden="true" />{' '}
-                        {labelUi('Khôi phục')}
+                        <RefreshCw size={14} aria-hidden="true" /> {labelUi('Khôi phục')}
                       </button>
                     ) : (
                       <button
@@ -905,40 +769,33 @@ function BillingWorkspace() {
                         className="manager-button"
                         disabled={busy}
                         onClick={() => {
-                          setError('');
-                          setMessage('');
-                          setDeletingPlan(plan);
+                          setError('')
+                          setMessage('')
+                          setDeletingPlan(plan)
                         }}
                       >
-                        <Trash2 size={14} aria-hidden="true" />{' '}
-                        {labelUi('Xóa gói')}
+                        <Trash2 size={14} aria-hidden="true" /> {labelUi('Xóa gói')}
                       </button>
                     ))}
                 </div>
               </div>
-            );
+            )
           })}
         </div>
       </div>
 
       <dl className="manager-panel manager-billing-stats">
         {[
-          [
-            'Khách sạn có thuê bao',
-            subscriptions.filter((row) => row.subscription).length,
-          ],
+          ['Khách sạn có thuê bao', subscriptions.filter((row) => row.subscription).length],
           [
             'Đang hiệu lực',
-            subscriptions.filter((row) =>
-              matchesSubscriptionState(row.subscription, 'active'),
-            ).length,
+            subscriptions.filter((row) => matchesSubscriptionState(row.subscription, 'active'))
+              .length,
           ],
           [
             'Chưa hiệu lực / hết hạn / hủy',
             subscriptions.filter(
-              (row) =>
-                row.subscription &&
-                !matchesSubscriptionState(row.subscription, 'active'),
+              (row) => row.subscription && !matchesSubscriptionState(row.subscription, 'active'),
             ).length,
           ],
         ].map(([label, value]) => (
@@ -970,24 +827,12 @@ function BillingWorkspace() {
             flexWrap: 'wrap',
           }}
         >
-          <h2
-            style={{
-              fontSize: '16px',
-              fontWeight: '800',
-              color: t.textPrimary,
-              margin: 0,
-            }}
-          >
+          <h2 style={{ fontSize: '16px', fontWeight: '800', color: t.textPrimary, margin: 0 }}>
             Thuê bao & gia hạn ({filteredSubscriptions.length})
           </h2>
           <div className="manager-billing-filters">
             <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                color: t.textSecondary,
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, color: t.textSecondary }}
             >
               <Search size={16} />
               <input
@@ -1005,13 +850,11 @@ function BillingWorkspace() {
               style={inputStyle}
             >
               <option value="ALL">{tUi('common.allStatuses')}</option>
-              {Object.entries(subscriptionStatusLabels).map(
-                ([value, label]) => (
-                  <option key={value} value={value}>
-                    {labelUi(label)}
-                  </option>
-                ),
-              )}
+              {Object.entries(subscriptionStatusLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {labelUi(label)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -1055,32 +898,25 @@ function BillingWorkspace() {
             </thead>
             <tbody>
               {filteredSubscriptions.map((row) => {
-                const state = subscriptionState(row.subscription);
+                const state = subscriptionState(row.subscription)
                 return (
                   <tr key={row.tenant.id}>
                     <td style={cell}>{row.tenant.name}</td>
-                    <td style={cell}>
-                      {row.subscription?.planName || labelUi('Chưa cấp gói')}
-                    </td>
+                    <td style={cell}>{row.subscription?.planName || labelUi('Chưa cấp gói')}</td>
                     <td style={cell}>{row.subscription?.roomCount ?? '—'}</td>
                     <td style={cell}>
                       <span className={`manager-subscription-status ${state}`}>
-                        {subscriptionStatusLabels[state] ||
-                          labelUi('Trạng thái chưa xác định')}
+                        {subscriptionStatusLabels[state] || labelUi('Trạng thái chưa xác định')}
                       </span>
                       {row.subscription?.operationalAccess?.active && (
                         <p>
                           {labelUi('Vận hành tạm đến')}{' '}
-                          {displayDate(
-                            row.subscription.operationalAccess.until,
-                          )}
+                          {displayDate(row.subscription.operationalAccess.until)}
                         </p>
                       )}
                     </td>
                     <td style={cell}>
-                      {row.subscription
-                        ? displayDate(row.subscription.endDate)
-                        : '—'}
+                      {row.subscription ? displayDate(row.subscription.endDate) : '—'}
                     </td>
                     <td style={cell}>
                       <div className="manager-invoice-actions">
@@ -1104,7 +940,7 @@ function BillingWorkspace() {
                       </div>
                     </td>
                   </tr>
-                );
+                )
               })}
               {loading && (
                 <tr>
@@ -1143,18 +979,12 @@ function BillingWorkspace() {
         <LegacyOverlay
           title={labelUi('Xóa gói khỏi danh sách bán')}
           onClose={() => {
-            if (!busy) setDeletingPlan(null);
+            if (!busy) setDeletingPlan(null)
           }}
           style={modalStyle}
         >
           <div className="manager-billing-dialog" style={modalCard}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ color: t.textPrimary, fontSize: 18 }}>
                 {labelUi('Xóa gói')} {deletingPlan.name}?
               </h2>
@@ -1169,16 +999,12 @@ function BillingWorkspace() {
               </button>
             </div>
             {notice}
-            <p
-              style={{ color: t.textSecondary, fontSize: 14, lineHeight: 1.6 }}
-            >
+            <p style={{ color: t.textSecondary, fontSize: 14, lineHeight: 1.6 }}>
               {labelUi(
                 'Gói sẽ biến mất khỏi bảng giá và không được cấp cho khách sạn mới. Thuê bao đang sử dụng, hóa đơn và lịch sử được giữ lại. Bạn có thể khôi phục gói sau.',
               )}
             </p>
-            <div
-              style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button
                 type="button"
                 disabled={busy}
@@ -1193,9 +1019,7 @@ function BillingWorkspace() {
                 onClick={handleArchivePlan}
                 style={{ ...primaryButton, backgroundColor: t.danger }}
               >
-                {busy
-                  ? labelUi('Đang xóa…')
-                  : labelUi('Xóa khỏi danh sách bán')}
+                {busy ? labelUi('Đang xóa…') : labelUi('Xóa khỏi danh sách bán')}
               </button>
             </div>
           </div>
@@ -1211,22 +1035,13 @@ function BillingWorkspace() {
                 : labelUi('Tạo gói mới')
           }
           onClose={() => {
-            if (!busy) setEditingPlan(null);
+            if (!busy) setEditingPlan(null)
           }}
           style={modalStyle}
         >
           <div className="manager-billing-dialog" style={modalCard}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <h2
-                id="plan-edit-title"
-                style={{ color: t.textPrimary, fontSize: 18 }}
-              >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 id="plan-edit-title" style={{ color: t.textPrimary, fontSize: 18 }}>
                 {editingPlan.restoring
                   ? `Khôi phục gói: ${editingPlan.name}`
                   : editingPlan.id
@@ -1259,10 +1074,7 @@ function BillingWorkspace() {
                   pattern="[A-Z][A-Z0-9_]{0,11}"
                   value={editingPlan.code || ''}
                   onChange={(event) =>
-                    setEditingPlan((plan) => ({
-                      ...plan,
-                      code: event.target.value.toUpperCase(),
-                    }))
+                    setEditingPlan((plan) => ({ ...plan, code: event.target.value.toUpperCase() }))
                   }
                   style={inputStyle}
                 />
@@ -1283,10 +1095,7 @@ function BillingWorkspace() {
                   maxLength={100}
                   value={editingPlan.name}
                   onChange={(event) =>
-                    setEditingPlan((plan) => ({
-                      ...plan,
-                      name: event.target.value,
-                    }))
+                    setEditingPlan((plan) => ({ ...plan, name: event.target.value }))
                   }
                   style={inputStyle}
                 />
@@ -1295,16 +1104,8 @@ function BillingWorkspace() {
                 ['price', 'Giá tháng', 'text'],
                 ['priceYear', 'Giá năm', 'text'],
                 ['currency', 'Tiền tệ', 'text'],
-                [
-                  'maxRooms',
-                  'Trần số phòng của gói (trống = theo số phòng đăng ký)',
-                  'number',
-                ],
-                [
-                  'maxUsers',
-                  'Giới hạn tài khoản (trống = không giới hạn)',
-                  'number',
-                ],
+                ['maxRooms', 'Trần số phòng của gói (trống = theo số phòng đăng ký)', 'number'],
+                ['maxUsers', 'Giới hạn tài khoản (trống = không giới hạn)', 'number'],
               ].map(([key, label, type]) => (
                 <label key={key} style={{ color: t.textPrimary, fontSize: 13 }}>
                   {labelUi(label)}
@@ -1323,24 +1124,11 @@ function BillingWorkspace() {
                           ? '[A-Za-z]{3}'
                           : undefined
                     }
-                    maxLength={
-                      key === 'currency'
-                        ? 3
-                        : key.startsWith('price')
-                          ? 20
-                          : undefined
-                    }
-                    required={
-                      key === 'price' ||
-                      key === 'priceYear' ||
-                      key === 'currency'
-                    }
+                    maxLength={key === 'currency' ? 3 : key.startsWith('price') ? 20 : undefined}
+                    required={key === 'price' || key === 'priceYear' || key === 'currency'}
                     value={editingPlan[key] ?? ''}
                     onChange={(event) =>
-                      setEditingPlan((plan) => ({
-                        ...plan,
-                        [key]: event.target.value,
-                      }))
+                      setEditingPlan((plan) => ({ ...plan, [key]: event.target.value }))
                     }
                     style={inputStyle}
                   />
@@ -1354,20 +1142,15 @@ function BillingWorkspace() {
               <div className="manager-plan-pricing-summary">
                 <span>
                   {labelUi('Số phòng cơ bản')}:{' '}
-                  <strong>
-                    {normalizePricingRules(editingPlan.pricingRules).baseRooms}
-                  </strong>
+                  <strong>{normalizePricingRules(editingPlan.pricingRules).baseRooms}</strong>
                 </span>
                 <button
                   type="button"
                   className="manager-button"
                   disabled={busy}
-                  onClick={() =>
-                    setPricingEditor({ plan: editingPlan, local: true })
-                  }
+                  onClick={() => setPricingEditor({ plan: editingPlan, local: true })}
                 >
-                  <Calculator size={16} aria-hidden="true" />{' '}
-                  {labelUi('Điều kiện tính giá')}
+                  <Calculator size={16} aria-hidden="true" /> {labelUi('Điều kiện tính giá')}
                 </button>
               </div>
               <label style={{ color: t.textPrimary }}>
@@ -1376,10 +1159,7 @@ function BillingWorkspace() {
                   disabled={busy}
                   checked={editingPlan.active}
                   onChange={(event) =>
-                    setEditingPlan((plan) => ({
-                      ...plan,
-                      active: event.target.checked,
-                    }))
+                    setEditingPlan((plan) => ({ ...plan, active: event.target.checked }))
                   }
                 />{' '}
                 {labelUi('Gói đang hoạt động')}
@@ -1392,11 +1172,7 @@ function BillingWorkspace() {
               <fieldset
                 className="manager-plan-feature-fields"
                 disabled={busy}
-                style={{
-                  border: `1px solid ${t.border}`,
-                  borderRadius: 12,
-                  color: t.textPrimary,
-                }}
+                style={{ border: `1px solid ${t.border}`, borderRadius: 12, color: t.textPrimary }}
               >
                 <legend>{labelUi('Tính năng của gói')}</legend>
                 <div
@@ -1414,10 +1190,7 @@ function BillingWorkspace() {
                         onChange={(event) =>
                           setEditingPlan((plan) => ({
                             ...plan,
-                            features: {
-                              ...plan.features,
-                              [feature.code]: event.target.checked,
-                            },
+                            features: { ...plan.features, [feature.code]: event.target.checked },
                           }))
                         }
                       />{' '}
@@ -1426,9 +1199,7 @@ function BillingWorkspace() {
                   ))}
                 </div>
               </fieldset>
-              <div
-                style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button
                   type="button"
                   disabled={busy}
@@ -1458,17 +1229,8 @@ function BillingWorkspace() {
           style={modalStyle}
         >
           <div className="manager-billing-dialog" style={modalCard}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <h2
-                id="subscription-edit-title"
-                style={{ color: t.textPrimary, fontSize: 18 }}
-              >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 id="subscription-edit-title" style={{ color: t.textPrimary, fontSize: 18 }}>
                 Thuê bao: {editingTenant.name}
               </h2>
               <button
@@ -1482,10 +1244,7 @@ function BillingWorkspace() {
               </button>
             </div>
             {notice}
-            <form
-              onSubmit={handleSaveSubscription}
-              style={{ display: 'grid', gap: 16 }}
-            >
+            <form onSubmit={handleSaveSubscription} style={{ display: 'grid', gap: 16 }}>
               <label style={{ color: t.textPrimary }}>
                 {labelUi('Gói cước')}
                 <select
@@ -1497,11 +1256,10 @@ function BillingWorkspace() {
                       ...value,
                       planId: event.target.value,
                       currency:
-                        plans.find((plan) => plan.id === event.target.value)
-                          ?.currency || value.currency,
+                        plans.find((plan) => plan.id === event.target.value)?.currency ||
+                        value.currency,
                       endDate:
-                        plans.find((plan) => plan.id === event.target.value)
-                          ?.code === 'FREE'
+                        plans.find((plan) => plan.id === event.target.value)?.code === 'FREE'
                           ? ''
                           : value.endDate,
                     }))
@@ -1514,16 +1272,14 @@ function BillingWorkspace() {
                       (plan) =>
                         !plan.deleted ||
                         plan.id ===
-                          subscriptions.find(
-                            (row) => row.tenant.id === editingTenant.id,
-                          )?.subscription?.planId,
+                          subscriptions.find((row) => row.tenant.id === editingTenant.id)
+                            ?.subscription?.planId,
                     )
                     .map((plan) => (
                       <option key={plan.id} value={plan.id}>
                         {plan.name}
                         {plan.deleted
-                          ? ' ' +
-                            labelUi('(đã xóa, chỉ gia hạn thuê bao hiện có)')
+                          ? ' ' + labelUi('(đã xóa, chỉ gia hạn thuê bao hiện có)')
                           : !plan.active
                             ? ' ' + labelUi('(ngừng cung cấp)')
                             : ''}
@@ -1539,16 +1295,10 @@ function BillingWorkspace() {
                   type="number"
                   min="1"
                   step="1"
-                  max={
-                    plans.find((plan) => plan.id === draft.planId)?.maxRooms ??
-                    1000000
-                  }
+                  max={plans.find((plan) => plan.id === draft.planId)?.maxRooms ?? 1000000}
                   value={draft.roomCount}
                   onChange={(event) =>
-                    setDraft((value) => ({
-                      ...value,
-                      roomCount: event.target.value,
-                    }))
+                    setDraft((value) => ({ ...value, roomCount: event.target.value }))
                   }
                   style={inputStyle}
                 />
@@ -1556,8 +1306,7 @@ function BillingWorkspace() {
                   {labelUi(
                     'Số phòng đăng ký mới mặc định theo số phòng cơ bản của gói (15 phòng).',
                   )}{' '}
-                  {plans.find((plan) => plan.id === draft.planId)?.maxRooms !=
-                  null
+                  {plans.find((plan) => plan.id === draft.planId)?.maxRooms != null
                     ? `Gói cho phép tối đa ${plans.find((plan) => plan.id === draft.planId).maxRooms} phòng.`
                     : ''}
                 </small>
@@ -1568,10 +1317,7 @@ function BillingWorkspace() {
                   aria-label={labelUi('Trạng thái thuê bao cần lưu')}
                   value={draft.status}
                   onChange={(event) =>
-                    setDraft((value) => ({
-                      ...value,
-                      status: event.target.value,
-                    }))
+                    setDraft((value) => ({ ...value, status: event.target.value }))
                   }
                   style={inputStyle}
                 >
@@ -1583,8 +1329,8 @@ function BillingWorkspace() {
                 </select>
               </label>
               <p style={{ color: t.textSecondary, fontSize: 12, margin: 0 }}>
-                Ngày giờ theo múi giờ thiết bị: {timezone}. Gói khác FREE đang
-                hiệu lực cần có hạn sử dụng trong tương lai.
+                Ngày giờ theo múi giờ thiết bị: {timezone}. Gói khác FREE đang hiệu lực cần có hạn
+                sử dụng trong tương lai.
               </p>
               {[
                 ['startDate', 'Bắt đầu kỳ'],
@@ -1595,21 +1341,14 @@ function BillingWorkspace() {
                   <DateInput
                     aria-label={labelUi(label)}
                     type="datetime-local"
-                    min={
-                      key === 'endDate'
-                        ? draft.startDate || undefined
-                        : undefined
-                    }
+                    min={key === 'endDate' ? draft.startDate || undefined : undefined}
                     value={draft[key]}
                     required={
                       key === 'endDate' &&
                       draft.status === 'active' &&
-                      plans.find((plan) => plan.id === draft.planId)?.code !==
-                        'FREE'
+                      plans.find((plan) => plan.id === draft.planId)?.code !== 'FREE'
                     }
-                    onChange={(next) =>
-                      setDraft((value) => ({ ...value, [key]: next }))
-                    }
+                    onChange={(next) => setDraft((value) => ({ ...value, [key]: next }))}
                     style={inputStyle}
                   />
                 </label>
@@ -1620,10 +1359,7 @@ function BillingWorkspace() {
                   aria-label={labelUi('Chu kỳ thuê bao')}
                   value={draft.cycle}
                   onChange={(event) =>
-                    setDraft((value) => ({
-                      ...value,
-                      cycle: event.target.value,
-                    }))
+                    setDraft((value) => ({ ...value, cycle: event.target.value }))
                   }
                   style={inputStyle}
                 >
@@ -1651,10 +1387,7 @@ function BillingWorkspace() {
                   {labelUi(renewalPreview.error)}
                 </p>
               ) : (
-                <PlanPriceBreakdown
-                  quote={renewalPreview?.quote}
-                  currency={draft.currency}
-                />
+                <PlanPriceBreakdown quote={renewalPreview?.quote} currency={draft.currency} />
               )}
               <label style={{ color: t.textPrimary }}>
                 {tUi('common.currency')}
@@ -1665,9 +1398,7 @@ function BillingWorkspace() {
                   style={inputStyle}
                 />
               </label>
-              <div
-                style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <button
                   type="button"
                   disabled={busy}
@@ -1682,9 +1413,7 @@ function BillingWorkspace() {
                   style={primaryButton}
                 >
                   <CheckCircle2 size={14} />{' '}
-                  {busy
-                    ? tUi('common.saving')
-                    : labelUi('Lưu thuê bao / Gia hạn')}
+                  {busy ? tUi('common.saving') : labelUi('Lưu thuê bao / Gia hạn')}
                 </button>
               </div>
             </form>
@@ -1718,17 +1447,12 @@ function BillingWorkspace() {
                 </thead>
                 <tbody>
                   {(
-                    subscriptions.find(
-                      (row) => row.tenant.id === editingTenant.id,
-                    )?.history || []
+                    subscriptions.find((row) => row.tenant.id === editingTenant.id)?.history || []
                   ).map((row) => (
                     <tr key={row.id}>
+                      <td style={cell}>{displayDate(row.createdAt || row.effectiveDate)}</td>
                       <td style={cell}>
-                        {displayDate(row.createdAt || row.effectiveDate)}
-                      </td>
-                      <td style={cell}>
-                        {actionLabels[row.action] ||
-                          labelUi('Cập nhật thuê bao')}
+                        {actionLabels[row.action] || labelUi('Cập nhật thuê bao')}
                         <br />
                         {row.planName}
                         <br />
@@ -1737,24 +1461,16 @@ function BillingWorkspace() {
                       <td style={cell}>{row.roomCount ?? '—'}</td>
                       <td style={cell}>{displayDate(row.endDate)}</td>
                       <td style={cell}>
-                        {row.amount === null
-                          ? '—'
-                          : formatCurrency(row.amount, row.currency)}
+                        {row.amount === null ? '—' : formatCurrency(row.amount, row.currency)}
                       </td>
-                      <td style={cell}>
-                        {row.actorName || row.actorId || '—'}
-                      </td>
+                      <td style={cell}>{row.actorName || row.actorId || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {!(
-                subscriptions.find((row) => row.tenant.id === editingTenant.id)
-                  ?.history || []
-              ).length && (
-                <p style={{ color: t.textSecondary }}>
-                  {labelUi('Chưa có lịch sử thay đổi.')}
-                </p>
+              {!(subscriptions.find((row) => row.tenant.id === editingTenant.id)?.history || [])
+                .length && (
+                <p style={{ color: t.textSecondary }}>{labelUi('Chưa có lịch sử thay đổi.')}</p>
               )}
             </div>
           </div>
@@ -1770,7 +1486,7 @@ function BillingWorkspace() {
         />
       )}
     </div>
-  );
+  )
 }
 
 const invoiceStatusLabels = {
@@ -1778,79 +1494,77 @@ const invoiceStatusLabels = {
   partial: 'Thanh toán một phần',
   paid: 'Đã thanh toán',
   void: 'Đã hủy',
-};
-const invoiceDay = (value) => (value ? formatDate(value) : '—');
-const displayPaymentDate = (value) =>
-  value ? formatDateTime(value, 'UTC') + ' UTC' : '—';
+}
+const invoiceDay = (value) => (value ? formatDate(value) : '—')
+const displayPaymentDate = (value) => (value ? formatDateTime(value, 'UTC') + ' UTC' : '—')
 
 function SaasInvoices({ tenants, theme: t }) {
-  useI18n();
+  useI18n()
   const {
     listSaasInvoices,
     createSaasInvoice,
     recordSaasPayment,
     refundSaasPayment,
     voidSaasInvoice,
-  } = usePms();
+  } = usePms()
   const [filterDraft, setFilterDraft] = useState({
     tenantId: '',
     status: '',
     start: '',
     through: '',
-  });
-  const [filters, setFilters] = useState({ page: 1, pageSize: 20 });
-  const [revision, setRevision] = useState(0);
-  const [data, setData] = useState({
-    filters: null,
-    revision: -1,
-    result: null,
-    error: '',
-  });
+  })
+  const [filters, setFilters] = useState({ page: 1, pageSize: 20 })
+  const [revision, setRevision] = useState(0)
+  const [data, setData] = useState({ filters: null, revision: -1, result: null, error: '' })
   const [dialog, setDialog] = useState(null),
-    [draft, setDraft] = useState({});
+    [draft, setDraft] = useState({})
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [message, setMessage] = useState('');
+    [message, setMessage] = useState('')
   const intent = useRef(null),
-    submitting = useRef(false);
+    submitting = useRef(false)
+  const mounted = useRef(false)
   useEffect(() => {
-    let cancelled = false;
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  useEffect(() => {
+    let cancelled = false
     listSaasInvoices(filters)
       .then((result) => {
-        if (!cancelled) setData({ filters, revision, result, error: '' });
+        if (!cancelled) setData({ filters, revision, result, error: '' })
       })
       .catch((err) => {
-        if (!cancelled)
-          setData({ filters, revision, result: null, error: err.message });
-      });
+        if (!cancelled) setData({ filters, revision, result: null, error: err.message })
+      })
     return () => {
-      cancelled = true;
-    };
-  }, [listSaasInvoices, filters, revision]);
-  const current = data.filters === filters && data.revision === revision;
-  const loading = !current;
-  const result = current ? data.result : null;
-  const invoices = result?.invoices || [];
+      cancelled = true
+    }
+  }, [listSaasInvoices, filters, revision])
+  const current = data.filters === filters && data.revision === revision
+  const loading = !current
+  const result = current ? data.result : null
+  const invoices = result?.invoices || []
   const pagination = result?.pagination || {
     page: filters.page,
     pageSize: filters.pageSize,
     totalItems: 0,
-  };
-  const pages = Math.max(
-    1,
-    Math.ceil(pagination.totalItems / pagination.pageSize),
-  );
+  }
+  const pages = Math.max(1, Math.ceil(pagination.totalItems / pagination.pageSize))
   const close = () => {
     if (!submitting.current) {
-      setDialog(null);
-      setError('');
+      setDialog(null)
+      setError('')
     }
-  };
+  }
   const open = (mode, invoice, payment) => {
-    setError('');
-    setMessage('');
-    intent.current = crypto.randomUUID();
-    setDialog({ mode, invoice, payment });
+    if (submitting.current) return
+    setError('')
+    setMessage('')
+    intent.current = crypto.randomUUID()
+    setDialog({ mode, invoice, payment })
     setDraft(
       mode === 'create'
         ? {
@@ -1865,15 +1579,45 @@ function SaasInvoices({ tenants, theme: t }) {
           : mode === 'refund'
             ? { amount: payment.refundable ?? payment.amount, reason: '' }
             : { reason: '' },
-    );
-  };
+    )
+  }
+  async function collect(row) {
+    if (submitting.current) return
+    submitting.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
+    try {
+      // The Manager API has no invoice-by-id read; refuse safely if it left this page.
+      const latest = await listSaasInvoices(filters)
+      if (!mounted.current) return
+      const fresh = latest?.invoices?.find(
+        (item) => item.id === row.id && item.tenantId === row.tenantId,
+      )
+      if (!fresh || !['unpaid', 'partial'].includes(fresh.status))
+        throw new Error(
+          'Hóa đơn đã thay đổi hoặc không còn trong danh sách. Vui lòng tải lại hóa đơn.',
+        )
+      if (!/^[A-Z]{3}$/.test(fresh.currency || ''))
+        throw new Error('Tiền tệ hóa đơn không hợp lệ. Vui lòng tải lại hóa đơn.')
+      const balance = positiveMoneyInput(String(fresh.balance ?? ''))
+      submitting.current = false
+      open('payment', { ...fresh, balance })
+    } catch (err) {
+      if (mounted.current) setError(err.message)
+    } finally {
+      submitting.current = false
+      if (mounted.current) setBusy(false)
+    }
+  }
   const changeDraft = (key, value) => {
-    setDraft((previous) => ({ ...previous, [key]: value }));
-    intent.current = crypto.randomUUID();
-  };
+    setDraft((previous) => ({ ...previous, [key]: value }))
+    intent.current = crypto.randomUUID()
+  }
   const applyFilters = (event) => {
-    event.preventDefault();
-    setError('');
+    event.preventDefault()
+    if (submitting.current) return
+    setError('')
     try {
       setFilters({
         tenantId: filterDraft.tenantId,
@@ -1881,20 +1625,20 @@ function SaasInvoices({ tenants, theme: t }) {
         ...dateFilterRange(filterDraft.start, filterDraft.through),
         page: 1,
         pageSize: 20,
-      });
+      })
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     }
-  };
+  }
   const save = async (event) => {
-    event.preventDefault();
-    if (submitting.current) return;
-    submitting.current = true;
-    setBusy(true);
-    setError('');
-    setMessage('');
+    event.preventDefault()
+    if (submitting.current) return
+    submitting.current = true
+    setBusy(true)
+    setError('')
+    setMessage('')
     try {
-      let response;
+      let response
       if (dialog.mode === 'create') {
         response = await createSaasInvoice(
           {
@@ -1905,8 +1649,8 @@ function SaasInvoices({ tenants, theme: t }) {
             ...(draft.dueDate ? { dueDate: draft.dueDate } : {}),
           },
           intent.current,
-        );
-        setMessage('Đã tạo hóa đơn dịch vụ.');
+        )
+        setMessage('Đã tạo hóa đơn dịch vụ.')
       } else if (dialog.mode === 'payment') {
         response = await recordSaasPayment(
           dialog.invoice.id,
@@ -1917,44 +1661,36 @@ function SaasInvoices({ tenants, theme: t }) {
             note: draft.note.trim(),
           },
           intent.current,
-        );
-        setMessage('Đã ghi nhận khoản thanh toán.');
+        )
+        setMessage('Đã ghi nhận khoản thanh toán.')
       } else if (dialog.mode === 'refund') {
         response = await refundSaasPayment(
           dialog.invoice.id,
           dialog.payment.id,
-          {
-            amount: positiveMoneyInput(draft.amount),
-            reason: draft.reason.trim(),
-          },
+          { amount: positiveMoneyInput(draft.amount), reason: draft.reason.trim() },
           intent.current,
-        );
-        setMessage('Đã ghi nhận hoàn/đảo khoản thu.');
+        )
+        setMessage('Đã ghi nhận hoàn/đảo khoản thu.')
       } else {
-        response = await voidSaasInvoice(
-          dialog.invoice.id,
-          draft.reason.trim(),
-        );
-        setMessage('Đã hủy hóa đơn chưa thanh toán.');
+        response = await voidSaasInvoice(dialog.invoice.id, draft.reason.trim())
+        setMessage('Đã hủy hóa đơn chưa thanh toán.')
       }
-      const saved = response?.invoice || (response?.id ? response : null);
-      setDialog(saved ? { mode: 'detail', invoice: saved } : null);
-      setRevision((value) => value + 1);
+      const saved = response?.invoice || (response?.id ? response : null)
+      setDialog(saved ? { mode: 'detail', invoice: saved } : null)
+      setRevision((value) => value + 1)
     } catch (err) {
-      setError(err.message);
+      setError(err.message)
     } finally {
-      submitting.current = false;
-      setBusy(false);
+      submitting.current = false
+      setBusy(false)
     }
-  };
-  const invoice = dialog?.invoice;
+  }
+  const invoice = dialog?.invoice
   const status = (row) => (
-    <span
-      className={`manager-invoice-status manager-invoice-status-${row.status}`}
-    >
+    <span className={`manager-invoice-status manager-invoice-status-${row.status}`}>
       {invoiceStatusLabels[row.status] || row.status}
     </span>
-  );
+  )
   const notice = (
     <>
       {error && (
@@ -1968,23 +1704,18 @@ function SaasInvoices({ tenants, theme: t }) {
         </p>
       )}
     </>
-  );
-  const filterChange = (key, value) =>
-    setFilterDraft((previous) => ({ ...previous, [key]: value }));
+  )
+  const filterChange = (key, value) => setFilterDraft((previous) => ({ ...previous, [key]: value }))
   return (
     <section
       className="manager-panel manager-invoices"
       aria-labelledby="manager-invoices-title"
-      aria-busy={loading}
+      aria-busy={loading || busy}
     >
       <div className="manager-billing-table-heading manager-invoice-heading">
         <div>
           <h2 id="manager-invoices-title">{labelUi('Hóa đơn dịch vụ SaaS')}</h2>
-          <p>
-            {labelUi(
-              'Hóa đơn và khoản thu cho dịch vụ phần mềm của từng khách sạn.',
-            )}
-          </p>
+          <p>{labelUi('Hóa đơn và khoản thu cho dịch vụ phần mềm của từng khách sạn.')}</p>
         </div>
         <button
           type="button"
@@ -2026,10 +1757,7 @@ function SaasInvoices({ tenants, theme: t }) {
         </label>
         <label>
           {labelUi('Tạo từ ngày (UTC)')}
-          <DateInput
-            value={filterDraft.start}
-            onChange={(value) => filterChange('start', value)}
-          />
+          <DateInput value={filterDraft.start} onChange={(value) => filterChange('start', value)} />
         </label>
         <label>
           {labelUi('Đến hết ngày (UTC)')}
@@ -2106,9 +1834,7 @@ function SaasInvoices({ tenants, theme: t }) {
                         {row.tenantName || row.tenantId}
                       </span>
                     </td>
-                    <td className="manager-invoice-description">
-                      {row.description}
-                    </td>
+                    <td className="manager-invoice-description">{row.description}</td>
                     <td>{formatCurrency(row.amount, row.currency)}</td>
                     <td>{formatCurrency(row.paid, row.currency)}</td>
                     <td>{formatCurrency(row.balance, row.currency)}</td>
@@ -2118,18 +1844,27 @@ function SaasInvoices({ tenants, theme: t }) {
                       <button
                         type="button"
                         className="manager-button"
+                        disabled={busy}
                         onClick={() => open('detail', row)}
                       >
-                        {labelUi('Chi tiết / Thu tiền')}
+                        {labelUi('Chi tiết')}
                       </button>
+                      {['unpaid', 'partial'].includes(row.status) && (
+                        <button
+                          type="button"
+                          className="manager-button manager-button-primary"
+                          disabled={busy}
+                          onClick={() => collect(row)}
+                        >
+                          {labelUi('Thu tiền')}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
                 {!invoices.length && (
                   <tr>
-                    <td colSpan={8}>
-                      {labelUi('Chưa có hóa đơn phù hợp với bộ lọc.')}
-                    </td>
+                    <td colSpan={8}>{labelUi('Chưa có hóa đơn phù hợp với bộ lọc.')}</td>
                   </tr>
                 )}
               </tbody>
@@ -2137,33 +1872,23 @@ function SaasInvoices({ tenants, theme: t }) {
           </div>
           <div className="manager-invoice-pagination">
             <span>
-              {pagination.totalItems.toLocaleString(getIntlLocale())} hóa đơn ·
-              Trang {pagination.page}/{pages}
+              {pagination.totalItems.toLocaleString(getIntlLocale())} hóa đơn · Trang{' '}
+              {pagination.page}/{pages}
             </span>
             <div>
               <button
                 type="button"
                 className="manager-button"
-                disabled={filters.page <= 1}
-                onClick={() =>
-                  setFilters((previous) => ({
-                    ...previous,
-                    page: previous.page - 1,
-                  }))
-                }
+                disabled={busy || filters.page <= 1}
+                onClick={() => setFilters((previous) => ({ ...previous, page: previous.page - 1 }))}
               >
                 {labelUi('Trước')}
               </button>
               <button
                 type="button"
                 className="manager-button"
-                disabled={filters.page >= pages}
-                onClick={() =>
-                  setFilters((previous) => ({
-                    ...previous,
-                    page: previous.page + 1,
-                  }))
-                }
+                disabled={busy || filters.page >= pages}
+                onClick={() => setFilters((previous) => ({ ...previous, page: previous.page + 1 }))}
               >
                 Sau
               </button>
@@ -2174,9 +1899,7 @@ function SaasInvoices({ tenants, theme: t }) {
       {dialog && (
         <LegacyOverlay
           title={
-            dialog.mode === 'create'
-              ? labelUi('Tạo hóa đơn dịch vụ')
-              : `Hóa đơn ${invoice.number}`
+            dialog.mode === 'create' ? labelUi('Tạo hóa đơn dịch vụ') : `Hóa đơn ${invoice.number}`
           }
           onClose={close}
           style={{
@@ -2211,9 +1934,7 @@ function SaasInvoices({ tenants, theme: t }) {
             {invoice && (
               <>
                 <p>{invoice.tenantName || invoice.tenantId}</p>
-                <p className="manager-invoice-description">
-                  {invoice.description}
-                </p>
+                <p className="manager-invoice-description">{invoice.description}</p>
                 <dl className="manager-invoice-summary">
                   <div>
                     <dt>{labelUi('Tổng tiền')}</dt>
@@ -2242,7 +1963,8 @@ function SaasInvoices({ tenants, theme: t }) {
                     <button
                       type="button"
                       className="manager-button manager-button-primary"
-                      onClick={() => open('payment', invoice)}
+                      disabled={busy}
+                      onClick={() => collect(invoice)}
                     >
                       {labelUi('Ghi nhận thanh toán')}
                     </button>
@@ -2251,6 +1973,7 @@ function SaasInvoices({ tenants, theme: t }) {
                     <button
                       type="button"
                       className="manager-button"
+                      disabled={busy}
                       onClick={() => open('void', invoice)}
                     >
                       {labelUi('Hủy hóa đơn')}
@@ -2263,9 +1986,7 @@ function SaasInvoices({ tenants, theme: t }) {
                     {invoice.payments.map((payment) => (
                       <li key={payment.id}>
                         <div>
-                          <strong>
-                            {formatCurrency(payment.amount, invoice.currency)}
-                          </strong>
+                          <strong>{formatCurrency(payment.amount, invoice.currency)}</strong>
                           <time dateTime={payment.createdAt}>
                             {displayPaymentDate(payment.createdAt)}
                           </time>
@@ -2308,9 +2029,7 @@ function SaasInvoices({ tenants, theme: t }) {
                       {invoice.refunds.map((refund) => (
                         <li key={refund.id}>
                           <div>
-                            <strong>
-                              −{formatCurrency(refund.amount, invoice.currency)}
-                            </strong>
+                            <strong>−{formatCurrency(refund.amount, invoice.currency)}</strong>
                             <time dateTime={refund.createdAt}>
                               {displayPaymentDate(refund.createdAt)}
                             </time>
@@ -2339,9 +2058,7 @@ function SaasInvoices({ tenants, theme: t }) {
                         <select
                           required
                           value={draft.tenantId}
-                          onChange={(event) =>
-                            changeDraft('tenantId', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('tenantId', event.target.value)}
                         >
                           <option value="">{labelUi('Chọn khách sạn')}</option>
                           {tenants.map((tenant) => (
@@ -2358,20 +2075,14 @@ function SaasInvoices({ tenants, theme: t }) {
                           maxLength={500}
                           rows={3}
                           value={draft.description}
-                          onChange={(event) =>
-                            changeDraft('description', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('description', event.target.value)}
                         />
                       </label>
                     </>
                   )}
                   {dialog.mode !== 'void' && (
                     <label>
-                      Số tiền (
-                      {dialog.mode === 'create'
-                        ? draft.currency
-                        : invoice.currency}
-                      )
+                      Số tiền ({dialog.mode === 'create' ? draft.currency : invoice.currency})
                       <input
                         required
                         inputMode="decimal"
@@ -2379,15 +2090,9 @@ function SaasInvoices({ tenants, theme: t }) {
                         maxLength={20}
                         pattern="[0-9]{1,15}([.][0-9]{1,4})?"
                         value={draft.amount}
-                        onChange={(event) =>
-                          changeDraft('amount', event.target.value)
-                        }
+                        onChange={(event) => changeDraft('amount', event.target.value)}
                       />
-                      <small>
-                        {labelUi(
-                          'Dùng dấu chấm cho phần thập phân, tối đa 4 chữ số.',
-                        )}
-                      </small>
+                      <small>{labelUi('Dùng dấu chấm cho phần thập phân, tối đa 4 chữ số.')}</small>
                     </label>
                   )}
                   {dialog.mode === 'create' && (
@@ -2396,9 +2101,7 @@ function SaasInvoices({ tenants, theme: t }) {
                         {tUi('common.currency')}
                         <select
                           value={draft.currency}
-                          onChange={(event) =>
-                            changeDraft('currency', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('currency', event.target.value)}
                         >
                           <option value="VND">VND</option>
                           <option value="USD">USD</option>
@@ -2419,13 +2122,9 @@ function SaasInvoices({ tenants, theme: t }) {
                         {labelUi('Hình thức thu')}
                         <select
                           value={draft.method}
-                          onChange={(event) =>
-                            changeDraft('method', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('method', event.target.value)}
                         >
-                          <option value="bank">
-                            {labelUi('Chuyển khoản')}
-                          </option>
+                          <option value="bank">{labelUi('Chuyển khoản')}</option>
                           <option value="cash">{labelUi('Tiền mặt')}</option>
                         </select>
                       </label>
@@ -2434,9 +2133,7 @@ function SaasInvoices({ tenants, theme: t }) {
                         <input
                           maxLength={160}
                           value={draft.reference}
-                          onChange={(event) =>
-                            changeDraft('reference', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('reference', event.target.value)}
                         />
                       </label>
                       <label>
@@ -2445,9 +2142,7 @@ function SaasInvoices({ tenants, theme: t }) {
                           maxLength={1000}
                           rows={2}
                           value={draft.note}
-                          onChange={(event) =>
-                            changeDraft('note', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('note', event.target.value)}
                         />
                       </label>
                       <p>
@@ -2472,9 +2167,7 @@ function SaasInvoices({ tenants, theme: t }) {
                           maxLength={1000}
                           rows={3}
                           value={draft.reason}
-                          onChange={(event) =>
-                            changeDraft('reason', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('reason', event.target.value)}
                         />
                       </label>
                     </>
@@ -2493,9 +2186,7 @@ function SaasInvoices({ tenants, theme: t }) {
                           maxLength={1000}
                           rows={3}
                           value={draft.reason}
-                          onChange={(event) =>
-                            changeDraft('reason', event.target.value)
-                          }
+                          onChange={(event) => changeDraft('reason', event.target.value)}
                         />
                       </label>
                     </>
@@ -2532,5 +2223,5 @@ function SaasInvoices({ tenants, theme: t }) {
         </LegacyOverlay>
       )}
     </section>
-  );
+  )
 }

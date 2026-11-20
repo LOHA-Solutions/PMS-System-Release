@@ -1,6 +1,6 @@
-import { t as tUi, tr as labelUi, useI18n } from '../i18n/useI18n.js';
-import { useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { t as tUi, tr as labelUi, useI18n } from '../i18n/useI18n.js'
+import { useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
@@ -10,11 +10,11 @@ import {
   FileQuestion,
   LogIn,
   CircleAlert,
-} from 'lucide-react';
-import { usePms } from '../../apps/pms/data/usePms';
-import LohaBrand from './LohaBrand';
-import { errorScreens, readableErrorMessage } from './errorStatus';
-import './LohaErrorPage.css';
+} from 'lucide-react'
+import { usePms } from '../../apps/pms/data/usePms'
+import LohaBrand from './LohaBrand'
+import { errorScreens, readableErrorMessage } from './errorStatus'
+import './LohaErrorPage.css'
 
 export default function LohaErrorPage({
   status = 500,
@@ -24,15 +24,15 @@ export default function LohaErrorPage({
   children,
   fullPage = false,
 }) {
-  useI18n();
-  const { user, isManager, role } = usePms();
+  useI18n()
+  const { user, isManager, role } = usePms()
   const location = useLocation(),
-    navigate = useNavigate();
+    navigate = useNavigate()
   const [busy, setBusy] = useState(false),
-    [retryError, setRetryError] = useState('');
-  const running = useRef(false);
-  const screen = errorScreens[status] || errorScreens[500];
-  const description = readableErrorMessage(message, screen.description);
+    [retryError, setRetryError] = useState('')
+  const running = useRef(false)
+  const screen = errorScreens[status] || errorScreens[500]
+  const description = readableErrorMessage(message, screen.description)
   const Icon =
     status === 403
       ? ShieldAlert
@@ -42,7 +42,7 @@ export default function LohaErrorPage({
           ? Unplug
           : status === 401
             ? LogIn
-            : CircleAlert;
+            : CircleAlert
   const home = !user
     ? '/'
     : isManager
@@ -51,28 +51,26 @@ export default function LohaErrorPage({
         ? '/id/housekeeping/status'
         : role === 'ACCOUNTANT'
           ? '/id/cashflow'
-          : '/id/dashboard';
+          : '/id/dashboard'
   const login =
     '/id/login' +
-    (status === 401
-      ? `?next=${encodeURIComponent(location.pathname + location.search)}`
-      : '');
+    (status === 401 ? `?next=${encodeURIComponent(location.pathname + location.search)}` : '')
   async function retry() {
-    if (running.current) return;
-    running.current = true;
-    setBusy(true);
-    setRetryError('');
+    if (running.current) return
+    running.current = true
+    setBusy(true)
+    setRetryError('')
     try {
-      await onRetry();
+      await onRetry()
     } catch (error) {
-      setRetryError(readableErrorMessage(error.message, screen.description));
+      setRetryError(readableErrorMessage(error.message, screen.description))
     } finally {
-      running.current = false;
-      setBusy(false);
+      running.current = false
+      setBusy(false)
     }
   }
-  const Container = fullPage ? 'main' : 'section';
-  const Heading = fullPage ? 'h1' : 'h2';
+  const Container = fullPage ? 'main' : 'section'
+  const Heading = fullPage ? 'h1' : 'h2'
   return (
     <Container
       className={`loha-error-page${fullPage ? ' loha-error-full' : ''}`}
@@ -95,11 +93,7 @@ export default function LohaErrorPage({
         {retryError && <p className="loha-error-retry-message">{retryError}</p>}
         <div className="loha-error-actions">
           {status === 401 ? (
-            <Link
-              className="loha-error-button loha-error-primary"
-              to={login}
-              onClick={onClose}
-            >
+            <Link className="loha-error-button loha-error-primary" to={login} onClick={onClose}>
               {tUi('errors.signIn')} <LogIn size={17} aria-hidden="true" />
             </Link>
           ) : onRetry ? (
@@ -113,11 +107,7 @@ export default function LohaErrorPage({
               {busy ? tUi('errors.retrying') : tUi('common.retry')}
             </button>
           ) : (
-            <Link
-              className="loha-error-button loha-error-primary"
-              to={home}
-              onClick={onClose}
-            >
+            <Link className="loha-error-button loha-error-primary" to={home} onClick={onClose}>
               {user ? tUi('errors.workspace') : tUi('auth.home')}
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
@@ -128,12 +118,7 @@ export default function LohaErrorPage({
             </Link>
           )}
           {onClose ? (
-            <button
-              type="button"
-              className="loha-error-button"
-              disabled={busy}
-              onClick={onClose}
-            >
+            <button type="button" className="loha-error-button" disabled={busy} onClick={onClose}>
               {tUi('errors.close')}
             </button>
           ) : (
@@ -141,9 +126,7 @@ export default function LohaErrorPage({
               type="button"
               className="loha-error-button"
               onClick={() =>
-                window.history.state?.idx > 0
-                  ? navigate(-1)
-                  : navigate(home, { replace: true })
+                window.history.state?.idx > 0 ? navigate(-1) : navigate(home, { replace: true })
               }
             >
               <ArrowLeft size={17} aria-hidden="true" />
@@ -151,11 +134,7 @@ export default function LohaErrorPage({
             </button>
           )}
           {status === 403 && (
-            <Link
-              className="loha-error-text-link"
-              to="/id/login"
-              onClick={onClose}
-            >
+            <Link className="loha-error-text-link" to="/id/login" onClick={onClose}>
               {tUi('errors.switchAccount')}
             </Link>
           )}
@@ -164,5 +143,5 @@ export default function LohaErrorPage({
       </div>
       <p className="loha-error-footer">{tUi('errors.tagline')}</p>
     </Container>
-  );
+  )
 }

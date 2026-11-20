@@ -8,10 +8,8 @@ export const INVENTORY_KINDS = {
   reversal: 'Phiếu đảo kho',
   pos_issue: 'Xuất kho POS',
   pos_return: 'Hoàn kho POS',
-};
+}
 
 // Keep server decimals exact, including 8-digit cost values and large quantities.
 export const quantityText = (value) =>
-  String(value ?? '0').replace(/\.(\d*?)0+$/, (_, digits) =>
-    digits ? `.${digits}` : '',
-  );
+  String(value ?? '0').replace(/\.(\d*?)0+$/, (_, digits) => (digits ? `.${digits}` : ''))

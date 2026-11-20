@@ -1,20 +1,16 @@
-import {
-  tr as labelUi,
-  t as tUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { Check, Info, RadioTower, Save, ShieldCheck, X } from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
+import { tr as labelUi, t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { Check, Info, RadioTower, Save, ShieldCheck, X } from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
 import {
   channelMappingInput,
   channelSettingsDraft,
   channelSettingsInput,
   uncertainChannelWrite,
-} from '../channelForms';
-import { environmentLabel } from '../presentation';
-import { ChannelFields, ChannelMappings } from './ChannelFields';
-import ChannelAirbnb from './ChannelAirbnb';
+} from '../channelForms'
+import { environmentLabel } from '../presentation'
+import { ChannelFields, ChannelMappings } from './ChannelFields'
+import ChannelAirbnb from './ChannelAirbnb'
 
 export default function ChannelForm({
   account,
@@ -27,77 +23,76 @@ export default function ChannelForm({
   onReload,
   onBusy,
 }) {
-  useI18n();
-  const pms = usePms();
-  const { probeChannexChannel, saveChannexChannel } = operations || pms;
+  useI18n()
+  const pms = usePms()
+  const { probeChannexChannel, saveChannexChannel } = operations || pms
   const channel = data.channel,
-    editing = Boolean(channel);
+    editing = Boolean(channel)
   const adapters = editing
     ? [data.adapter]
-    : data.adapters.filter((item) => ['ota', 'meta'].includes(item.kind));
-  const unavailableAdapters = data.unavailableAdapters || [];
+    : data.adapters.filter((item) => ['ota', 'meta'].includes(item.kind))
+  const unavailableAdapters = data.unavailableAdapters || []
   const [code, setCode] = useState(channel?.code || ''),
     [name, setName] = useState(channel?.name || ''),
-    [groupId, setGroupId] = useState(data.groups?.[0]?.id || '');
-  const adapter = adapters.find((item) => item.code === code);
+    [groupId, setGroupId] = useState(data.groups?.[0]?.id || '')
+  const adapter = adapters.find((item) => item.code === code)
   const [settings, setSettings] = useState(() =>
     channelSettingsDraft(data.adapter?.fields, channel?.settings),
-  );
+  )
   const [mappings, setMappings] = useState(() =>
     (channel?.mappings || []).map((row) => ({
       ...row,
       settings: channelSettingsDraft(data.adapter?.mappingFields, row.settings),
     })),
-  );
+  )
   const [remote, setRemote] = useState(null),
     [tested, setTested] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [uncertain, setUncertain] = useState(false);
+    [uncertain, setUncertain] = useState(false)
   const mounted = useRef(true),
     working = useRef(false),
-    closeButton = useRef(null);
-  const readonly =
-    !canWrite || (editing && (channel.active || !channel.editable));
+    closeButton = useRef(null)
+  const readonly = !canWrite || (editing && (channel.active || !channel.editable))
   useEffect(() => {
-    mounted.current = true;
-    closeButton.current?.focus({ preventScroll: true });
+    mounted.current = true
+    closeButton.current?.focus({ preventScroll: true })
     return () => {
-      mounted.current = false;
-    };
-  }, []);
+      mounted.current = false
+    }
+  }, [])
   function selectAdapter(value) {
-    const next = adapters.find((item) => item.code === value);
-    setCode(value);
-    setSettings(channelSettingsDraft(next?.fields));
-    setMappings([]);
-    setRemote(null);
-    setTested(false);
-    setError('');
+    const next = adapters.find((item) => item.code === value)
+    setCode(value)
+    setSettings(channelSettingsDraft(next?.fields))
+    setMappings([])
+    setRemote(null)
+    setTested(false)
+    setError('')
   }
   function changeSettings(field, value) {
-    setSettings((previous) => ({ ...previous, [field]: value }));
-    setTested(false);
-    setRemote(null);
+    setSettings((previous) => ({ ...previous, [field]: value }))
+    setTested(false)
+    setRemote(null)
   }
   async function run(callback, writes = false) {
-    if (working.current || uncertain || !canWrite) return;
-    working.current = true;
-    setBusy(true);
-    onBusy(true);
-    setError('');
+    if (working.current || uncertain || !canWrite) return
+    working.current = true
+    setBusy(true)
+    onBusy(true)
+    setError('')
     try {
-      await callback();
+      await callback()
     } catch (failure) {
       if (mounted.current) {
-        setError(failure.message || 'Chưa hoàn tất thao tác.');
-        if (writes) setUncertain(uncertainChannelWrite(failure));
+        setError(failure.message || 'Chưa hoàn tất thao tác.')
+        if (writes) setUncertain(uncertainChannelWrite(failure))
       }
     } finally {
-      working.current = false;
+      working.current = false
       if (mounted.current) {
-        setBusy(false);
-        onBusy(false);
+        setBusy(false)
+        onBusy(false)
       }
     }
   }
@@ -107,74 +102,57 @@ export default function ChannelForm({
       settings: channelSettingsInput(
         adapter?.fields,
         settings,
-        editing
-          ? channelSettingsDraft(adapter.fields, channel.settings)
-          : undefined,
+        editing ? channelSettingsDraft(adapter.fields, channel.settings) : undefined,
       ),
       ...(editing ? { channelId: channel.id, revision: channel.revision } : {}),
-    };
+    }
   }
   async function testConnection() {
     await run(async () => {
-      const result = await probeChannexChannel(
-        account.id,
-        property.id,
-        'test_connection',
-        input(),
-      );
-      if (!result.success)
-        throw new Error(result.message || 'Thông tin kết nối chưa đúng.');
-      const mapping = await probeChannexChannel(
-        account.id,
-        property.id,
-        'mapping_details',
-        input(),
-      );
+      const result = await probeChannexChannel(account.id, property.id, 'test_connection', input())
+      if (!result.success) throw new Error(result.message || 'Thông tin kết nối chưa đúng.')
+      const mapping = await probeChannexChannel(account.id, property.id, 'mapping_details', input())
       if (mounted.current) {
-        setRemote(mapping);
-        setTested(true);
+        setRemote(mapping)
+        setTested(true)
       }
-    });
+    })
   }
   function save(event) {
-    event.preventDefault();
-    if (readonly || !adapter || (!editing && !tested)) return;
+    event.preventDefault()
+    if (readonly || !adapter || (!editing && !tested)) return
     run(async () => {
       const changedSettings = channelSettingsInput(
         adapter.fields,
         settings,
-        editing
-          ? channelSettingsDraft(adapter.fields, channel.settings)
-          : undefined,
-      );
+        editing ? channelSettingsDraft(adapter.fields, channel.settings) : undefined,
+      )
       const changedMappings = channelMappingInput(
         mappings,
         adapter.mappingFields,
         channel?.mappings,
-      );
-      const payload = { name: name.trim() };
-      if (!editing || Object.keys(changedSettings).length)
-        payload.settings = changedSettings;
-      if (!editing || changedMappings.length)
-        payload.mappings = changedMappings;
+      )
+      const payload = { name: name.trim() }
+      if (!editing || Object.keys(changedSettings).length) payload.settings = changedSettings
+      if (!editing || changedMappings.length) payload.mappings = changedMappings
       if (editing) {
-        payload.id = channel.id;
-        payload.revision = channel.revision;
+        payload.id = channel.id
+        payload.revision = channel.revision
       } else {
-        payload.code = code;
-        payload.groupId = groupId;
+        payload.code = code
+        payload.groupId = groupId
       }
-      const result = await saveChannexChannel(account.id, property.id, payload);
+      const result = await saveChannexChannel(account.id, property.id, payload)
       if (mounted.current) {
-        if (result.pending) setUncertain('pending');
+        if (result.pending) setUncertain('pending')
         else
           onSaved(
             editing
               ? 'Đã lưu cấu hình kênh OTA.'
               : 'Đã tạo kết nối OTA. Kiểm tra và kích hoạt để bắt đầu đồng bộ.',
-          );
+          )
       }
-    }, true);
+    }, true)
   }
   return (
     <>
@@ -183,9 +161,7 @@ export default function ChannelForm({
           <RadioTower size={21} aria-hidden="true" />
         </span>
         <div>
-          <span className="channex-editor-eyebrow">
-            {labelUi('Kết nối kênh bán phòng')}
-          </span>
+          <span className="channex-editor-eyebrow">{labelUi('Kết nối kênh bán phòng')}</span>
           <h2>{editing ? channel.name : labelUi('Thêm kênh OTA')}</h2>
           <p>
             {property.name} · {environmentLabel(account.environment)}
@@ -207,11 +183,7 @@ export default function ChannelForm({
           <div className="channex-editor-error" role="alert">
             <p>{error}</p>
             {editing && !uncertain && (
-              <button
-                type="button"
-                className="manager-button"
-                onClick={onReload}
-              >
+              <button type="button" className="manager-button" onClick={onReload}>
                 {labelUi('Đóng & tải lại cấu hình')}
               </button>
             )}
@@ -224,19 +196,14 @@ export default function ChannelForm({
                 ? labelUi(
                     'Channex đã nhận yêu cầu và đang xử lý. Tải lại danh sách để kiểm tra kết quả trước khi tạo hoặc gửi lại.',
                   )
-                : labelUi(
-                    'Kết quả lưu chưa xác định. Tải lại kênh để kiểm tra trước khi gửi lại.',
-                  )}
+                : labelUi('Kết quả lưu chưa xác định. Tải lại kênh để kiểm tra trước khi gửi lại.')}
             </p>
             <button type="button" className="manager-button" onClick={onReload}>
               {labelUi('Đóng & tải lại kênh')}
             </button>
           </div>
         )}
-        <fieldset
-          disabled={busy || uncertain}
-          className="channex-editor-fields"
-        >
+        <fieldset disabled={busy || uncertain} className="channex-editor-fields">
           {!editing && (
             <>
               <label>
@@ -270,9 +237,7 @@ export default function ChannelForm({
               )}
               {!adapters.length && (
                 <p className="channex-channel-note" role="status">
-                  {labelUi(
-                    'Chưa có kênh OTA nào có thể cấu hình với nguồn này.',
-                  )}
+                  {labelUi('Chưa có kênh OTA nào có thể cấu hình với nguồn này.')}
                 </p>
               )}
             </>
@@ -335,9 +300,7 @@ export default function ChannelForm({
                         onClick={testConnection}
                       >
                         <ShieldCheck size={15} aria-hidden="true" />
-                        {busy
-                          ? labelUi('Đang kiểm tra…')
-                          : labelUi('Kiểm tra & lấy phòng OTA')}
+                        {busy ? labelUi('Đang kiểm tra…') : labelUi('Kiểm tra & lấy phòng OTA')}
                       </button>
                       {tested && (
                         <span className="channex-status channex-status--active">
@@ -364,9 +327,7 @@ export default function ChannelForm({
                         'Bạn đang ở chế độ chỉ xem. Chủ khách sạn có thể thay đổi kết nối OTA.',
                       )
                     : !channel.editable
-                      ? labelUi(
-                          'Kết nối dùng chung nhiều khách sạn: chỉ xem tại màn hình này.',
-                        )
+                      ? labelUi('Kết nối dùng chung nhiều khách sạn: chỉ xem tại màn hình này.')
                       : adapter.oauth
                         ? labelUi(
                             'Airbnb đang đồng bộ. Bỏ ghép các listing trước khi tắt đồng bộ; chỉ thêm listing khi kênh đã tắt.',
@@ -390,8 +351,8 @@ export default function ChannelForm({
                   onSaved={onSaved}
                   onReload={onReload}
                   onBusy={(value) => {
-                    onBusy(value);
-                    setBusy(value);
+                    onBusy(value)
+                    setBusy(value)
                   }}
                 />
               )}
@@ -399,12 +360,7 @@ export default function ChannelForm({
           )}
         </fieldset>
         <div className="channex-editor-actions">
-          <button
-            type="button"
-            className="manager-button"
-            disabled={busy}
-            onClick={onClose}
-          >
+          <button type="button" className="manager-button" disabled={busy} onClick={onClose}>
             {readonly ? tUi('common.close') : tUi('common.cancel')}
           </button>
           {adapter && !adapter.oauth && !readonly && (
@@ -424,5 +380,5 @@ export default function ChannelForm({
         </div>
       </form>
     </>
-  );
+  )
 }

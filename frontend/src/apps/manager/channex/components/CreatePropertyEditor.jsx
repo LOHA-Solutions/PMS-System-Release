@@ -1,20 +1,20 @@
-import { tr as labelUi } from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { Building2, Info, Plus, RefreshCw, X } from 'lucide-react';
-import { usePms } from '../../../pms/data/usePms';
-import LegacyOverlay from '../../../pms/components/LegacyOverlay';
-import { environmentLabel } from '../presentation';
+import { tr as labelUi } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { Building2, Info, Plus, RefreshCw, X } from 'lucide-react'
+import { usePms } from '../../../pms/data/usePms'
+import LegacyOverlay from '../../../pms/components/LegacyOverlay'
+import { environmentLabel } from '../presentation'
 import {
   canCreateChannexProperty,
   channexPropertyDraft,
   channexPropertyInput,
-} from '../propertyForm';
-import { uncertainChannelWrite } from '../channelForms';
-import '../pages/ManagerChannex.css';
-import '../ChannexSurface.css';
-import { phonePattern } from '../../../../shared/lib/phone.js';
-import { emailPattern } from '../../../../shared/lib/validation.js';
-import { HOTEL_CURRENCIES } from '../../../../shared/lib/currencies.js';
+} from '../propertyForm'
+import { uncertainChannelWrite } from '../channelForms'
+import '../pages/ManagerChannex.css'
+import '../ChannexSurface.css'
+import { phonePattern } from '../../../../shared/lib/phone.js'
+import { emailPattern } from '../../../../shared/lib/validation.js'
+import { HOTEL_CURRENCIES } from '../../../../shared/lib/currencies.js'
 
 const overlayStyle = {
   position: 'fixed',
@@ -25,7 +25,7 @@ const overlayStyle = {
   alignItems: 'center',
   justifyContent: 'center',
   padding: 12,
-};
+}
 
 export default function CreatePropertyEditor({
   account,
@@ -35,62 +35,58 @@ export default function CreatePropertyEditor({
   onCreated,
   onReload,
 }) {
-  const { user, createChannexProperty } = usePms();
-  const [draft, setDraft] = useState(() =>
-    channexPropertyDraft(hotel, settings),
-  );
+  const { user, createChannexProperty } = usePms()
+  const [draft, setDraft] = useState(() => channexPropertyDraft(hotel, settings))
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [uncertain, setUncertain] = useState(false);
+    [uncertain, setUncertain] = useState(false)
   const mounted = useRef(true),
     submitting = useRef(false),
     nameInput = useRef(null),
-    errorNotice = useRef(null);
+    errorNotice = useRef(null)
   useEffect(() => {
-    mounted.current = true;
-    nameInput.current?.focus();
+    mounted.current = true
+    nameInput.current?.focus()
     return () => {
-      mounted.current = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (error) errorNotice.current?.focus();
-  }, [error]);
-  const allowed = canCreateChannexProperty(user, account);
-  const close = () => {
-    if (!submitting.current) onClose();
-  };
-  const update = (field, value) =>
-    setDraft((previous) => ({ ...previous, [field]: value }));
-  async function create(event) {
-    event.preventDefault();
-    if (!allowed || submitting.current || uncertain) return;
-    let input;
-    try {
-      input = channexPropertyInput(account.id, draft);
-    } catch (failure) {
-      setError(failure.message);
-      return;
+      mounted.current = false
     }
-    submitting.current = true;
-    setBusy(true);
-    setError('');
+  }, [])
+  useEffect(() => {
+    if (error) errorNotice.current?.focus()
+  }, [error])
+  const allowed = canCreateChannexProperty(user, account)
+  const close = () => {
+    if (!submitting.current) onClose()
+  }
+  const update = (field, value) => setDraft((previous) => ({ ...previous, [field]: value }))
+  async function create(event) {
+    event.preventDefault()
+    if (!allowed || submitting.current || uncertain) return
+    let input
     try {
-      const result = await createChannexProperty(input);
-      if (!result?.property?.id)
-        throw new Error('Channex chưa trả thông tin khách sạn vừa tạo.');
-      if (mounted.current) onCreated(result.property);
+      input = channexPropertyInput(account.id, draft)
+    } catch (failure) {
+      setError(failure.message)
+      return
+    }
+    submitting.current = true
+    setBusy(true)
+    setError('')
+    try {
+      const result = await createChannexProperty(input)
+      if (!result?.property?.id) throw new Error('Channex chưa trả thông tin khách sạn vừa tạo.')
+      if (mounted.current) onCreated(result.property)
     } catch (failure) {
       if (mounted.current) {
-        setError(failure.message || 'Chưa tạo được khách sạn.');
-        setUncertain(uncertainChannelWrite(failure));
+        setError(failure.message || 'Chưa tạo được khách sạn.')
+        setUncertain(uncertainChannelWrite(failure))
       }
     } finally {
-      submitting.current = false;
-      if (mounted.current) setBusy(false);
+      submitting.current = false
+      if (mounted.current) setBusy(false)
     }
   }
-  if (!allowed) return null;
+  if (!allowed) return null
   return (
     <LegacyOverlay
       modal
@@ -126,12 +122,7 @@ export default function CreatePropertyEditor({
         </div>
         <form onSubmit={create} aria-busy={busy}>
           {error && (
-            <p
-              ref={errorNotice}
-              tabIndex={-1}
-              className="channex-editor-error"
-              role="alert"
-            >
+            <p ref={errorNotice} tabIndex={-1} className="channex-editor-error" role="alert">
               {error}
             </p>
           )}
@@ -142,19 +133,12 @@ export default function CreatePropertyEditor({
                   'Kết quả tạo chưa xác định. Kiểm tra danh sách khách sạn trên Channex trước khi tạo lại để tránh trùng.',
                 )}
               </p>
-              <button
-                type="button"
-                className="manager-button"
-                onClick={onReload}
-              >
+              <button type="button" className="manager-button" onClick={onReload}>
                 {labelUi('Đóng & tải lại danh sách')}
               </button>
             </div>
           )}
-          <fieldset
-            disabled={busy || uncertain}
-            className="channex-editor-fields"
-          >
+          <fieldset disabled={busy || uncertain} className="channex-editor-fields">
             <label>
               {labelUi('Tên khách sạn')}
               <input
@@ -200,9 +184,7 @@ export default function CreatePropertyEditor({
                   maxLength={2}
                   pattern="[A-Z]{2}"
                   value={draft.country}
-                  onChange={(event) =>
-                    update('country', event.target.value.toUpperCase())
-                  }
+                  onChange={(event) => update('country', event.target.value.toUpperCase())}
                   placeholder="VN"
                 />
               </label>
@@ -246,25 +228,19 @@ export default function CreatePropertyEditor({
                   value={draft.phone}
                   onChange={(event) => {
                     if (!/[^0-9+ .()-]/.test(event.target.value))
-                      update('phone', event.target.value);
+                      update('phone', event.target.value)
                   }}
                 />
               </label>
             </div>
             <p className="channex-editor-hint">
               <Info size={15} aria-hidden="true" />
-              Chỉ tạo khách sạn trên {environmentLabel(account.environment)}.
-              Loại phòng, gói giá và liên kết PMS được thiết lập ở bước tiếp
-              theo.
+              Chỉ tạo khách sạn trên {environmentLabel(account.environment)}. Loại phòng, gói giá và
+              liên kết PMS được thiết lập ở bước tiếp theo.
             </p>
           </fieldset>
           <div className="channex-editor-actions">
-            <button
-              type="button"
-              className="manager-button"
-              disabled={busy}
-              onClick={close}
-            >
+            <button type="button" className="manager-button" disabled={busy} onClick={close}>
               {labelUi('Hủy')}
             </button>
             <button
@@ -283,5 +259,5 @@ export default function CreatePropertyEditor({
         </form>
       </div>
     </LegacyOverlay>
-  );
+  )
 }

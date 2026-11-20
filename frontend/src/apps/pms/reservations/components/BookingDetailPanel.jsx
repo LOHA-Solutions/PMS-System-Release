@@ -1,14 +1,10 @@
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import { formatDate, formatDateTime } from '../../../../shared/lib/date.js';
-import { phonePattern } from '../../../../shared/lib/phone.js';
-import { emailPattern } from '../../../../shared/lib/validation.js';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import React, { useEffect, useId, useRef, useState } from 'react';
-import { usePms } from '../../data/usePms';
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { formatDate, formatDateTime } from '../../../../shared/lib/date.js'
+import { phonePattern } from '../../../../shared/lib/phone.js'
+import { emailPattern } from '../../../../shared/lib/validation.js'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import React, { useEffect, useId, useRef, useState } from 'react'
+import { usePms } from '../../data/usePms'
 import {
   nights,
   statusLabels,
@@ -16,14 +12,14 @@ import {
   moneyAmount,
   bookingRooms,
   today,
-} from '../../data/model';
-import BookingTabs from './BookingTabs';
-import StayChangeForm from './StayChangeForm';
-import { openBookingDocument } from '../bookingDocument';
-import { bookingEditInput } from '../bookingDraft';
-import LegacyOverlay from '../../components/LegacyOverlay';
-import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider';
-import { AccessMessage } from '../../../../shared/components/AccessControl';
+} from '../../data/model'
+import BookingTabs from './BookingTabs'
+import StayChangeForm from './StayChangeForm'
+import { openBookingDocument } from '../bookingDocument'
+import { bookingEditInput } from '../bookingDraft'
+import LegacyOverlay from '../../components/LegacyOverlay'
+import { useDraftGuard } from '../../../../shared/drafts/DraftGuardProvider'
+import { AccessMessage } from '../../../../shared/components/AccessControl'
 import {
   X,
   Printer,
@@ -39,8 +35,8 @@ import {
   LogOut,
   UserX,
   CircleX,
-} from 'lucide-react';
-import './BookingDetailPanel.css';
+} from 'lucide-react'
+import './BookingDetailPanel.css'
 
 const tabs = [
   ['details', 'Chi tiết'],
@@ -50,19 +46,33 @@ const tabs = [
   ['thanhtoán', 'Thanh toán'],
   ['ghichú', 'Ghi chú'],
   ['lịchsử', 'Lịch sử'],
-];
+]
+const TAB_IDS = tabs.map(([id]) => id)
+const TAB_ALIASES = { payments: 'thanhtoán', services: 'dịchvụ' }
+function resolveTab(raw) {
+  if (!raw) return 'details'
+  const aliasResult = Object.prototype.hasOwnProperty.call(TAB_ALIASES, raw)
+    ? TAB_ALIASES[raw]
+    : undefined
+  if (aliasResult && TAB_IDS.includes(aliasResult)) return aliasResult
+  if (TAB_IDS.includes(raw)) return raw
+  return 'details'
+}
 const editDraft = (booking) => ({
   ...booking,
   email: booking?.guests?.[0]?.email || '',
   identity: booking?.guests?.[0]?.identityNumber || '',
   nationality: booking?.guests?.[0]?.nationality || '',
-});
+})
 
-export default function BookingDetailPanel({ bookingId, onClose }) {
-  useI18n();
-  const [activeTab, setActiveTab] = useState('details');
-  const [visitedTabs, setVisitedTabs] = useState([]);
-  const draftGroup = useId();
+export default function BookingDetailPanel({ bookingId, onClose, initialTab, returnLabel }) {
+  useI18n()
+  const [activeTab, setActiveTab] = useState(() => resolveTab(initialTab))
+  const [visitedTabs, setVisitedTabs] = useState(() => {
+    const resolved = resolveTab(initialTab)
+    return resolved !== 'details' ? [resolved] : []
+  })
+  const draftGroup = useId()
   const {
     bookings,
     rooms,
@@ -74,50 +84,55 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
     settings,
     tenant,
     refreshWorkspace,
-  } = usePms();
-  const booking = bookings.find((b) => b.id === bookingId);
-  const [draft, setDraft] = useState(() => editDraft(booking));
-  const [error, setError] = useState('');
+  } = usePms()
+  const booking = bookings.find((b) => b.id === bookingId)
+  const [draft, setDraft] = useState(() => editDraft(booking))
+  const [error, setError] = useState('')
   const [dirty, setDirty] = useState(false),
-    [conflict, setConflict] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState('');
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const [confirmNoShow, setConfirmNoShow] = useState(false);
-  const [stayChange, setStayChange] = useState(false);
-  const bodyRef = useRef(null);
+    [conflict, setConflict] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [confirmNoShow, setConfirmNoShow] = useState(false)
+  const [stayChange, setStayChange] = useState(false)
+  const bodyRef = useRef(null)
   const dirtyRef = useRef(false),
-    inFlight = useRef(false);
+    inFlight = useRef(false)
+  const childPendingRef = useRef(false)
+  const [childPending, setChildPending] = useState(false)
+  const handleChildPendingChange = (v) => {
+    childPendingRef.current = v
+    setChildPending(v)
+  }
+  // One shared write gate: a parent write or any child tab's write blocks every
+  // other writer, so the single childPending flag can never be cleared early.
+  const isParentPending = () => inFlight.current || childPendingRef.current
   const { requestLeave } = useDraftGuard({
     group: draftGroup,
     dirty: () =>
       dirtyRef.current ||
-      Boolean(
-        bodyRef.current?.querySelector(
-          '.date-input-control [aria-invalid="true"]',
-        ),
-      ),
-    pending: () => inFlight.current,
+      Boolean(bodyRef.current?.querySelector('.date-input-control [aria-invalid="true"]')),
+    pending: () => inFlight.current || childPendingRef.current,
     onDiscard: () => {
-      dirtyRef.current = false;
-      setDirty(false);
-      setDraft(editDraft(booking));
-      setError('');
-      setConflict(false);
+      dirtyRef.current = false
+      setDirty(false)
+      setDraft(editDraft(booking))
+      setError('')
+      setConflict(false)
     },
-  });
-  const close = () => requestLeave(onClose);
-  const confirmationRef = useRef(null);
+  })
+  const close = () => requestLeave(onClose)
+  const confirmationRef = useRef(null)
   useEffect(() => {
-    if (!dirty) setDraft(editDraft(booking));
-  }, [booking, dirty]);
+    if (!dirty) setDraft(editDraft(booking))
+  }, [booking, dirty])
   useEffect(() => {
     if (confirmCancel || confirmNoShow)
-      confirmationRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [confirmCancel, confirmNoShow]);
-  if (!booking) return null;
-  const money = (value) => formatMoney(value, booking.currency);
-  const visibility = access('reservations.view', 'RESERVATION_VIEW');
+      confirmationRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [confirmCancel, confirmNoShow])
+  if (!booking) return null
+  const money = (value) => formatMoney(value, booking.currency)
+  const visibility = access('reservations.view', 'RESERVATION_VIEW')
   if (!visibility.allowed)
     return (
       <LegacyOverlay
@@ -138,88 +153,90 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
           <button onClick={close}>{tUi('common.close')}</button>
         </div>
       </LegacyOverlay>
-    );
-  const roomType = roomTypes.find(
-    (t) => t.id === rooms.find((r) => r.id === booking.room)?.typeId,
-  );
+    )
+  const roomType = roomTypes.find((t) => t.id === rooms.find((r) => r.id === booking.room)?.typeId)
   const update = (key, value) => {
-    if (inFlight.current) return;
-    dirtyRef.current = true;
-    setDraft((d) => ({ ...d, [key]: value }));
-    setDirty(true);
-    setNotice('');
-  };
+    if (inFlight.current || childPendingRef.current) return
+    dirtyRef.current = true
+    setDraft((d) => ({ ...d, [key]: value }))
+    setDirty(true)
+    setNotice('')
+  }
   const selectTab = (id) => {
-    setActiveTab(id);
-    if (id !== 'details')
-      setVisitedTabs((list) => (list.includes(id) ? list : [...list, id]));
-    bodyRef.current?.scrollTo({ top: 0 });
-  };
+    setActiveTab(id)
+    if (id !== 'details') setVisitedTabs((list) => (list.includes(id) ? list : [...list, id]))
+    bodyRef.current?.scrollTo({ top: 0 })
+  }
   const showError = (err) => {
-    setError(err.message);
-    setConflict(['stale_booking', 'stale_guest'].includes(err.code));
-  };
+    setError(err.message)
+    setConflict(['stale_booking', 'stale_guest'].includes(err.code))
+  }
   async function act(status) {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
+    if (inFlight.current || childPendingRef.current) return
+    inFlight.current = true
+    setBusy(true)
     try {
-      await changeStatus(booking.id, status, draft.version);
-      setError('');
-      setConflict(false);
-      setConfirmCancel(false);
-      setConfirmNoShow(false);
+      await changeStatus(booking.id, status, booking.version)
+      setError('')
+      setConflict(false)
+      setConfirmCancel(false)
+      setConfirmNoShow(false)
     } catch (err) {
-      showError(err);
+      showError(err)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   async function save() {
     if (
       inFlight.current ||
+      childPendingRef.current ||
       [...bodyRef.current.querySelectorAll('input,select,textarea')].some(
-        (field) =>
-          !field.disabled &&
-          !field.closest('[hidden]') &&
-          !field.reportValidity(),
+        (field) => !field.disabled && !field.closest('[hidden]') && !field.reportValidity(),
       )
     )
-      return;
-    inFlight.current = true;
-    setBusy(true);
+      return
+    inFlight.current = true
+    setBusy(true)
     try {
-      await updateBooking(booking.id, bookingEditInput(draft));
-      dirtyRef.current = false;
-      setDirty(false);
-      setConflict(false);
-      setNotice('Đã lưu thay đổi.');
-      setError('');
+      await updateBooking(booking.id, bookingEditInput(draft))
+      dirtyRef.current = false
+      setDirty(false)
+      setConflict(false)
+      setNotice('Đã lưu thay đổi.')
+      setError('')
     } catch (err) {
-      showError(err);
+      showError(err)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
   }
   async function reload() {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
+    if (inFlight.current || childPendingRef.current) return
+    inFlight.current = true
+    setBusy(true)
     try {
-      await refreshWorkspace();
-      dirtyRef.current = false;
-      setDirty(false);
-      setConflict(false);
-      setError('');
-      setNotice('Đã tải bản mới. Các thay đổi chưa lưu đã bỏ.');
+      await refreshWorkspace()
+      dirtyRef.current = false
+      setDirty(false)
+      setConflict(false)
+      setError('')
+      setNotice('Đã tải bản mới. Các thay đổi chưa lưu đã bỏ.')
     } catch (err) {
-      showError(err);
+      showError(err)
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      inFlight.current = false
+      setBusy(false)
     }
+  }
+
+  const anyBusy = busy || childPending
+  // Never queue a checkout behind a pending write: it would run later with a stale version.
+  const onCheckout = () => {
+    if (inFlight.current || childPendingRef.current) return
+    requestLeave(() => act('CHECKED_OUT'))
   }
 
   return (
@@ -244,23 +261,23 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                 {booking.guest.charAt(0)}
               </div>
               <div className="booking-detail-title">
-                <span className="booking-detail-eyebrow">
-                  {labelUi('Chi tiết đặt phòng')}
+                <span className="booking-detail-eyebrow" style={{ wordBreak: 'break-all' }}>
+                  {labelUi('Chi tiết đặt phòng')} · {booking.id}
                 </span>
                 <div className="booking-detail-title-row">
                   <h2>{booking.guest}</h2>
-                  <span
-                    className={
-                      'booking-detail-status status-' +
-                      booking.status.toLowerCase()
-                    }
-                  >
+                  <span className={'booking-detail-status status-' + booking.status.toLowerCase()}>
                     {statusLabels[booking.status]}
                   </span>
                 </div>
               </div>
             </div>
             <div className="booking-detail-header-actions">
+              {returnLabel && (
+                <button type="button" className="booking-detail-button" onClick={close}>
+                  {labelUi(returnLabel)}
+                </button>
+              )}
               <button
                 type="button"
                 className="booking-detail-button booking-detail-button--icon"
@@ -271,10 +288,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
               </button>
             </div>
           </div>
-          <nav
-            className="booking-detail-tabs"
-            aria-label={labelUi('Mục chi tiết đặt phòng')}
-          >
+          <nav className="booking-detail-tabs" aria-label={labelUi('Mục chi tiết đặt phòng')}>
             {tabs.map(([id, label]) => (
               <button
                 type="button"
@@ -313,16 +327,14 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                   </span>
                   <span>
                     <Calendar size={14} aria-hidden="true" />
-                    {formatDate(booking.checkIn)} →{' '}
-                    {formatDate(booking.checkOut)}
+                    {formatDate(booking.checkIn)} → {formatDate(booking.checkOut)}
                   </span>
                   <span>
                     <Clock size={14} aria-hidden="true" />
                     {nights(booking.checkIn, booking.checkOut)} đêm
                   </span>
                   <span>
-                    {labelUi('Phòng')}{' '}
-                    <strong>{bookingRooms(booking).join(', ')}</strong>
+                    {labelUi('Phòng')} <strong>{bookingRooms(booking).join(', ')}</strong>
                   </span>
                 </div>
                 <div
@@ -342,7 +354,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       <button
                         type="button"
                         className="booking-detail-button booking-detail-button--success"
-                        disabled={busy}
+                        disabled={anyBusy}
                         onClick={() => act('IN_HOUSE')}
                       >
                         <LogIn size={16} aria-hidden="true" />
@@ -352,19 +364,15 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                         <button
                           type="button"
                           className="booking-detail-button booking-detail-button--warning"
-                          disabled={
-                            busy || booking.checkIn > today(settings.timezone)
-                          }
+                          disabled={anyBusy || booking.checkIn > today(settings.timezone)}
                           title={
                             booking.checkIn > today(settings.timezone)
-                              ? labelUi(
-                                  'Chỉ ghi nhận từ ngày nhận phòng theo múi giờ khách sạn',
-                                )
+                              ? labelUi('Chỉ ghi nhận từ ngày nhận phòng theo múi giờ khách sạn')
                               : ''
                           }
                           onClick={() => {
-                            setConfirmNoShow(true);
-                            setConfirmCancel(false);
+                            setConfirmNoShow(true)
+                            setConfirmCancel(false)
                           }}
                         >
                           <UserX size={16} aria-hidden="true" />
@@ -373,10 +381,10 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                         <button
                           type="button"
                           className="booking-detail-button booking-detail-button--danger"
-                          disabled={busy}
+                          disabled={anyBusy}
                           onClick={() => {
-                            setConfirmCancel(true);
-                            setConfirmNoShow(false);
+                            setConfirmCancel(true)
+                            setConfirmNoShow(false)
                           }}
                         >
                           <CircleX size={16} aria-hidden="true" />
@@ -386,40 +394,35 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                     </>
                   )}
                 {booking.status === 'IN_HOUSE' &&
-                  access('reservations.checkout', 'RESERVATION_VIEW')
-                    .allowed && (
+                  access('reservations.checkout', 'RESERVATION_VIEW').allowed && (
                     <button
                       type="button"
                       className="booking-detail-button booking-detail-button--success"
-                      disabled={busy || Number(booking.balance) !== 0}
+                      disabled={anyBusy || Number(booking.balance) !== 0}
                       title={
                         Number(booking.balance) !== 0
-                          ? labelUi(
-                              'Cần thanh toán hết số dư trước khi trả phòng',
-                            )
+                          ? labelUi('Cần thanh toán hết số dư trước khi trả phòng')
                           : ''
                       }
-                      onClick={() => act('CHECKED_OUT')}
+                      onClick={onCheckout}
                     >
                       <LogOut size={16} aria-hidden="true" />
                       {labelUi('Trả phòng (Check-out)')}
                     </button>
                   )}
               </div>
-              {booking.status === 'CONFIRMED' &&
-                booking.checkIn > today(settings.timezone) && (
-                  <p className="booking-detail-help">
-                    {labelUi(
-                      'Chỉ ghi nhận khách không đến từ ngày nhận phòng theo múi giờ khách sạn.',
-                    )}
-                  </p>
-                )}
-              {booking.status === 'IN_HOUSE' &&
-                Number(booking.balance) !== 0 && (
-                  <p className="booking-detail-help">
-                    {labelUi('Cần thanh toán hết số dư trước khi trả phòng.')}
-                  </p>
-                )}
+              {booking.status === 'CONFIRMED' && booking.checkIn > today(settings.timezone) && (
+                <p className="booking-detail-help">
+                  {labelUi(
+                    'Chỉ ghi nhận khách không đến từ ngày nhận phòng theo múi giờ khách sạn.',
+                  )}
+                </p>
+              )}
+              {booking.status === 'IN_HOUSE' && Number(booking.balance) !== 0 && (
+                <p className="booking-detail-help">
+                  {labelUi('Cần thanh toán hết số dư trước khi trả phòng.')}
+                </p>
+              )}
               {confirmCancel && (
                 <div
                   ref={confirmationRef}
@@ -427,14 +430,12 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                   role="group"
                   aria-label={labelUi('Xác nhận hủy đặt phòng')}
                 >
-                  <p>
-                    {labelUi('Xác nhận hủy booking? Phòng sẽ được mở bán lại.')}
-                  </p>
+                  <p>{labelUi('Xác nhận hủy booking? Phòng sẽ được mở bán lại.')}</p>
                   <div className="booking-detail-form-actions">
                     <button
                       type="button"
                       className="booking-detail-button"
-                      disabled={busy}
+                      disabled={anyBusy}
                       onClick={() => setConfirmCancel(false)}
                     >
                       {labelUi('Giữ booking')}
@@ -442,7 +443,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                     <button
                       type="button"
                       className="booking-detail-button booking-detail-button--danger"
-                      disabled={busy}
+                      disabled={anyBusy}
                       onClick={() => act('CANCELLED')}
                     >
                       {labelUi('Xác nhận hủy')}
@@ -466,7 +467,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                     <button
                       type="button"
                       className="booking-detail-button"
-                      disabled={busy}
+                      disabled={anyBusy}
                       onClick={() => setConfirmNoShow(false)}
                     >
                       {labelUi('Giữ booking')}
@@ -474,7 +475,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                     <button
                       type="button"
                       className="booking-detail-button booking-detail-button--warning"
-                      disabled={busy}
+                      disabled={anyBusy}
                       onClick={() => act('NO_SHOW')}
                     >
                       {labelUi('Xác nhận khách không đến')}
@@ -486,11 +487,10 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                 <p className="booking-detail-message" role="status">
                   Đã ghi nhận khách không đến
                   {booking.noShowAt
-                    ? ' lúc ' +
-                      formatDateTime(booking.noShowAt, settings.timezone)
+                    ? ' lúc ' + formatDateTime(booking.noShowAt, settings.timezone)
                     : ''}
-                  . Giá đã chốt và các giao dịch cũ được giữ nguyên; xử lý khoản
-                  phí, thu tiền hoặc hoàn tiền tại các mục tương ứng.
+                  . Giá đã chốt và các giao dịch cũ được giữ nguyên; xử lý khoản phí, thu tiền hoặc
+                  hoàn tiền tại các mục tương ứng.
                 </p>
               )}
               {booking.status === 'IN_HOUSE' &&
@@ -498,7 +498,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                   <button
                     type="button"
                     className="booking-detail-button"
-                    disabled={busy || dirty}
+                    disabled={anyBusy || dirty}
                     onClick={() => setStayChange(true)}
                   >
                     {tUi('stayChange.title')}
@@ -510,29 +510,26 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                   booking={booking}
                   group={draftGroup}
                   onDone={() => {
-                    setStayChange(false);
-                    setNotice(tUi('stayChange.saved'));
+                    setStayChange(false)
+                    setNotice(tUi('stayChange.saved'))
                   }}
                   onCancel={() => setStayChange(false)}
                 />
               )}
               <div className="booking-detail-grid">
                 <div className="booking-detail-column">
-                  <Card
-                    title={labelUi('Thông tin khách hàng')}
-                    icon={<User size={17} />}
-                  >
+                  <Card title={labelUi('Thông tin khách hàng')} icon={<User size={17} />}>
                     <div className="booking-detail-fields">
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Họ tên khách (*)"
                         value={draft.guest || ''}
                         onChange={(value) => update('guest', value)}
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="CCCD/CMND/Hộ chiếu"
                         placeholder={labelUi('Nhập giấy tờ tùy thân...')}
                         value={draft.identity || ''}
@@ -540,7 +537,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Điện thoại"
                         type="tel"
                         value={draft.phone || ''}
@@ -549,7 +546,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Email"
                         type="email"
                         value={draft.email || ''}
@@ -558,50 +555,24 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Quốc tịch"
                         value={draft.nationality || ''}
                         onChange={(value) => update('nationality', value)}
                         type="select"
                         options={[
-                          ...new Set([
-                            draft.nationality || '',
-                            'Malaysia',
-                            'Vietnam',
-                            'USA',
-                          ]),
+                          ...new Set([draft.nationality || '', 'Malaysia', 'Vietnam', 'USA']),
                         ]}
                       />
                     </div>
                   </Card>
                 </div>
                 <div className="booking-detail-column">
-                  <Card>
-                    <div className="booking-detail-options">
-                      {[
-                        'Đặt phòng theo giờ',
-                        'Miễn phí tiền phòng (FOC)',
-                        'Bữa sáng',
-                      ].map((label) => (
-                        <label key={label}>
-                          <input
-                            type="checkbox"
-                            disabled
-                            title={labelUi('Chưa triển khai')}
-                          />
-                          {labelUi(label)}
-                        </label>
-                      ))}
-                    </div>
-                  </Card>
-                  <Card
-                    title={labelUi('Chi tiết lưu trú')}
-                    icon={<Calendar size={17} />}
-                  >
+                  <Card title={labelUi('Chi tiết lưu trú')} icon={<Calendar size={17} />}>
                     <div className="booking-detail-field-grid">
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Trạng thái (*)"
                         value={statusLabels[booking.status]}
                         type="select"
@@ -610,11 +581,9 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Ngày đặt"
-                        defaultValue={
-                          booking.createdAt?.slice(0, 10) || booking.checkIn
-                        }
+                        defaultValue={booking.createdAt?.slice(0, 10) || booking.checkIn}
                         type="date"
                         disabled
                       />
@@ -623,7 +592,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       <div className="booking-detail-date-pair">
                         <Field
                           bookingStatus={booking.status}
-                          busy={busy}
+                          busy={anyBusy}
                           label="Ngày nhận (*)"
                           value={draft.checkIn}
                           onChange={(value) => update('checkIn', value)}
@@ -632,7 +601,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                         />
                         <Field
                           bookingStatus={booking.status}
-                          busy={busy}
+                          busy={anyBusy}
                           label="Giờ"
                           value={settings.checkInTime || '14:00'}
                           disabled
@@ -640,14 +609,12 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                       </div>
                       <div className="booking-detail-night-count">
                         <span>{labelUi('Số đêm')}</span>
-                        <strong>
-                          {nights(draft.checkIn, draft.checkOut) || 0}
-                        </strong>
+                        <strong>{nights(draft.checkIn, draft.checkOut) || 0}</strong>
                       </div>
                       <div className="booking-detail-date-pair">
                         <Field
                           bookingStatus={booking.status}
-                          busy={busy}
+                          busy={anyBusy}
                           label="Ngày trả (*)"
                           value={draft.checkOut}
                           onChange={(value) => update('checkOut', value)}
@@ -656,34 +623,19 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                         />
                         <Field
                           bookingStatus={booking.status}
-                          busy={busy}
+                          busy={anyBusy}
                           label="Giờ"
                           value={settings.checkOutTime || '12:00'}
                           disabled
                         />
                       </div>
                     </div>
-                    <div className="booking-detail-field-grid booking-detail-field-grid--three">
-                      {['Người lớn', 'Trẻ em', 'Em bé'].map((label) => (
-                        <Field
-                          key={label}
-                          bookingStatus={booking.status}
-                          busy={busy}
-                          label={label}
-                          value="Chưa triển khai"
-                          disabled
-                        />
-                      ))}
-                    </div>
                   </Card>
-                  <Card
-                    title={labelUi('Nguồn & Giá phòng')}
-                    icon={<CreditCard size={17} />}
-                  >
+                  <Card title={labelUi('Nguồn & Giá phòng')} icon={<CreditCard size={17} />}>
                     <div className="booking-detail-field-grid">
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Nguồn đặt (*)"
                         value={draft.source}
                         onChange={(value) => update('source', value)}
@@ -691,66 +643,40 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                         options={[
                           ...new Set([
                             draft.source,
-                            ...bookingSources
-                              .filter((s) => s.active !== false)
-                              .map((s) => s.name),
+                            ...bookingSources.filter((s) => s.active !== false).map((s) => s.name),
                           ]),
                         ]}
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Kênh / Mã kênh"
                         value={booking.source}
                         disabled
                       />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Loại phòng (*)"
                         value={roomType?.name}
                         type="select"
                         options={[roomType?.name]}
                         disabled
                       />
-                      <div className="booking-detail-field">
-                        <span>{labelUi('Phòng ở')}</span>
-                        <div className="booking-detail-room-options">
-                          {rooms
-                            .filter(
-                              (r) =>
-                                r.active !== false ||
-                                bookingRooms(booking).includes(r.id),
-                            )
-                            .map((r) => (
-                              <label key={r.id}>
-                                <input
-                                  type="checkbox"
-                                  disabled={
-                                    busy ||
-                                    booking.status !== 'CONFIRMED' ||
-                                    !access('reservations.write').allowed
-                                  }
-                                  checked={bookingRooms(draft).includes(r.id)}
-                                  onChange={(e) =>
-                                    update(
-                                      'rooms',
-                                      e.target.checked
-                                        ? [...bookingRooms(draft), r.id]
-                                        : bookingRooms(draft).filter(
-                                            (id) => id !== r.id,
-                                          ),
-                                    )
-                                  }
-                                />
-                                {r.id}
-                              </label>
-                            ))}
-                        </div>
-                      </div>
+                      <RoomPicker
+                        booking={booking}
+                        draft={draft}
+                        rooms={rooms}
+                        roomTypes={roomTypes}
+                        editable={
+                          booking.status === 'CONFIRMED' && access('reservations.write').allowed
+                        }
+                        busy={anyBusy}
+                        onChange={(next) => update('rooms', next)}
+                      />
                       <Field
                         bookingStatus={booking.status}
-                        busy={busy}
+                        busy={anyBusy}
                         label="Phòng RTC (*)"
                         value={roomType?.name}
                         type="select"
@@ -772,11 +698,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                             )}
                             readOnly
                           />
-                          <span>
-                            {booking.currency === 'VND'
-                              ? '₫'
-                              : booking.currency}
-                          </span>
+                          <span>{booking.currency === 'VND' ? '₫' : booking.currency}</span>
                         </div>
                       </label>
                     </div>
@@ -791,6 +713,9 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                 tab={tab}
                 booking={booking}
                 draftGroup={draftGroup}
+                onPendingChange={handleChildPendingChange}
+                isParentPending={isParentPending}
+                onCheckout={onCheckout}
               />
             </div>
           ))}
@@ -805,7 +730,7 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
             <button
               type="button"
               className="booking-detail-button"
-              disabled={busy}
+              disabled={anyBusy}
               onClick={reload}
             >
               Tải bản mới và bỏ thay đổi chưa lưu
@@ -821,13 +746,13 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
               type="button"
               className="booking-detail-button"
               aria-label={labelUi('Xem và in phiếu đặt phòng')}
-              disabled={busy}
+              disabled={anyBusy}
               onClick={() => {
                 try {
-                  openBookingDocument(booking, tenant, settings);
-                  setError('');
+                  openBookingDocument(booking, tenant, settings)
+                  setError('')
                 } catch (failure) {
-                  setError(failure.message);
+                  setError(failure.message)
                 }
               }}
             >
@@ -839,25 +764,146 @@ export default function BookingDetailPanel({ bookingId, onClose }) {
                 type="button"
                 className="booking-detail-button booking-detail-button--primary"
                 disabled={
-                  busy ||
+                  anyBusy ||
                   !['CONFIRMED', 'IN_HOUSE'].includes(booking.status) ||
                   !access('reservations.write', 'RESERVATION_VIEW').allowed
                 }
                 onClick={save}
               >
                 <Save size={16} aria-hidden="true" />
-                {busy ? labelUi('Đang xử lý…') : tUi('common.saveChanges')}
+                {anyBusy ? labelUi('Đang xử lý…') : tUi('common.saveChanges')}
               </button>
             )}
           </div>
         </footer>
       </div>
     </LegacyOverlay>
-  );
+  )
+}
+
+const ROOM_CANDIDATE_LIMIT = 50
+
+// Search text is local UI state only: it never touches the booking draft.
+function RoomPicker({ booking, draft, rooms, roomTypes, editable, busy, onChange }) {
+  useI18n()
+  const [query, setQuery] = useState('')
+  const searchId = useId()
+  const byId = new Map(rooms.map((r) => [String(r.id), r]))
+  const marker = (id) => {
+    const room = byId.get(id)
+    return !room
+      ? ' (không còn trong danh sách phòng)'
+      : room.active === false
+        ? ' (ngừng hoạt động)'
+        : ''
+  }
+  if (!editable) {
+    const assigned = bookingRooms(booking)
+    return (
+      <div className="booking-detail-field booking-detail-room-field">
+        <span>{labelUi('Phòng ở')}</span>
+        {assigned.length ? (
+          <ul className="booking-detail-room-chips" aria-label={labelUi('Phòng đã gán')}>
+            {assigned.map((id) => (
+              <li key={id} data-room={id}>
+                {id}
+                {marker(id)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="booking-detail-help">{labelUi('Chưa gán phòng')}</p>
+        )}
+      </div>
+    )
+  }
+  const selected = bookingRooms(draft)
+  const assigned = bookingRooms(booking)
+  const typeName = (room) => roomTypes.find((t) => t.id === room.typeId)?.name || ''
+  const needle = query.trim().toLowerCase()
+  const matches = (room) =>
+    !needle ||
+    [room.id, room.number, room.name, typeName(room)].some(
+      (value) => value != null && String(value).toLowerCase().includes(needle),
+    )
+  const candidates = rooms.filter(
+    (r) =>
+      !selected.includes(String(r.id)) &&
+      (r.active !== false || assigned.includes(String(r.id))) &&
+      matches(r),
+  )
+  const shown = candidates.slice(0, ROOM_CANDIDATE_LIMIT)
+  const toggle = (id, checked) =>
+    onChange(checked ? [...selected, id] : selected.filter((value) => value !== id))
+  return (
+    <div className="booking-detail-field booking-detail-room-field">
+      <span>{labelUi('Phòng ở')}</span>
+      <div
+        className="booking-detail-room-options"
+        role="group"
+        aria-label={labelUi('Phòng đã chọn')}
+      >
+        {selected.length ? (
+          selected.map((id) => (
+            <label key={id}>
+              <input
+                type="checkbox"
+                disabled={busy}
+                checked
+                onChange={(e) => toggle(id, e.target.checked)}
+              />
+              {id}
+              {marker(id)}
+            </label>
+          ))
+        ) : (
+          <p className="booking-detail-help">{labelUi('Chưa chọn phòng')}</p>
+        )}
+      </div>
+      <label htmlFor={searchId} className="booking-detail-room-search-label">
+        {labelUi('Tìm phòng để thêm')}
+      </label>
+      <input
+        id={searchId}
+        className="booking-detail-input"
+        type="search"
+        aria-label={labelUi('Tìm phòng để thêm')}
+        placeholder={labelUi('Mã, số phòng hoặc loại phòng')}
+        value={query}
+        maxLength={80}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <p className="booking-detail-help booking-detail-room-count" aria-live="polite">
+        {candidates.length > shown.length
+          ? `Hiển thị ${shown.length}/${candidates.length} phòng phù hợp. Nhập mã, số hoặc loại phòng để thu hẹp.`
+          : `${candidates.length} phòng phù hợp.`}
+      </p>
+      <div
+        className="booking-detail-room-options booking-detail-room-candidates"
+        role="group"
+        aria-label={labelUi('Phòng có thể thêm')}
+        tabIndex={0}
+      >
+        {shown.map((r) => (
+          <label key={r.id}>
+            <input
+              type="checkbox"
+              disabled={busy}
+              checked={false}
+              onChange={(e) => toggle(String(r.id), e.target.checked)}
+            />
+            {r.id}
+            {typeName(r) ? ' · ' + typeName(r) : ''}
+            {marker(String(r.id))}
+          </label>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 const Card = ({ title, icon, children }) => {
-  useI18n();
+  useI18n()
   return (
     <section className="booking-detail-card">
       {title && (
@@ -868,8 +914,8 @@ const Card = ({ title, icon, children }) => {
       )}
       <div className="booking-detail-card-body">{children}</div>
     </section>
-  );
-};
+  )
+}
 
 const Field = ({
   label,
@@ -884,13 +930,13 @@ const Field = ({
   bookingStatus,
   busy,
 }) => {
-  useI18n();
-  const { access } = usePms();
+  useI18n()
+  const { access } = usePms()
   disabled =
     disabled ||
     busy ||
     (bookingStatus && !['CONFIRMED', 'IN_HOUSE'].includes(bookingStatus)) ||
-    !access('reservations.write', 'RESERVATION_VIEW').allowed;
+    !access('reservations.write', 'RESERVATION_VIEW').allowed
   return (
     <label className="booking-detail-field">
       <span>{labelUi(label)}</span>
@@ -927,19 +973,12 @@ const Field = ({
           <input
             className="booking-detail-input"
             type={type}
-            pattern={
-              type === 'tel'
-                ? phonePattern
-                : type === 'email'
-                  ? emailPattern
-                  : undefined
-            }
+            pattern={type === 'tel' ? phonePattern : type === 'email' ? emailPattern : undefined}
             maxLength={type === 'tel' ? 40 : type === 'email' ? 254 : 160}
             aria-label={labelUi(label)}
             value={value}
             onChange={(e) => {
-              if (type !== 'tel' || !/[^0-9+ .()-]/.test(e.target.value))
-                onChange?.(e.target.value);
+              if (type !== 'tel' || !/[^0-9+ .()-]/.test(e.target.value)) onChange?.(e.target.value)
             }}
             defaultValue={value === undefined ? defaultValue : undefined}
             placeholder={placeholder}
@@ -947,13 +986,9 @@ const Field = ({
           />
         )}
         {type === 'select' && (
-          <ChevronDown
-            size={15}
-            className="booking-detail-select-arrow"
-            aria-hidden="true"
-          />
+          <ChevronDown size={15} className="booking-detail-select-arrow" aria-hidden="true" />
         )}
       </div>
     </label>
-  );
-};
+  )
+}

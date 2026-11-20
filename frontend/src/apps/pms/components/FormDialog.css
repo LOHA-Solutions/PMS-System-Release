@@ -5,15 +5,11 @@
   margin: auto;
   width: min(
     620px,
-    calc(
-      100% - 24px - env(safe-area-inset-left, 0px) -
-        env(safe-area-inset-right, 0px)
-    )
+    calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))
   );
   max-width: none;
   max-height: calc(
-    100dvh - 32px - env(safe-area-inset-top, 0px) -
-      env(safe-area-inset-bottom, 0px)
+    100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
   );
   padding: 0;
   box-sizing: border-box;

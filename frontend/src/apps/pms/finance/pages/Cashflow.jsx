@@ -1,13 +1,9 @@
-import { decimalInput } from '../../../../shared/lib/number.js';
-import { formatDate, formatDateTime } from '../../../../shared/lib/date.js';
-import DateInput from '../../../../shared/components/DateInput.jsx';
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { decimalInput } from '../../../../shared/lib/number.js'
+import { formatDate, formatDateTime } from '../../../../shared/lib/date.js'
+import DateInput from '../../../../shared/components/DateInput.jsx'
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeftRight,
   ArrowUpRight,
@@ -21,14 +17,21 @@ import {
   TrendingUp,
   Wallet,
   X,
-} from 'lucide-react';
-import { money as formatMoney, today } from '../../data/model';
-import { usePms } from '../../data/usePms';
+} from 'lucide-react'
+import { money as formatMoney, today } from '../../data/model'
+import { usePms } from '../../data/usePms'
+import { HOTEL_CURRENCY_CODES } from '../../../../shared/lib/currencies.js'
 import {
-  HOTEL_CURRENCY_CODES,
-  isHotelCurrency,
-} from '../../../../shared/lib/currencies.js';
-import './Cashflow.css';
+  cashflowDatesValid,
+  cashflowInvalid,
+  cashflowScope,
+  cashflowSearchValid,
+  cashflowTarget,
+  clearCashflowFilters,
+  readCashflowFilters,
+  writeCashflowFilters,
+} from './cashflowFilters.js'
+import './Cashflow.css'
 
 const TYPES = {
   receipt: 'Thu tiền',
@@ -36,7 +39,7 @@ const TYPES = {
   withdrawal: 'Rút tiền',
   transfer: 'Chuyển quỹ',
   opening: 'Số dư đầu kỳ',
-};
+}
 const ENTRY_TYPES = {
   payment: 'Thu đặt phòng',
   refund: 'Hoàn đặt phòng',
@@ -49,12 +52,8 @@ const ENTRY_TYPES = {
   transfer_out: 'Chuyển quỹ',
   opening: 'Đầu kỳ',
   reversal: 'Đảo chứng từ',
-};
-const card = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 12,
-};
+}
+const card = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12 }
 const button = {
   border: '1px solid #d1d5db',
   borderRadius: 7,
@@ -68,14 +67,14 @@ const button = {
   justifyContent: 'center',
   gap: 7,
   cursor: 'pointer',
-};
+}
 const primary = {
   ...button,
   background: '#0c7cd5',
   borderColor: '#0c7cd5',
   color: '#fff',
   fontWeight: 600,
-};
+}
 const control = {
   width: '100%',
   minHeight: 42,
@@ -86,151 +85,193 @@ const control = {
   color: '#111827',
   fontSize: 14,
   boxSizing: 'border-box',
-};
-const field = {
-  display: 'grid',
-  gap: 7,
-  minWidth: 135,
-  fontSize: 13,
-  color: '#4b5563',
-};
+}
+const field = { display: 'grid', gap: 7, minWidth: 135, fontSize: 13, color: '#4b5563' }
 const cell = {
   padding: '14px 16px',
   fontSize: 14,
   color: '#374151',
   borderBottom: '1px solid #f3f4f6',
   verticalAlign: 'top',
-};
+}
 const errorBox = {
   color: '#b91c1c',
   background: '#fef2f2',
   border: '1px solid #fecaca',
   borderRadius: 8,
   padding: 12,
-};
+}
 
 export default function Cashflow() {
-  useI18n();
-  const { tab } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const documentId = searchParams.get('documentId') || '';
-  const linkedCurrency = searchParams.get('currency');
-  const navigate = useNavigate();
-  const pms = usePms();
+  useI18n()
+  const { tab } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const documentId = searchParams.get('documentId') || ''
+  const navigate = useNavigate()
+  const pms = usePms()
   const {
     funds,
     settings,
-    tenantId,
-    user,
     cashDocuments,
     ledger,
     access,
     workspaceRevision,
     cashbookCategories = [],
-  } = pms;
-  const users = pms.cashbookActors || pms.users;
-  const activeTab = tab === 'bank' ? 'bank' : 'cash';
-  const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: documentId ? '' : today(settings.timezone),
-    fundId: '',
-    actorId: '',
-    categoryId: '',
-    currency: settings.currency,
-    page: 1,
-  });
-  const [book, setBook] = useState(null),
+  } = pms
+  const users = pms.cashbookActors || pms.users
+  const activeTab = tab === 'bank' ? 'bank' : 'cash'
+  const filters = readCashflowFilters(searchParams, pms, activeTab)
+  const searchValid = cashflowSearchValid(searchParams, pms)
+  const appliedQuery = filters.q?.trim().normalize('NFC') || ''
+  const [searchDraft, setSearchDraft] = useState(null)
+  const [startValid, setStartValid] = useState(true),
+    [endValid, setEndValid] = useState(true)
+  const [bookResult, setBook] = useState(null),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState('');
+    [error, setError] = useState('')
   const [reload, setReload] = useState(0),
     [form, setForm] = useState(null),
     [busy, setBusy] = useState(false),
     [formError, setFormError] = useState(''),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState('')
   const dialog = useRef(null),
     inFlight = useRef(false),
     current = useRef(null),
-    generation = useRef(0);
-  current.current = { pms, tenantId, userId: user?.id };
-  const scope = `${tenantId || ''}:${user?.id || ''}`;
+    generation = useRef(0),
+    editedPeriod = useRef('')
+  const scope = cashflowScope(pms, searchParams)
+  current.current = { pms, scope }
   const visibleFunds = funds.filter((fund) =>
     activeTab === 'bank'
       ? fund.type?.toUpperCase() === 'BANK'
       : fund.type?.toUpperCase() !== 'BANK',
-  );
+  )
   const activeFunds = visibleFunds.filter(
-    (fund) =>
-      fund.active !== false &&
-      (fund.currency || settings.currency) === filters.currency,
-  );
+    (fund) => fund.active !== false && (fund.currency || settings.currency) === filters.currency,
+  )
   const canWrite = access('cashbook.write').allowed,
-    canReverse = access('cashbook.reverse').allowed;
-  const sameScope = (token) =>
-    token ===
-    `${current.current.tenantId || ''}:${current.current.userId || ''}`;
-  const filterKey = JSON.stringify({
-    ...filters,
-    documentId,
-    fundType: activeTab,
-    pageSize: 20,
-  });
+    canReverse = access('cashbook.reverse').allowed
+  const sameScope = (token) => token === current.current.scope
+  const calendarDatesValid = cashflowDatesValid(filters)
+  const datesValid =
+    startValid && endValid && calendarDatesValid && !cashflowInvalid(searchParams, pms, activeTab)
+  const dateKey = JSON.stringify([scope, filters.startDate, filters.endDate])
+  const filterKey = JSON.stringify({ ...filters, documentId, fundType: activeTab, pageSize: 20 })
+  const book = datesValid && searchValid && bookResult?.key === filterKey ? bookResult.data : null
+  const searchKey = JSON.stringify([scope, filters.q || ''])
+  const searchValue = searchDraft?.key === searchKey ? searchDraft.value : filters.q || ''
+  function applySearch(value) {
+    filter('q', value.trim().normalize('NFC'))
+    setSearchDraft(null)
+  }
 
   useEffect(() => {
-    setFilters({
-      startDate: '',
-      endDate: documentId ? '' : today(settings.timezone),
-      fundId: '',
-      actorId: '',
-      categoryId: '',
-      currency: isHotelCurrency(linkedCurrency)
-        ? linkedCurrency
-        : settings.currency,
-      page: 1,
-    });
-    setForm(null);
-    setFormError('');
-    setNotice('');
-    setBook(null);
-    setBusy(false);
-  }, [scope, activeTab, documentId, linkedCurrency]);
+    setForm(null)
+    setFormError('')
+    setNotice('')
+    setBook(null)
+    setBusy(false)
+    setStartValid(true)
+    setEndValid(true)
+  }, [scope, activeTab])
   useEffect(() => {
-    const version = ++generation.current;
-    setLoading(true);
-    setError('');
-    setBook(null);
+    if (searchParams.has('cf_scope') && searchParams.get('cf_scope') !== scope)
+      setSearchParams((previous) => clearCashflowFilters(previous), { replace: true })
+  }, [scope, searchParams, setSearchParams])
+  useEffect(() => {
+    if (searchParams.get('cf_invalid') !== '1') {
+      editedPeriod.current = ''
+      return
+    }
+    if (startValid && endValid && calendarDatesValid && editedPeriod.current === dateKey) {
+      editedPeriod.current = ''
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous)
+          next.delete('cf_invalid')
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [searchParams, setSearchParams, startValid, endValid, calendarDatesValid, dateKey])
+  useEffect(() => {
+    const version = ++generation.current
+    setLoading(datesValid && searchValid)
+    setError('')
+    setBook(null)
+    if (!datesValid || !searchValid) return undefined
     current.current.pms
       .getCashbook(JSON.parse(filterKey))
       .then((result) => {
-        if (version === generation.current && sameScope(scope)) setBook(result);
+        if (
+          appliedQuery &&
+          (result.search?.q !== appliedQuery ||
+            result.search?.scope !== 'ledger_entries' ||
+            result.search?.summaryFiltered !== false)
+        ) {
+          throw new Error(
+            'Máy chủ chưa xác nhận kết quả tìm kiếm toàn bộ giao dịch. Tải lại hoặc xóa từ khóa để xem sổ quỹ.',
+          )
+        }
+        if (version === generation.current && sameScope(scope))
+          setBook({ key: filterKey, data: result })
       })
       .catch((err) => {
-        if (version === generation.current && sameScope(scope))
-          setError(err.message);
+        if (version === generation.current && sameScope(scope)) setError(err.message)
       })
       .finally(() => {
-        if (version === generation.current && sameScope(scope))
-          setLoading(false);
-      });
+        if (version === generation.current && sameScope(scope)) setLoading(false)
+      })
     return () => {
-      ++generation.current;
-    };
-  }, [scope, filterKey, reload, workspaceRevision]);
+      ++generation.current
+    }
+  }, [scope, filterKey, reload, workspaceRevision, datesValid, searchValid, appliedQuery])
   useEffect(() => {
-    if (form && !dialog.current.open) dialog.current.showModal();
-    if (!form && dialog.current.open) dialog.current.close();
-  }, [Boolean(form)]);
+    if (form && !dialog.current.open) dialog.current.showModal()
+    if (!form && dialog.current.open) dialog.current.close()
+  }, [Boolean(form)])
 
+  function setFilters(change) {
+    const nextFilters = typeof change === 'function' ? change(filters) : change
+    setSearchParams((previous) => writeCashflowFilters(previous, nextFilters, pms), {
+      replace: true,
+    })
+  }
   function filter(name, value) {
-    setFilters((previous) => ({
-      ...previous,
+    const next = {
+      ...filters,
       [name]: value,
       ...(name === 'currency' ? { fundId: '' } : {}),
       page: 1,
-    }));
+    }
+    if (name === 'startDate' || name === 'endDate')
+      editedPeriod.current = JSON.stringify([scope, next.startDate, next.endDate])
+    setSearchParams(
+      (previous) => {
+        const params = writeCashflowFilters(previous, next, pms)
+        if (name === 'startDate' ? endValid : name === 'endDate' ? startValid : false)
+          params.delete('cf_invalid')
+        return params
+      },
+      { replace: true },
+    )
+  }
+  function dateValidity(setValid, valid) {
+    setValid(valid)
+    if (!valid && searchParams.get('cf_invalid') !== '1')
+      setSearchParams(
+        (previous) => {
+          const params = writeCashflowFilters(previous, filters, pms)
+          params.set('cf_invalid', '1')
+          return params
+        },
+        { replace: true },
+      )
   }
   function openCreate(type) {
-    setFormError('');
-    setNotice('');
+    setFormError('')
+    setNotice('')
     setForm({
       mode: 'create',
       type,
@@ -240,71 +281,55 @@ export default function Cashflow() {
       categoryId: '',
       description: '',
       date: today(settings.timezone),
-    });
+    })
   }
   function closeForm() {
-    if (!inFlight.current) setForm(null);
+    if (!inFlight.current) setForm(null)
   }
   async function submit(event) {
-    event.preventDefault();
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setBusy(true);
-    setFormError('');
-    const token = scope;
+    event.preventDefault()
+    if (inFlight.current) return
+    inFlight.current = true
+    setBusy(true)
+    setFormError('')
+    const token = scope
     try {
       if (form.mode === 'reverse')
-        await pms.reverseCashDocument(form.document.id, {
-          reason: form.reason,
-        });
+        await pms.reverseCashDocument(form.document.id, { reason: form.reason })
       else
         await pms.createCashDocument({
           type: form.type,
-          amount: decimalInput(form.amount, {
-            min: form.type === 'opening' ? '0' : '0.0001',
-          }),
+          amount: decimalInput(form.amount, { min: form.type === 'opening' ? '0' : '0.0001' }),
           fundId: form.fundId,
           description: form.description,
           currency: filters.currency,
           ...(form.type === 'transfer' ? { toFundId: form.toFundId } : {}),
           ...(form.type === 'opening' ? { date: form.date } : {}),
           ...(form.categoryId ? { categoryId: form.categoryId } : {}),
-        });
+        })
       if (sameScope(token)) {
-        setForm(null);
-        setNotice('Đã ghi sổ thành công.');
-        setReload((value) => value + 1);
+        setForm(null)
+        setNotice('Đã ghi sổ thành công.')
+        setReload((value) => value + 1)
       }
     } catch (err) {
-      if (sameScope(token)) setFormError(err.message);
+      if (sameScope(token)) setFormError(err.message)
     } finally {
-      inFlight.current = false;
-      if (sameScope(token)) setBusy(false);
+      inFlight.current = false
+      if (sameScope(token)) setBusy(false)
     }
   }
 
-  const money = (amount) =>
-    formatMoney(amount, book?.summary.currency || filters.currency);
+  const money = (amount) => formatMoney(amount, book?.summary.currency || filters.currency)
   const summary = book?.summary,
-    transactions = book?.ledger || [];
-  const totalPages = Math.max(
-    1,
-    Math.ceil((book?.pagination.totalItems || 0) / 20),
-  );
-  const documents = [...cashDocuments, ...(book?.cashDocuments || [])];
-  const reversed = new Set(
-    documents.map((document) => document.reversalOfId).filter(Boolean),
-  );
-  const documentById = new Map(
-    documents.map((document) => [document.id, document]),
-  );
+    transactions = book?.ledger || []
+  const totalPages = Math.max(1, Math.ceil((book?.pagination.totalItems || 0) / 20))
+  const documents = [...cashDocuments, ...(book?.cashDocuments || [])]
+  const reversed = new Set(documents.map((document) => document.reversalOfId).filter(Boolean))
+  const documentById = new Map(documents.map((document) => [document.id, document]))
   const currencyOptions = [
-    ...new Set([
-      settings.currency,
-      ...HOTEL_CURRENCY_CODES,
-      ...ledger.map((row) => row.currency),
-    ]),
-  ].filter(Boolean);
+    ...new Set([settings.currency, ...HOTEL_CURRENCY_CODES, ...ledger.map((row) => row.currency)]),
+  ].filter(Boolean)
 
   return (
     <div
@@ -345,8 +370,8 @@ export default function Cashflow() {
                 type="button"
                 key={type}
                 aria-pressed={activeTab === type}
-                disabled={busy}
-                onClick={() => navigate('/id/cashflow/' + type)}
+                disabled={busy || !datesValid}
+                onClick={() => navigate(cashflowTarget('/id/cashflow/' + type, searchParams, pms))}
                 style={{
                   ...button,
                   border: 0,
@@ -395,11 +420,7 @@ export default function Cashflow() {
       {error && (
         <div role="alert" style={{ ...errorBox, marginBottom: 20 }}>
           {error}{' '}
-          <button
-            type="button"
-            style={button}
-            onClick={() => setReload((value) => value + 1)}
-          >
+          <button type="button" style={button} onClick={() => setReload((value) => value + 1)}>
             {tUi('common.reload')}
           </button>
         </div>
@@ -421,25 +442,65 @@ export default function Cashflow() {
         ].map(([key, label, Icon, color]) => (
           <div
             key={key}
-            style={{
-              ...card,
-              padding: 20,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-            }}
+            style={{ ...card, padding: 20, display: 'flex', alignItems: 'center', gap: 14 }}
           >
             <Icon size={24} color={color} aria-hidden="true" />
             <div>
               <div style={{ color: '#6b7280', fontSize: 13, marginBottom: 7 }}>
                 {labelUi(label)}
               </div>
-              <strong style={{ fontSize: 22, color }}>
-                {summary ? money(summary[key]) : '—'}
-              </strong>
+              <strong style={{ fontSize: 22, color }}>{summary ? money(summary[key]) : '—'}</strong>
             </div>
           </div>
         ))}
+      </div>
+      {/* Read-only filter: not a <form>, so typing a query never becomes a workspace dirty draft. */}
+      <div
+        role="search"
+        aria-label="Tìm kiếm sổ quỹ"
+        style={{ ...card, padding: 16, marginBottom: 16 }}
+      >
+        <label style={field}>
+          Tìm mô tả hoặc mã giao dịch/phiếu/booking
+          <input
+            aria-label="Tìm giao dịch quỹ"
+            type="search"
+            maxLength={160}
+            style={control}
+            value={searchValue}
+            disabled={busy}
+            onChange={(event) => setSearchDraft({ key: searchKey, value: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' || event.nativeEvent.isComposing || event.keyCode === 229)
+                return
+              event.preventDefault()
+              applySearch(searchValue)
+            }}
+          />
+        </label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            type="button"
+            style={button}
+            disabled={busy}
+            onClick={() => applySearch(searchValue)}
+          >
+            Tìm giao dịch
+          </button>
+          <button type="button" style={button} disabled={busy} onClick={() => applySearch('')}>
+            Xóa tìm kiếm
+          </button>
+        </div>
+        <p style={{ color: '#6b7280', fontSize: 13 }}>
+          Tìm trên toàn bộ giao dịch của kỳ và bộ lọc đang chọn. Tổng kỳ và số dư quỹ không lọc theo
+          từ khóa.
+        </p>
+        {!searchValid && (
+          <p role="alert" style={errorBox}>
+            Từ khóa không hợp lệ: chỉ một giá trị, tối đa 160 ký tự và không có ký tự điều khiển.
+            Sửa hoặc xóa tìm kiếm để xem giao dịch.
+          </p>
+        )}
       </div>
       <div
         style={{
@@ -454,18 +515,22 @@ export default function Cashflow() {
         <label style={field}>
           {tUi('common.fromDate')}
           <DateInput
+            key={scope + ':start'}
             style={control}
             value={filters.startDate}
             onChange={(value) => filter('startDate', value)}
+            onValidityChange={(valid) => dateValidity(setStartValid, valid)}
           />
         </label>
         <label style={field}>
           {labelUi('Đến ngày')}
           <DateInput
+            key={scope + ':end'}
             style={control}
             min={filters.startDate || undefined}
             value={filters.endDate}
             onChange={(value) => filter('endDate', value)}
+            onValidityChange={(valid) => dateValidity(setEndValid, valid)}
           />
         </label>
         <label style={{ ...field, flex: 1 }}>
@@ -476,8 +541,7 @@ export default function Cashflow() {
             onChange={(event) => filter('fundId', event.target.value)}
           >
             <option value="">
-              Tất cả quỹ{' '}
-              {activeTab === 'bank' ? labelUi('tiền gửi') : labelUi('tiền mặt')}
+              Tất cả quỹ {activeTab === 'bank' ? labelUi('tiền gửi') : labelUi('tiền mặt')}
             </option>
             {visibleFunds.map((fund) => (
               <option key={fund.id} value={fund.id}>
@@ -532,6 +596,11 @@ export default function Cashflow() {
           </select>
         </label>
       </div>
+      {!datesValid && (
+        <p role="alert" style={errorBox}>
+          {labelUi('Chọn khoảng ngày hợp lệ trước khi đổi quỹ.')}
+        </p>
+      )}
       {filters.actorId && (
         <p style={{ color: '#6b7280', fontSize: 13 }}>
           {labelUi(
@@ -548,13 +617,8 @@ export default function Cashflow() {
       )}
       {documentId && (
         <p style={{ color: '#6b7280', fontSize: 13 }}>
-          Đang xem phiếu {documentId} và các phiếu đảo. Tổng kỳ chỉ gồm các giao
-          dịch này.{' '}
-          <button
-            type="button"
-            style={button}
-            onClick={() => setSearchParams({})}
-          >
+          Đang xem phiếu {documentId} và các phiếu đảo. Tổng kỳ chỉ gồm các giao dịch này.{' '}
+          <button type="button" style={button} onClick={() => setSearchParams({})}>
             {labelUi('Xem toàn bộ sổ quỹ')}
           </button>
         </p>
@@ -562,12 +626,7 @@ export default function Cashflow() {
       <div style={{ ...card, overflow: 'hidden' }} aria-busy={loading}>
         <div style={{ overflowX: 'auto' }}>
           <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              minWidth: 870,
-              textAlign: 'left',
-            }}
+            style={{ width: '100%', borderCollapse: 'collapse', minWidth: 870, textAlign: 'left' }}
           >
             <thead>
               <tr style={{ background: '#f9fafb' }}>
@@ -610,50 +669,36 @@ export default function Cashflow() {
                 <tr>
                   <td
                     colSpan={7}
-                    style={{
-                      ...cell,
-                      padding: 30,
-                      textAlign: 'center',
-                      color: '#6b7280',
-                    }}
+                    style={{ ...cell, padding: 30, textAlign: 'center', color: '#6b7280' }}
                   >
-                    {labelUi('Không có giao dịch trong kỳ đã chọn.')}
+                    {!searchValid
+                      ? 'Sửa từ khóa để xem giao dịch.'
+                      : filters.q
+                        ? 'Không có giao dịch khớp từ khóa trong kỳ và bộ lọc đang chọn.'
+                        : labelUi('Không có giao dịch trong kỳ đã chọn.')}
                   </td>
                 </tr>
               ) : (
                 transactions.map((row) => {
                   const amount = Number(row.amount),
-                    document = documentById.get(row.cashDocumentId);
+                    document = documentById.get(row.cashDocumentId)
                   const canUndo =
                     canReverse &&
                     document &&
                     document.type !== 'reversal' &&
                     Number(document.amount) > 0 &&
-                    !reversed.has(document.id);
+                    !reversed.has(document.id)
                   return (
                     <tr key={row.id}>
                       <td style={cell}>
                         {formatDate(row.date)}
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: '#6b7280',
-                            marginTop: 4,
-                          }}
-                        >
-                          Ghi nhận{' '}
-                          {formatDateTime(row.createdAt, settings.timezone)}
+                        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                          Ghi nhận {formatDateTime(row.createdAt, settings.timezone)}
                         </div>
                       </td>
                       <td style={cell}>
                         <div style={{ fontWeight: 500 }}>{row.description}</div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: '#6b7280',
-                            marginTop: 4,
-                          }}
-                        >
+                        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
                           {ENTRY_TYPES[row.type] || row.type} · {row.id}
                         </div>
                         <div style={{ fontSize: 12, color: '#6b7280' }}>
@@ -666,30 +711,18 @@ export default function Cashflow() {
                         )}
                       </td>
                       <td style={cell}>
-                        {funds.find((fund) => fund.id === row.fundId)?.name ||
-                          row.fundId}
+                        {funds.find((fund) => fund.id === row.fundId)?.name || row.fundId}
                       </td>
                       <td style={cell}>
-                        {users.find((actor) => actor.id === row.userId)?.name ||
-                          '—'}
+                        {users.find((actor) => actor.id === row.userId)?.name || '—'}
                       </td>
                       <td
-                        style={{
-                          ...cell,
-                          textAlign: 'right',
-                          color: '#059669',
-                          fontWeight: 600,
-                        }}
+                        style={{ ...cell, textAlign: 'right', color: '#059669', fontWeight: 600 }}
                       >
                         {amount > 0 ? money(row.amount) : '—'}
                       </td>
                       <td
-                        style={{
-                          ...cell,
-                          textAlign: 'right',
-                          color: '#dc2626',
-                          fontWeight: 600,
-                        }}
+                        style={{ ...cell, textAlign: 'right', color: '#dc2626', fontWeight: 600 }}
                       >
                         {amount < 0 ? money(-amount) : '—'}
                       </td>
@@ -700,12 +733,8 @@ export default function Cashflow() {
                             style={button}
                             disabled={busy}
                             onClick={() => {
-                              setFormError('');
-                              setForm({
-                                mode: 'reverse',
-                                document,
-                                reason: '',
-                              });
+                              setFormError('')
+                              setForm({ mode: 'reverse', document, reason: '' })
                             }}
                           >
                             <RotateCcw size={14} aria-hidden="true" />
@@ -720,7 +749,7 @@ export default function Cashflow() {
                         )}
                       </td>
                     </tr>
-                  );
+                  )
                 })
               )}
             </tbody>
@@ -738,20 +767,23 @@ export default function Cashflow() {
           }}
         >
           <span style={{ color: '#6b7280', fontSize: 13 }}>
-            {book?.pagination.totalItems || 0} giao dịch · Trang {filters.page}/
-            {totalPages}
+            {book
+              ? book.pagination.totalItems +
+                (filters.q ? ' giao dịch khớp' : ' giao dịch') +
+                ' · Trang ' +
+                filters.page +
+                '/' +
+                totalPages
+              : loading
+                ? 'Đang tải giao dịch…'
+                : 'Chưa có kết quả giao dịch'}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               type="button"
               style={button}
               disabled={loading || filters.page <= 1}
-              onClick={() =>
-                setFilters((previous) => ({
-                  ...previous,
-                  page: previous.page - 1,
-                }))
-              }
+              onClick={() => setFilters((previous) => ({ ...previous, page: previous.page - 1 }))}
             >
               <ChevronLeft size={16} aria-hidden="true" />
               {labelUi('Trước')}
@@ -760,12 +792,7 @@ export default function Cashflow() {
               type="button"
               style={button}
               disabled={loading || filters.page >= totalPages}
-              onClick={() =>
-                setFilters((previous) => ({
-                  ...previous,
-                  page: previous.page + 1,
-                }))
-              }
+              onClick={() => setFilters((previous) => ({ ...previous, page: previous.page + 1 }))}
             >
               Sau
               <ChevronRight size={16} aria-hidden="true" />
@@ -781,14 +808,8 @@ export default function Cashflow() {
           <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             {book.fundBalances.map((fund) => (
               <div key={fund.fundId}>
-                <div
-                  style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}
-                >
-                  {fund.fund}
-                </div>
-                <strong style={{ color: '#111827' }}>
-                  {money(fund.balance)}
-                </strong>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>{fund.fund}</div>
+                <strong style={{ color: '#111827' }}>{money(fund.balance)}</strong>
               </div>
             ))}
           </div>
@@ -799,11 +820,11 @@ export default function Cashflow() {
         className="cashflow-drawer"
         aria-labelledby="cash-document-title"
         onCancel={(event) => {
-          if (inFlight.current) event.preventDefault();
-          else setForm(null);
+          if (inFlight.current) event.preventDefault()
+          else setForm(null)
         }}
         onClose={() => {
-          if (!inFlight.current) setForm(null);
+          if (!inFlight.current) setForm(null)
         }}
       >
         {form && (
@@ -815,9 +836,7 @@ export default function Cashflow() {
               <div className="cashflow-drawer-title">
                 <p>{labelUi('Quản lý Thu Chi')}</p>
                 <h2 id="cash-document-title">
-                  {form.mode === 'reverse'
-                    ? labelUi('Đảo chứng từ')
-                    : TYPES[form.type]}
+                  {form.mode === 'reverse' ? labelUi('Đảo chứng từ') : TYPES[form.type]}
                 </h2>
               </div>
               <button
@@ -841,11 +860,8 @@ export default function Cashflow() {
                   <>
                     <p style={{ margin: 0, color: '#4b5563', lineHeight: 1.6 }}>
                       Phiếu {form.document.id} · {form.document.description} ·{' '}
-                      {formatMoney(
-                        form.document.amount,
-                        form.document.currency,
-                      )}
-                      . Hệ thống sẽ ghi giao dịch ngược vào quỹ gốc.
+                      {formatMoney(form.document.amount, form.document.currency)}. Hệ thống sẽ ghi
+                      giao dịch ngược vào quỹ gốc.
                     </p>
                     <label>
                       {labelUi('Lý do đảo phiếu')}
@@ -855,10 +871,7 @@ export default function Cashflow() {
                         maxLength={500}
                         value={form.reason}
                         onChange={(event) =>
-                          setForm((previous) => ({
-                            ...previous,
-                            reason: event.target.value,
-                          }))
+                          setForm((previous) => ({ ...previous, reason: event.target.value }))
                         }
                       />
                     </label>
@@ -866,8 +879,7 @@ export default function Cashflow() {
                 ) : (
                   <>
                     <label>
-                      {labelUi('Quỹ')}{' '}
-                      {form.type === 'transfer' ? labelUi('chuyển') : ''}
+                      {labelUi('Quỹ')} {form.type === 'transfer' ? labelUi('chuyển') : ''}
                       <select
                         autoFocus
                         required
@@ -877,9 +889,7 @@ export default function Cashflow() {
                             ...previous,
                             fundId: event.target.value,
                             toFundId:
-                              previous.toFundId === event.target.value
-                                ? ''
-                                : previous.toFundId,
+                              previous.toFundId === event.target.value ? '' : previous.toFundId,
                           }))
                         }
                       >
@@ -898,10 +908,7 @@ export default function Cashflow() {
                           required
                           value={form.toFundId}
                           onChange={(event) =>
-                            setForm((previous) => ({
-                              ...previous,
-                              toFundId: event.target.value,
-                            }))
+                            setForm((previous) => ({ ...previous, toFundId: event.target.value }))
                           }
                         >
                           <option value="">{labelUi('Chọn quỹ nhận')}</option>
@@ -910,8 +917,7 @@ export default function Cashflow() {
                               (fund) =>
                                 fund.active !== false &&
                                 fund.id !== form.fundId &&
-                                (fund.currency || settings.currency) ===
-                                  filters.currency,
+                                (fund.currency || settings.currency) === filters.currency,
                             )
                             .map((fund) => (
                               <option key={fund.id} value={fund.id}>
@@ -927,10 +933,7 @@ export default function Cashflow() {
                         <select
                           value={form.categoryId}
                           onChange={(event) =>
-                            setForm((previous) => ({
-                              ...previous,
-                              categoryId: event.target.value,
-                            }))
+                            setForm((previous) => ({ ...previous, categoryId: event.target.value }))
                           }
                         >
                           <option value="">{labelUi('Chưa phân loại')}</option>
@@ -938,10 +941,7 @@ export default function Cashflow() {
                             .filter(
                               (category) =>
                                 category.active !== false &&
-                                category.type ===
-                                  (form.type === 'receipt'
-                                    ? 'INCOME'
-                                    : 'EXPENSE'),
+                                category.type === (form.type === 'receipt' ? 'INCOME' : 'EXPENSE'),
                             )
                             .map((category) => (
                               <option key={category.id} value={category.id}>
@@ -967,10 +967,7 @@ export default function Cashflow() {
                           max="999999999999999.9999"
                           value={form.amount}
                           onChange={(event) =>
-                            setForm((previous) => ({
-                              ...previous,
-                              amount: event.target.value,
-                            }))
+                            setForm((previous) => ({ ...previous, amount: event.target.value }))
                           }
                         />
                         <span aria-hidden="true">{filters.currency}</span>
@@ -985,10 +982,7 @@ export default function Cashflow() {
                             max={today(settings.timezone)}
                             value={form.date}
                             onChange={(value) =>
-                              setForm((previous) => ({
-                                ...previous,
-                                date: value,
-                              }))
+                              setForm((previous) => ({ ...previous, date: value }))
                             }
                           />
                         </label>
@@ -1006,10 +1000,7 @@ export default function Cashflow() {
                         maxLength={500}
                         value={form.description}
                         onChange={(event) =>
-                          setForm((previous) => ({
-                            ...previous,
-                            description: event.target.value,
-                          }))
+                          setForm((previous) => ({ ...previous, description: event.target.value }))
                         }
                       />
                     </label>
@@ -1021,11 +1012,7 @@ export default function Cashflow() {
               <button type="button" disabled={busy} onClick={closeForm}>
                 {tUi('common.close')}
               </button>
-              <button
-                type="submit"
-                className="cashflow-drawer-submit"
-                disabled={busy}
-              >
+              <button type="submit" className="cashflow-drawer-submit" disabled={busy}>
                 <Check size={17} aria-hidden="true" />
                 {busy
                   ? labelUi('Đang ghi sổ…')
@@ -1038,5 +1025,5 @@ export default function Cashflow() {
         )}
       </dialog>
     </div>
-  );
+  )
 }

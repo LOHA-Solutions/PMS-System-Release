@@ -95,22 +95,15 @@
 .pms-business-settings .pms-business-field textarea::placeholder {
   color: #94a3b8;
 }
-.pms-business-settings
-  .pms-business-field
-  :is(input, select, textarea):hover:not(:disabled) {
+.pms-business-settings .pms-business-field :is(input, select, textarea):hover:not(:disabled) {
   border-color: #b9ccdd;
 }
-.pms-business-settings
-  .pms-business-field
-  :is(input, select, textarea):focus-visible {
+.pms-business-settings .pms-business-field :is(input, select, textarea):focus-visible {
   outline: 3px solid #086ab41c;
   outline-offset: 1px;
   border-color: var(--accent-primary, #086ab4);
 }
-.pms-business-settings
-  fieldset:disabled
-  .pms-business-field
-  :is(input, select, textarea) {
+.pms-business-settings fieldset:disabled .pms-business-field :is(input, select, textarea) {
   background: #f8fafc;
   color: #7e8fa1;
   cursor: not-allowed;

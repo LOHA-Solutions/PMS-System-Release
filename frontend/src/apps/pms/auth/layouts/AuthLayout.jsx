@@ -1,12 +1,12 @@
-import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js';
-import { Link, Outlet } from 'react-router-dom';
-import { ArrowLeft, BedDouble } from 'lucide-react';
-import LohaBrand from '../../../../shared/components/LohaBrand';
-import LanguageSwitcher from '../../../../shared/i18n/LanguageSwitcher.jsx';
-import './AuthLayout.css';
+import { t as tUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { Link, Outlet } from 'react-router-dom'
+import { ArrowLeft, BedDouble } from 'lucide-react'
+import LohaBrand from '../../../../shared/components/LohaBrand'
+import LanguageSwitcher from '../../../../shared/i18n/LanguageSwitcher.jsx'
+import './AuthLayout.css'
 
 export default function AuthLayout() {
-  useI18n();
+  useI18n()
   return (
     <div className="loha-home loha-auth">
       <aside className="loha-auth-aside" aria-label="LOHA">
@@ -61,5 +61,5 @@ export default function AuthLayout() {
         </footer>
       </main>
     </div>
-  );
+  )
 }

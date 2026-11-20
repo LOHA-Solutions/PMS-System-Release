@@ -53,8 +53,12 @@ def pricing_rules_value(value):
             or not isinstance(row["aboveRooms"], int)
             or row["aboveRooms"] != threshold
         ):
-            raise ApiError(422, "invalid_pricing_rules", "Mốc tăng giảm phải là 30, 50 và 100 phòng.")
-        normalized.append({"aboveRooms": threshold, "percent": decimal_text(row["percent"], percent=True)})
+            raise ApiError(
+                422, "invalid_pricing_rules", "Mốc tăng giảm phải là 30, 50 và 100 phòng."
+            )
+        normalized.append(
+            {"aboveRooms": threshold, "percent": decimal_text(row["percent"], percent=True)}
+        )
     return {
         "baseRooms": rooms,
         "extraRoomPrice": decimal_text(value["extraRoomPrice"]),

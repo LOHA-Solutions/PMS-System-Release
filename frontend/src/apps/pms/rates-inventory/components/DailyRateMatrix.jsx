@@ -1,10 +1,6 @@
-import {
-  t as tUi,
-  tr as labelUi,
-  useI18n,
-} from '../../../../shared/i18n/useI18n.js';
-import { shortDate as dateLabel } from '../../../../shared/i18n/formatters.js';
-import { useId, useState } from 'react';
+import { t as tUi, tr as labelUi, useI18n } from '../../../../shared/i18n/useI18n.js'
+import { shortDate as dateLabel } from '../../../../shared/i18n/formatters.js'
+import { useId, useState } from 'react'
 import {
   Check,
   ChevronDown,
@@ -14,19 +10,17 @@ import {
   SquareCheck,
   SquareMinus,
   Tag,
-} from 'lucide-react';
-import { money, today } from '../../data/model';
+} from 'lucide-react'
+import { money, today } from '../../data/model'
 
-const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const keyFor = (typeId, date) => `${typeId}:${date}`;
+const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+const keyFor = (typeId, date) => `${typeId}:${date}`
 
 function priceLabel(value, currency) {
-  if (value == null) return '—';
-  const formatted = money(value, currency);
-  const suffix = ' ' + (currency === 'VND' ? '₫' : currency);
-  return formatted.endsWith(suffix)
-    ? formatted.slice(0, -suffix.length)
-    : formatted;
+  if (value == null) return '—'
+  const formatted = money(value, currency)
+  const suffix = ' ' + (currency === 'VND' ? '₫' : currency)
+  return formatted.endsWith(suffix) ? formatted.slice(0, -suffix.length) : formatted
 }
 
 export default function DailyRateMatrix({
@@ -41,34 +35,29 @@ export default function DailyRateMatrix({
   onToggle,
   onSelectRow,
 }) {
-  useI18n();
-  const [collapsed, setCollapsed] = useState(new Set());
-  const gridId = useId();
-  const currentDate = today(settings.timezone);
-  const ratesByKey = new Map(
-    rates.map((row) => [keyFor(row.roomTypeId, row.date), row]),
-  );
-  const stockByKey = new Map(
-    availability.map((row) => [keyFor(row.roomTypeId, row.date), row]),
-  );
-  const allCollapsed =
-    types.length > 0 && types.every((type) => collapsed.has(type.id));
+  useI18n()
+  const [collapsed, setCollapsed] = useState(new Set())
+  const gridId = useId()
+  const currentDate = today(settings.timezone)
+  const ratesByKey = new Map(rates.map((row) => [keyFor(row.roomTypeId, row.date), row]))
+  const stockByKey = new Map(availability.map((row) => [keyFor(row.roomTypeId, row.date), row]))
+  const allCollapsed = types.length > 0 && types.every((type) => collapsed.has(type.id))
   const dayInfo = days.map((date) => {
-    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay();
+    const weekday = new Date(`${date}T00:00:00Z`).getUTCDay()
     return {
       date,
       weekday,
       className:
         `${weekday === 0 || weekday === 6 ? 'is-weekend' : ''}${date === currentDate ? ' is-today' : ''}`.trim(),
-    };
-  });
+    }
+  })
   function toggleGroup(typeId) {
     setCollapsed((previous) => {
-      const next = new Set(previous);
-      if (next.has(typeId)) next.delete(typeId);
-      else next.add(typeId);
-      return next;
-    });
+      const next = new Set(previous)
+      if (next.has(typeId)) next.delete(typeId)
+      else next.add(typeId)
+      return next
+    })
   }
   return (
     <div
@@ -96,17 +85,9 @@ export default function DailyRateMatrix({
                 className="rates-group-toggle rates-toggle-all"
                 disabled={busy || !types.length}
                 aria-expanded={!allCollapsed}
-                aria-label={
-                  allCollapsed
-                    ? tUi('rates.expandAll')
-                    : tUi('rates.collapseAll')
-                }
+                aria-label={allCollapsed ? tUi('rates.expandAll') : tUi('rates.collapseAll')}
                 onClick={() =>
-                  setCollapsed(
-                    allCollapsed
-                      ? new Set()
-                      : new Set(types.map((type) => type.id)),
-                  )
+                  setCollapsed(allCollapsed ? new Set() : new Set(types.map((type) => type.id)))
                 }
               >
                 {allCollapsed ? (
@@ -131,25 +112,17 @@ export default function DailyRateMatrix({
           </tr>
         </thead>
         {types.map((type, typeIndex) => {
-          const expanded = !collapsed.has(type.id);
-          const selectedCount = days.filter((date) =>
-            selected.has(keyFor(type.id, date)),
-          ).length;
-          const allSelected = days.length > 0 && selectedCount === days.length;
-          const SelectionIcon = allSelected
-            ? SquareCheck
-            : selectedCount
-              ? SquareMinus
-              : Square;
+          const expanded = !collapsed.has(type.id)
+          const selectedCount = days.filter((date) => selected.has(keyFor(type.id, date))).length
+          const allSelected = days.length > 0 && selectedCount === days.length
+          const SelectionIcon = allSelected ? SquareCheck : selectedCount ? SquareMinus : Square
           const cells = dayInfo.map((day) => {
-            const key = keyFor(type.id, day.date);
+            const key = keyFor(type.id, day.date)
             const rate = ratesByKey.get(key),
-              stock = stockByKey.get(key);
-            const stopped = Boolean(rate?.stopSell || stock?.stopSell);
+              stock = stockByKey.get(key)
+            const stopped = Boolean(rate?.stopSell || stock?.stopSell)
             const count =
-              Number.isInteger(stock?.available) && stock.available >= 0
-                ? stock.available
-                : null;
+              Number.isInteger(stock?.available) && stock.available >= 0 ? stock.available : null
             const state =
               stopped || count === 0
                 ? 'is-paused'
@@ -157,18 +130,10 @@ export default function DailyRateMatrix({
                   ? 'is-unknown'
                   : count <= 2
                     ? 'is-low'
-                    : 'is-active';
-            return {
-              ...day,
-              key,
-              rate,
-              count,
-              stopped,
-              state,
-              price: rate?.price ?? type.price,
-            };
-          });
-          const priceRowId = `${gridId}-price-${typeIndex}`;
+                    : 'is-active'
+            return { ...day, key, rate, count, stopped, state, price: rate?.price ?? type.price }
+          })
+          const priceRowId = `${gridId}-price-${typeIndex}`
           return (
             <tbody key={type.id}>
               <tr className="rates-room-row">
@@ -202,12 +167,7 @@ export default function DailyRateMatrix({
                     title={`${type.name}, ${dateLabel(cell.date)}: ${cell.count === null ? tUi('common.noAvailability') : tUi('rates.stockCount', { count: cell.count })}${cell.stopped ? ' · ' + tUi('rates.stopSell') : ''}`}
                   >
                     <span>A:{cell.count ?? '—'}</span>
-                    {cell.stopped && (
-                      <LockKeyhole
-                        size={11}
-                        aria-label={tUi('rates.stopSell')}
-                      />
-                    )}
+                    {cell.stopped && <LockKeyhole size={11} aria-label={tUi('rates.stopSell')} />}
                   </td>
                 ))}
               </tr>
@@ -219,15 +179,9 @@ export default function DailyRateMatrix({
                         type="button"
                         className="rates-row-select"
                         disabled={busy}
-                        aria-pressed={
-                          selectedCount > 0 && !allSelected
-                            ? 'mixed'
-                            : allSelected
-                        }
+                        aria-pressed={selectedCount > 0 && !allSelected ? 'mixed' : allSelected}
                         aria-label={tUi('rates.rowAria', {
-                          action: allSelected
-                            ? tUi('rates.deselectRow')
-                            : tUi('rates.selectRow'),
+                          action: allSelected ? tUi('rates.deselectRow') : tUi('rates.selectRow'),
                           room: type.name,
                         })}
                         onClick={() => onSelectRow(type)}
@@ -236,9 +190,7 @@ export default function DailyRateMatrix({
                         <Tag size={14} aria-hidden="true" />
                         <span>{tUi('rates.pmsPrice')}</span>
                         <small>
-                          {allSelected
-                            ? tUi('rates.deselectRow')
-                            : tUi('rates.selectRow')}
+                          {allSelected ? tUi('rates.deselectRow') : tUi('rates.selectRow')}
                         </small>
                       </button>
                     ) : (
@@ -265,16 +217,14 @@ export default function DailyRateMatrix({
                         <span className="rates-cell-price">
                           {priceLabel(cell.price, settings.currency)}
                         </span>
-                        {selected.has(cell.key) && (
-                          <Check size={11} aria-hidden="true" />
-                        )}
+                        {selected.has(cell.key) && <Check size={11} aria-hidden="true" />}
                       </button>
                     </td>
                   ))}
                 </tr>
               )}
             </tbody>
-          );
+          )
         })}
         {!types.length && (
           <tbody>
@@ -287,5 +237,5 @@ export default function DailyRateMatrix({
         )}
       </table>
     </div>
-  );
+  )
 }
